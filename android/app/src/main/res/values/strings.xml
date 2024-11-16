@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">deep</string>
+    <string name="title_activity_main">deep</string>
+    <string name="package_name">com.deep_foundation.deep.app</string>
+    <string name="custom_url_scheme">com.deep_foundation.deep.app</string>
+</resources>

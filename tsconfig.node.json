@@ -1,0 +1,46 @@
+{
+  "compilerOptions": {
+      "lib": [
+          "dom",
+          "es6",
+          "es7",
+          "es2022.error"
+      ],
+      "allowJs": true,
+      "allowSyntheticDefaultImports": true,
+      "experimentalDecorators": true,
+      "sourceMap": true,
+      "noImplicitAny": false,
+      "skipLibCheck": true,
+      "removeComments": true,
+      "jsx": "preserve",
+      "module": "commonjs",
+      "moduleResolution": "node",
+      "target": "ES2015",
+      "resolveJsonModule": true,
+      "esModuleInterop": true,
+      "isolatedModules": true,
+      "declaration": true,
+      "outDir": "dist",
+      "rootDir": "./src",
+      "downlevelIteration": true
+  },
+  "exclude": [
+      "./src/app",
+      "./src/components",
+      "./src/hooks",
+      "./dist",
+      "./client",
+      "./ios",
+      "./android",
+      "./electron",
+      "./vscode",
+      "./tailwind.config.ts",
+      "./capacitor.config.ts",
+      "./next.config.ts",
+      "./postcss.config.mjs"
+  ],
+  "include": [
+      "src/**/*"
+  ]
+}

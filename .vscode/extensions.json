@@ -1,0 +1,10 @@
+{
+    "recommendations": [
+        "ms-azuretools.vscode-docker",
+        "bobsparadox.seti-black",
+        "tabnine.tabnine-vscode",
+        "ms-vscode.live-server",
+        "bradlc.vscode-tailwindcss",
+        "github.vscode-github-actions"
+    ]
+}

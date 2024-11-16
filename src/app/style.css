@@ -1,0 +1,12 @@
+html, body {
+  scrollbar-width: none !important;
+}
+html::-webkit-scrollbar, body::-webkit-scrollbar {
+  display: none;
+}
+html::-webkit-scrollbar-track, body::-webkit-scrollbar-track {
+  display: none;
+}
+html::-webkit-scrollbar-thumb, body::-webkit-scrollbar-thumb {
+  display: none;
+}
