@@ -84,15 +84,50 @@ class Memory {
   }
 }
 
+export interface DeepEvent {
+  name: 'change';
+  deep: Deep;
+  prev: {
+    id?: string;
+    type?: Deep;
+    from?: Deep;
+    to?: Deep;
+    value?: any;
+  };
+  next: {
+    id?: string;
+    type?: Deep;
+    from?: Deep;
+    to?: Deep;
+    value?: any;
+  };
+}
+
 export class Deep {
   [key: string]: any;
 
+  /**
+   * Checks if the given value is a Deep instance
+   * @param it - Value to check
+   * @returns True if the value is a Deep instance
+   */
   isDeep(it) { return isDeep(it); }
+
+  /**
+   * Checks if the given value is a non-Deep value and not undefined
+   * @param it - Value to check
+   * @returns True if the value is neither Deep nor undefined
+   */
   isValue(it) { return isValue(it); }
 
   deep: Deep;
   memory: Memory;
   _events?: boolean;
+  
+  /**
+   * Creates a new Deep instance with the given deep as the root agent Deep with memory index.
+   * @param deep - Parent Deep instance
+   */
   constructor(deep: Deep = this) {
     this.deep = deep;
     if (this == deep) {
@@ -127,36 +162,37 @@ export class Deep {
       const Contain = deep.new(); const c = deep.new();
       c.type = Contain; c.from = deep; c.to = Contain; c.value = 'Contain';
 
-      deep.contains.Contain = this.Contain = Contain;
+      deep.Contain = deep.contains.Contain = this.Contain = Contain;
 
       const deepName = _insert(Contain, deep, deep, 'deep');
 
-      const Everything = deep.contains.Everything = deep.wrap(deep.memory.all);
-      const Nothing = deep.contains.Nothing = deep.new();
+      const Everything = deep.Everything = deep.contains.Everything = deep.wrap(deep.memory.all);
+      const Nothing = deep.Nothing = deep.contains.Nothing = deep.new();
+      const Unxpected = deep.Unxpected = deep.contains.Unxpected = deep.new();
       const Any = deep.contains.Any = deep.new();
 
       deep.contains.Value = Value;
 
-      const Id = deep.contains.Id = deep.new();
+      const Id = deep.Id = deep.contains.Id = deep.new();
 
-      const Exp = deep.contains.Exp = deep.new();
-      const Selection = deep.contains.Selection = _insert(deep, Value);
+      const Exp = deep.Exp = deep.contains.Exp = deep.new();
+      const Selection = deep.Selection = deep.contains.Selection = _insert(deep, Value);
 
-      const Relation = deep.contains.Relation = deep.new();
+      const Relation = deep.Relation = deep.contains.Relation = deep.new();
 
-      deep.contains.Many = Relation.new();
-      deep.contains.One = Relation.new();
+      deep.Many = deep.contains.Many = Relation.new();
+      deep.One = deep.contains.One = Relation.new();
 
-      deep.contains.type = deep.contains.One.new();
-      deep.contains.typed = deep.contains.Many.new();
-      deep.contains.from = deep.contains.One.new();
-      deep.contains.out = deep.contains.Many.new();
-      deep.contains.to = deep.contains.One.new();
-      deep.contains.out = deep.contains.Many.new();
-      deep.contains.value = deep.contains.One.new();
-      deep.contains.valued = deep.contains.Many.new();
+      deep.contains.type = deep.__type = deep.contains.One.new();
+      deep.contains.typed = deep.__typed = deep.contains.Many.new();
+      deep.contains.from = deep.__from = deep.contains.One.new();
+      deep.contains.out = deep.__out = deep.contains.Many.new();
+      deep.contains.to = deep.__to = deep.contains.One.new();
+      deep.contains.out = deep.__out = deep.contains.Many.new();
+      deep.contains.value = deep.__value = deep.contains.One.new();
+      deep.contains.valued = deep.__valued = deep.contains.Many.new();
 
-      const Condition = deep.contains.Condition = Relation.new();
+      const Condition = deep.Condition = deep.contains.Condition = Relation.new();
 
       deep.contains.eq = Condition.new();
       deep.contains.neq = Condition.new();
@@ -167,11 +203,13 @@ export class Deep {
       deep.contains.in = Condition.new();
       deep.contains.nin = Condition.new();
 
-      const Logic = deep.contains.Logic = Relation.new();
+      const Logic = deep.Logic = deep.contains.Logic = Relation.new();
 
       const and = deep.contains.and = Logic.new();
       const or = deep.contains.or = Logic.new();
       const not = deep.contains.not = Logic.new();
+
+      const Order = deep.Order = deep.contains.Order = Relation.new();
 
       deep.contains.relations = deep.new({
         'type': { one: true, many: false, invert: 'typed' },
@@ -221,7 +259,7 @@ export class Deep {
       deep.contains.isDeep = Is.new(isDeep);
       deep.contains.isValue = Is.new(isValue);
 
-      deep.contains.orderIs = deep.new([
+      deep.orderIs = deep.contains.orderIs = deep.new([
         deep.contains.isSymbol,
         deep.contains.isUndefined,
         deep.contains.isPromise,
@@ -238,7 +276,7 @@ export class Deep {
         deep.contains.isFunction,
       ]);
 
-      const Isable = deep.contains.Isable = deep.new();
+      const Isable = deep.Isable = deep.contains.Isable = deep.new();
 
       _insert(Isable, deep.contains.isSymbol, deep.contains.Symbol);
       _insert(Isable, deep.contains.isUndefined, deep.contains.Undefined);
@@ -277,7 +315,7 @@ export class Deep {
       deep.contains.MethodToString = Method.new()
       deep.contains.MethodValueOf = Method.new()
       
-      deep.contains.Compatable = _insert(deep, Any, Any);
+      deep.Compatable = deep.contains.Compatable = _insert(deep, Any, Any);
 
       // Any
     
@@ -425,7 +463,7 @@ export class Deep {
       });
       _insert(deep.contains.Compatable, deep.contains.SetFilter, deep.contains.Set);
 
-      deep.contains.SetEach = deep.contains.MethodEach.new((current, callback: (value: any, key: any) => void) => {
+      deep.contains.SetEach = deep.contains.MethodEach.new((current, callback: (value: any, key: any) => boolean) => {
         current.call.forEach((value) => {
           callback(value, value);
         });
@@ -644,7 +682,7 @@ export class Deep {
       });
       _insert(deep.contains.Compatable, deep.contains.ArraySort, deep.contains.Array);
 
-      deep.contains.ArrayReduce = deep.contains.MethodSort.new((current, callback: (accumulator: any, currentValue?: any) => any, initialValue?: any) => {
+      deep.contains.ArrayReduce = deep.contains.MethodReduce.new((current, callback: (accumulator: any, currentValue?: any) => any, initialValue?: any) => {
         return current.call.reduce((accumulator, currentValue) => callback(accumulator, currentValue), initialValue);
       });
       _insert(deep.contains.Compatable, deep.contains.ArrayReduce, deep.contains.Array);
@@ -773,6 +811,200 @@ export class Deep {
     }
   }
 
+  /**
+   * Creates a change event for this Deep instance
+   * @param name - Event name
+   * @param field - Field name
+   * @param previousValue - Previous value
+   * @param currentValue - Current value
+   * @returns Change event
+   */
+  private _createChangeEvent(
+    name: 'new' | 'change' | 'kill',
+    field?: 'id' | 'type' | 'from' | 'to' | 'value',
+    previousValue?: any,
+    currentValue?: any
+  ): DeepEvent {
+    const event: DeepEvent = {
+      name: 'change',
+      deep: this,
+      prev: {},
+      next: {},
+    };
+
+    if (field) {
+      event.prev[field] = previousValue;
+      event.next[field] = currentValue;
+    }
+
+    return event;
+  }
+
+  /**
+   * Gets the deep.Id instance .to this Deep instance .from current this.deep agent. If no ID is set, one will be created.
+   * @param value - Optional ID value
+   * @param agent - Optional agent Deep instance
+   * @returns ID value
+   */
+  id(value?: string, agent: Deep = this.deep): string {
+    const ids = this.ids;
+    let previous;
+    for (let id of this.ids) {
+      if (id.from === agent) previous = id.call;
+    }
+    if (!ids.size || arguments.length) {
+      const id = this.deep.Id.new(value || uuidv4());
+      id.from = agent;
+      id.to = this;
+      const current = id.call;
+      if (previous !== current) {
+        this.on.emit(this._createChangeEvent('change', 'id', previous, current));
+      }
+      return current;
+    } else {
+      for (let id of ids) return id.call;
+      throw new Error(`🤔 Unexpected, ids can't be empty here.`);
+    }
+  }
+
+  /**
+   * Gets the value stored in this Deep instance, can be other Deep instance.
+   * @returns Stored value
+   */
+  get value() {
+    return this.deep.memory.values.get(this);
+  }
+
+  /**
+   * Sets the value in this Deep instance. Value wrap into untyped Deep instance, if this Deep is typed. Values not duplicating inside this.deep.memory.
+   * @param value - Value to set
+   */
+  set value(value) {
+    const previous = this.call;
+    if (isUndefined(value)) {
+      if (isValue(this.value)) throw new Error(`🤦 If .value is Value, it's can't be ereised!`);
+      this.deep.memory.values.unset(this);
+    } else if (isValue(value) && this.type == this.deep.Id) {
+      this.deep.memory.values.unset(this);
+      this.deep.memory.values.set(this, value);
+    } else if (isValue(value)) {
+      this.deep.memory.values.unset(this);
+      this.deep.memory.values.set(this, this.wrap(value));
+    } else if (isDeep(value) && isValue(value.value)) {
+      this.deep.memory.values.unset(this);
+      this.deep.memory.values.set(this, value);
+    } else throw new Error('🙅 Value must be isValue(value) or isValue(value.value) or isUndefined(value)');
+    const current = this.value;
+    if (previous !== current) {
+      const event = this._createChangeEvent('change', 'value', previous, current);
+      this.on.emit(event);
+    }
+  }
+
+  /**
+   * Gets the type of this Deep instance
+   * @returns Type Deep instance
+   */
+  get type() { return this.deep.memory.types.get(this); }
+
+  /**
+   * Sets the type of this Deep instance
+   * @param it - Type to set
+   */
+  set type(it: Deep | undefined) {
+    const previous = this.type;
+    if (isUndefined(it)) this.deep.memory.types.unset(this);
+    else this.deep.memory.types.set(this, it);
+    if (!this.deep._events) return;
+    if ((this.type != this.deep.Selection && this.type != this.deep.Id) && previous !== it) {
+      this.on.emit(this._createChangeEvent('change', 'type', previous, it));
+    }
+    let notifiedSelections = new Set();
+    for (let d of this.deep.memory.types.many(this.deep.__type)) {
+      if (d?.to?.to && d.to.type == this.deep.Selection && d.to.to.call.has(it)) {
+        d.emit(this._createChangeEvent('change', 'type', previous, it));
+        notifiedSelections.add(d.to);
+      } else if (d.to == it || d.to == previous) {
+        d.emit(this._createChangeEvent('change', 'type', previous, it));
+        notifiedSelections.add(d.from);
+      }
+    }
+    for (let selection of this.deep.memory.types.many(this.deep.Selection)) {
+      if (!notifiedSelections.has(notifiedSelections) && selection.to && !isArray(selection.to.call) && selection.to.call.has(this)) selection.emit(this._createChangeEvent('change', 'type', previous, it));
+    }
+  }
+
+  /**
+   * Gets the 'from' reference of this Deep instance
+   * @returns From Deep instance
+   */
+  get from() { return this.deep.memory.froms.get(this); }
+
+  /**
+   * Sets the 'from' reference of this Deep instance
+   * @param it - From Deep instance to set
+   */
+  set from(it: Deep | undefined) {
+    const previous = this.from;
+    if (isUndefined(it)) this.deep.memory.froms.unset(this);
+    else this.deep.memory.froms.set(this, it);
+    if (!this.deep._events) return;
+    if ((this.type != this.deep.Selection && this.type != this.deep.Id) && previous !== it) {
+      this.on.emit(this._createChangeEvent('change', 'from', previous, it));
+    }
+    let notifiedSelections = new Set();
+    for (let d of this.deep.memory.types.many(this.deep.__from)) {
+      if (d?.to?.to && d.to.type == this.deep.Selection && d.to.to.call.has(it)) {
+        d.emit(this._createChangeEvent('change', 'from', previous, it));
+        notifiedSelections.add(d.to);
+      } else if (d.to == it || d.to == previous) {
+        d.emit(this._createChangeEvent('change', 'from', previous, it));
+        notifiedSelections.add(d.from);
+      }
+    }
+    for (let selection of this.deep.memory.types.many(this.deep.Selection)) {
+      if (!notifiedSelections.has(notifiedSelections) && selection.to && !isArray(selection.to.call) && selection.to.call.has(this)) selection.emit(this._createChangeEvent('change', 'from', previous, it));
+    }
+  }
+
+  /**
+   * Gets the 'to' reference of this Deep instance
+   * @returns To Deep instance
+   */
+  get to() { return this.deep.memory.tos.get(this); }
+
+  /**
+   * Sets the 'to' reference of this Deep instance
+   * @param it - To Deep instance to set
+   */
+  set to(it: Deep | undefined) {
+    const previous = this.to;
+    if (isUndefined(it)) this.deep.memory.tos.unset(this);
+    else this.deep.memory.tos.set(this, it);
+    if (!this.deep._events) return;
+    if ((this.type != this.deep.Selection && this.type != this.deep.Id) && previous !== it) {
+      this.on.emit(this._createChangeEvent('change', 'to', previous, it));
+    }
+    let notifiedSelections = new Set();
+    for (let d of this.deep.memory.types.many(this.deep.__to)) {
+      if (d?.to?.to && d.to.type == this.deep.Selection && d.to.to.call.has(it)) {
+        d.emit(this._createChangeEvent('change', 'to', previous, it));
+        notifiedSelections.add(d.to);
+      } else if (d.to == it || d.to == previous) {
+        d.emit(this._createChangeEvent('change', 'to', previous, it));
+        notifiedSelections.add(d.from);
+      }
+    }
+    for (let selection of this.deep.memory.types.many(this.deep.Selection)) {
+      if (!notifiedSelections.has(notifiedSelections) && selection.to && !isArray(selection.to.call) && selection.to.call.has(this)) selection.emit(this._createChangeEvent('change', 'to', previous, it));
+    }
+  }
+
+  /**
+   * Determines the Deep type of a given value
+   * @param value - Value to check type of
+   * @returns Deep instance representing the type, instance of this.deep.contains.Value
+   */
   _is(value: any): Deep {
     if (isSymbol(value)) return this.deep.Symbol;
     else if (isUndefined(value)) return this.deep.Undefined;
@@ -791,7 +1023,10 @@ export class Deep {
     return this.Unexpected;
   }
 
-  private _contains: Contains;
+  /**
+   * Gets the container for managing contains relationships, based on this.deep.Contain where .from is parent, and .to is children.
+   * @returns Contains instance
+   */
   get contains() {
     if (!this._contains) {
       const _contains = new Contains(this);
@@ -800,51 +1035,73 @@ export class Deep {
     return this._contains;
   }
 
-  id(value?: string, agent: Deep = this.deep): string {
-    const ids = this.ids;
-    if (!ids.size || arguments.length) {
-      const id = this.deep.contains.Id.new(value || uuidv4());
-      id.from = agent;
-      id.to = this;
-      return id.call;
-    } else {
-      for (let id of ids) return id.call;
-      throw new Error(`🤔 Unexpected, ids can't be empty here.`);
-    }
-  }
+  /**
+   * Gets all deep.Id isntances where .to = this.
+   * @returns Set of Deep instances representing IDs
+   */
   get ids(): Set<Deep> {
     const ids = new Set<Deep>();
-    this.in.each(i => i.type === this.deep.contains.Id && ids.add(i));
+    this.in.each(i => i.type === this.deep.Id && ids.add(i));
     // for (let i of this.in) {
-    //   if (i.type === this.deep.contains.Id) {
+    //   if (i.type === this.deep.Id) {
     //     ids.add(i);
     //   }
     // }
     return ids;
   }
 
+  /**
+   * Gets the first founded name of this Deep instance based on its contain relationships.
+   * @returns Name string
+   */
   get name(): string {
     let name: string = '';
     for (let i of this.in.call) {
-      if (i.type === this.deep.contains.Contain) {
+      if (i.type === this.deep.Contain) {
         name = i.call;
         break;
       }
     }
-    // if (this.type && this.type != this) {
-    //   name += `(${this.type.name})`;
-    // }
     return name;
   }
 
+  /**
+   * Gets the full name including recursive by types information
+   * @returns Full name string as CurrentName(TypeName(TypeTypeName))
+   */
+  get fullName(): string {
+    let name: string = this.name;
+    if (this.type && this.type != this) {
+      name += `(${this.type.fullName})`;
+    }
+    return name;
+  }
+
+  /**
+   * Creates a new Deep instance of this type
+   * @param value - Optional initial value
+   * @returns New Deep instance
+   */
   new(value?: any) {
     const deep = new Deep(this.deep);
     this.deep.memory.all.add(deep);
     deep.type = this;
     if (arguments.length) deep.value = value;
+    if (this.deep._events) {
+      this.deep.memory.tos.many(this).forEach(d => {
+        if (d.type === this.deep.Selection) {
+          deep.on.emit(d._createChangeEvent('new'));
+        }
+      });
+    }
     return deep;
   }
 
+  /**
+   * Wraps a value in a Deep instance if it isn't already, or returns existing Deep instance.
+   * @param value - Value to wrap
+   * @returns Deep instance containing the value
+   */
   wrap(value?: any) {
     if (isDeep(value)) return value;
     else {
@@ -859,26 +1116,39 @@ export class Deep {
     }
   }
 
+  /**
+   * Removes this Deep instance and all its references, also kill event emitting.
+   */
   kill() {
     this.deep.memory.all.delete(this);
     this.deep.memory.values.unset(this);
-    this.type = undefined;
     this.from = undefined;
     this.to = undefined;
+    this.type = undefined;
     if (this._on) this._on.kill();
   }
 
-  get iterator() { return makeIterator(this.call); };
-  [Symbol.iterator]() { return this.iterator; };
+  /**
+   * Gets an iterator for this Deep instance's value, any Deep instance can be iterated in for of.
+   * @returns Iterator
+   */
+  [Symbol.iterator]() { return makeIterator(this.call); };
 
+  /**
+   * Gets the value of this Deep instance, resolving Deep values recursively by deeps to their primitive js value.
+   * @returns Resolved value
+   */
   get call() {
     let value = this.value;
     if (isDeep(value)) value = value.value;
     return value;
   }
-  get value() {
-    return this.deep.memory.values.get(this);
-  }
+
+  /**
+   * Creates a new Deep instance of the appropriate type for a value
+   * @param value - Value to create Deep instance for
+   * @returns New Deep instance
+   */
   Value(value) {
     const set = this.deep.memory.values.many(value);
     if (!set.size) {
@@ -892,85 +1162,38 @@ export class Deep {
       }
     }
   }
-  set value(value) {
-    if (isUndefined(value)) {
-      if (isValue(this.value)) throw new Error(`🤦 If .value is Value, it's can't be ereised!`);
-      this.deep.memory.values.unset(this);
-    } else if (isValue(value)) {
-      this.deep.memory.values.unset(this);
-      this.value = this.Value(value);
-    } else if (isDeep(value) && isValue(value.value)) {
-      this.deep.memory.values.unset(this);
-      this.deep.memory.values.set(this, value);
-    } else throw new Error('🙅 Value must be isValue(value) or isValue(value.value) or isUndefined(value)');
-  }
+
+  /**
+   * Gets Deep instances that have this instance as a value
+   * @returns Deep instance with .call == set of results.
+   */
   get valued() {
     return this.wrap(this.deep.memory.values.many(this));
   }
-  get type() { return this.deep.memory.types.get(this); }
-  set type(it: Deep | undefined) {
-    const prev = this.type;
-    if (isUndefined(it)) this.deep.memory.types.unset(this);
-    else this.deep.memory.types.set(this, it);
-    if (!this.deep._events) return;
-    let notifiedSelections = new Set();
-    for (let d of this.deep.memory.types.many(this.deep.contains.type)) {
-      if (d?.to?.to && d.to.type == this.deep.contains.Selection && d.to.to.call.has(it)) {
-        d.emit();
-        notifiedSelections.add(d.to);
-      } else if (d.to == it || d.to == prev) {
-        d.emit();
-        notifiedSelections.add(d.from);
-      }
-    }
-    for (let selection of this.deep.memory.types.many(this.deep.contains.Selection)) {
-      if (!notifiedSelections.has(notifiedSelections) && selection.to && selection.to.call.has(this)) selection.emit();
-    }
-  }
+
+  /**
+   * Gets Deep instances that have this instance as a type.
+   * @returns Deep instance with .call == set of results.
+   */
   get typed() { return this.wrap(this.deep.memory.types.many(this)); }
-  get from() { return this.deep.memory.froms.get(this); }
-  set from(it: Deep | undefined) {
-    const prev = this.from;
-    if (isUndefined(it)) this.deep.memory.froms.unset(this);
-    else this.deep.memory.froms.set(this, it);
-    if (!this.deep._events) return;
-    let notifiedSelections = new Set();
-    for (let d of this.deep.memory.types.many(this.deep.contains.from)) {
-      if (d?.to?.to && d.to.type == this.deep.contains.Selection && d.to.to.has(it)) {
-        d.emit();
-        notifiedSelections.add(d.to);
-      } else if (d.to == it || d.to == prev) {
-        d.emit();
-        notifiedSelections.add(d.from);
-      }
-    }
-    for (let selection of this.deep.memory.types.many(this.deep.contains.Selection)) {
-      if (!notifiedSelections.has(notifiedSelections) && selection.to && selection.to.call.has(this)) selection.emit();
-    }
-  }
+
+  /**
+   * Gets Deep instances that have this instance as their 'from' reference
+   * @returns Deep instance with .call == set of results.
+   */
   get out() { return this.wrap(this.deep.memory.froms.many(this)); }
-  get to() { return this.deep.memory.tos.get(this); }
-  set to(it: Deep | undefined) {
-    const prev = this.type;
-    if (isUndefined(it)) this.deep.memory.tos.unset(this);
-    else this.deep.memory.tos.set(this, it);
-    if (!this.deep._events) return;
-    let notifiedSelections = new Set();
-    for (let d of this.deep.memory.types.many(this.deep.contains.to)) {
-      if (d?.to?.to && d.to.type == this.deep.contains.Selection && d.to.to.has(it)) {
-        d.emit();
-        notifiedSelections.add(d.to);
-      } else if (d.to == it || d.to == prev) {
-        d.emit();
-        notifiedSelections.add(d.from);
-      }
-    }
-    for (let selection of this.deep.memory.types.many(this.deep.contains.Selection)) {
-      if (!notifiedSelections.has(notifiedSelections) && selection.to && selection.to.call.has(this)) selection.emit();
-    }
-  }
+
+  /**
+   * Gets Deep instances that have this instance as their 'to' reference
+   * @returns Deep instance with .call == set of results.
+   */
   get in() { return this.wrap(this.deep.memory.tos.many(this)); }
 
+  /**
+   * Checks if this Deep instance is of a specific type
+   * @param check - Type to check against
+   * @returns True if instance is of the specified type
+   */
   typeof(check) {
     if (!check) return false;
     const type = this?.type;
@@ -978,6 +1201,12 @@ export class Deep {
     if (type && type != this) return type.typeof(check);
     return false;
   }
+
+  /**
+   * Gets an array of all types in the type hierarchy up.
+   * @param array - Optional array to append types to
+   * @returns Array of types
+   */
   typeofs(array: any[] = []) {
     const type = this.type;
     if (type && type != this) {
@@ -987,28 +1216,38 @@ export class Deep {
     return array;
   }
 
+  /**
+   * Determines the type of a value based on deep.Isable.
+   * @param value - Value to check
+   * @returns Deep type instance
+   */
   is(value) {
     if (isDeep(value)) return Deep;
     else {
       // TODO orderId must be links not array
-      for (let is of this.deep.contains.orderIs.call) {
+      for (let is of this.deep.orderIs.call) {
         if (is.call(value)) {
           const outs = is.out.call;
           for (let out of outs) {
-            if (out.type === this.deep.contains.Isable) return out.to;
+            if (out.type === this.deep.Isable) return out.to;
           }
         }
       }
-      return this.deep.contains.Unxpected;
+      return this.deep.Unxpected;
     }
   }
 
+  /**
+   * Gets a method implementation for this Deep instance
+   * @param name - Method name
+   * @returns Method implementation
+   */
   _method(name: string): any {
     const Type = this._is(this.call);
     const typedMethods = this.deep.contains[`Method${name}`].typed;
     for (let method of typedMethods.call) {
       for (let out of method.out.call) {
-        if (out.type === this.deep.contains.Compatable && out.to === Type) {
+        if (out.type === this.deep.Compatable && out.to === Type) {
           return method?.call;
         }
       }
@@ -1016,82 +1255,244 @@ export class Deep {
     return this.deep.contains[`Any${name}`].call;
   }
 
+  /**
+   * Checks if this Deep instance has a specific value
+   * @param args - Arguments for has check
+   * @returns Result of has check
+   */
   has(...args) { return this._method('Has')(this, ...args); }
+
+  /**
+   * Gets a value from this Deep instance
+   * @param args - Arguments for get operation
+   * @returns Retrieved value
+   */
   get(...args) { return this._method('Get')(this, ...args); }
+
+  /**
+   * Gets the size of this Deep instance's value
+   * @returns Size value
+   */
   get size() { return this._method('Size')(this); }
+
+  /**
+   * Maps over values in this Deep instance
+   * @param args - Arguments for map operation
+   * @returns Mapped values
+   */
   map(...args) { return this._method('Map')(this, ...args); }
+
+  /**
+   * Adds a value to this Deep instance
+   * @param args - Arguments for add operation
+   * @returns Result of add operation
+   */
   add(...args) { return this._method('Add')(this, ...args); }
+
+  /**
+   * Sets a value in this Deep instance
+   * @param args - Arguments for set operation
+   * @returns Result of set operation
+   */
   set(...args) { return this._method('Set')(this, ...args); }
+
+  /**
+   * Removes a value from this Deep instance
+   * @param args - Arguments for unset operation
+   * @returns Result of unset operation
+   */
   unset(...args) { return this._method('Unset')(this, ...args); }
+
+  /**
+   * Gets the keys of this Deep instance's value
+   * @returns Keys
+   */
   get keys() { return this._method('Keys')(this); }
+
+  /**
+   * Gets the values of this Deep instance
+   * @returns Values
+   */
   get values() { return this._method('Values')(this); }
+
+  /**
+   * Finds a value in this Deep instance
+   * @param args - Arguments for find operation
+   * @returns Found value
+   */
   find(...args) { return this._method('Find')(this, ...args); }
+
+  /**
+   * Filters values in this Deep instance
+   * @param args - Arguments for filter operation
+   * @returns Filtered values
+   */
   filter(...args) { return this._method('Filter')(this, ...args); }
+
+  /**
+   * Executes a callback for each value in this Deep instance
+   * @param args - Arguments for each operation
+   * @returns Result of each operation
+   */
   each(...args) { return this._method('Each')(this, ...args); }
+
+  /**
+   * Sorts values in this Deep instance
+   * @param args - Arguments for sort operation
+   * @returns Sorted values
+   */
   sort(...args) { return this._method('Sort')(this, ...args); }
+
+  /**
+   * Reduces values in this Deep instance
+   * @param args - Arguments for reduce operation
+   * @returns Reduced value
+   */
   reduce(...args) { return this._method('Reduce')(this, ...args); }
+
+  /**
+   * Gets the first value in this Deep instance
+   * @returns First value
+   */
   get first() { return this._method('First')(this); }
+
+  /**
+   * Gets the last value in this Deep instance
+   * @returns Last value
+   */
   get last() { return this._method('Last')(this); }
+
+  /**
+   * Joins values in this Deep instance
+   * @param args - Arguments for join operation
+   * @returns Joined string
+   */
   join(...args) { return this._method('Join')(this, ...args); }
+
+  /**
+   * Converts this Deep instance to a string
+   * @param args - Arguments for toString operation
+   * @returns String representation
+   */
   toString(...args) { return this._method('ToString')(this, ...args); }
+
+  /**
+   * Gets the primitive value of this Deep instance
+   * @param args - Arguments for valueOf operation
+   * @returns Primitive value
+   */
   valueOf(...args) { return this._method('ValueOf')(this, ...args); }
 
+  /**
+   * Expands input into a deep.Exp.
+   * @param input - Plain expression object.
+   * @param selection - Instance of deep.Selection.
+   * @returns Expanded deep.Exp
+   */
   exp(input: any, selection: Deep) {
-    if (isDeep(input) || !isPlainObject(input)) throw new Error(`🙅 Exp must be plain object`);
-    const exp: any = this.deep.contains.Exp.new({});
-    for (let key in this.deep.contains.relations.call) {
-      if (input.hasOwnProperty(key)) {
-        const relation = this.deep.contains[key].new();
-        if (isDeep(input[key])) {
-          exp.call[key] = input[key];
-        } else if (isPlainObject(input[key])) {
-          const nestedSelection = this.selection();
-          this.exp(input[key], nestedSelection);
-          exp.call[key] = nestedSelection;
-          nestedSelection.on(() => relation.emit());
-        } else throw new Error(`🙅 Only Deep or plain objects Exp can be value in exp (${key})!`);
+    if (isDeep(input) || (!isObject(input))) throw new Error(`🙅 Exp must be plain object or array for and operator`);
+    const exp: any = this.deep.Exp.new({});
+    
+    if (isArray(input)) {
+      for (let i in input) {
+        const e = input[i];
+        const nestedSelection = this.selection();
+        const relation = this.deep.Order.new();
+        this.exp(e, nestedSelection);
         relation.from = selection;
-        relation.to = exp.call[key];
-        relation.on(() => selection.emit());
+        relation.to = nestedSelection;
+        relation.value = i;
+        relation.on((e) => selection.emit(e));
+      }
+    } else {
+      for (let key in this.deep.contains.relations.call) {
+        if (input.hasOwnProperty(key)) {
+          const relation = this.deep.contains[key].new();
+          if (isDeep(input[key])) {
+            exp.call[key] = input[key];
+          } else if (isPlainObject(input[key])) {
+            const nestedSelection = this.selection();
+            this.exp(input[key], nestedSelection);
+            exp.call[key] = nestedSelection;
+            nestedSelection.on((e) => relation.emit(e));
+          } else throw new Error(`🙅 Only Deep or plain objects Exp can be value in exp (${key})!`);
+          relation.from = selection;
+          relation.to = exp.call[key];
+          relation.on((e) => selection.emit(e));
+        }
+      }
+      for (let logic of this.deep.Logic.typed) {
+        if (input.hasOwnProperty(logic.name)) {
+          const relation = logic.new();
+          const nestedSelection = this.selection();
+          const value = input[logic.name];
+          this.exp(value, nestedSelection);
+          exp.call[logic.name] = nestedSelection;
+          relation.from = selection;
+          relation.to = exp.call[logic.name];
+          relation.on((e) => selection.emit(e));
+        }
       }
     }
     return exp;
   }
 
+  /**
+   * Creates a new selection. Can be observed by selection.on(event => {}), and recalculated with selection.call();
+   * @returns New selection Deep instance
+   */
   selection() {
     const rels = this.deep.contains.relations.call;
-    const selection = this.deep.contains.Selection.new(() => {
+    const selection = this.deep.Selection.new(() => {
       const relations = selection.out;
       let set;
       for (let relation of relations) {
-        if (relation.typeof(this.deep.contains.Relation)) {
-          if (relation.typeof(this.deep.contains.Many)) {
+        if (relation.typeof(this.deep.Relation)) {
+          if (relation.typeof(this.deep.Many)) {
             const nextSet = new Set([relation.to[rels[relation.type.name].invert]]);
             set = set ? set.intersection(nextSet) : nextSet;
-          } else if (relation.typeof(this.deep.contains.One)) {
-            const nextSet = relation.to.type === this.deep.contains.Selection ?
+          } else if (relation.typeof(this.deep.One)) {
+            const nextSet = relation.to.type === this.deep.Selection ?
             relation.to.call().reduce((result, d) => result.union(d[rels[relation.type.name].invert].call), new Set()) :
             relation.to[rels[relation.type.name].invert].call;
             set = set ? set.intersection(nextSet) : nextSet;
-          } else if (relation.typeof(this.deep.contains.Condition)) {
+          } else if (relation.typeof(this.deep.Condition)) {
             
-          } else if (relation.typeof(this.deep.contains.Logic)) {
-            
+          } else if (relation.typeof(this.deep.Logic)) {
+            if (relation.typeof(this.deep.contains.not)) {
+              const currentSet = set || this.deep.Everything.call;
+              const notSet = relation.to.call().call;
+              set = currentSet.difference(notSet);
+            } else if (relation.typeof(this.deep.contains.and)) {
+              const currentSet = set || this.deep.Everything.call;
+              const arrayOfSets = relation.to.call();
+              set = arrayOfSets.reduce((result, set) => {
+                return result.intersection(set.call);
+              }, currentSet);
+            }
+          } else if (relation.typeof(this.deep.Order)) {
+            const nextSet = relation.to.call();
+            set = set ? (set.push(nextSet), set) : [nextSet];
           }
         }
       }
-      if (!set) set = this.deep.contains.Everything;
+      if (!set) set = this.deep.Everything.call;
       const result = this.wrap(set);
       selection.to = result;
       return selection.to;
     });
     return selection;
   }
+
+  /**
+   * Selects based on input criteria
+   * @param input - Plain expression object.
+   * @returns Instance of deep.Selection
+   */
   select(input: any) {
     let selection;
-    if (isDeep(input) && input.type === this.deep.contains.Selection) selection = input;
+    if (isDeep(input) && input.type === this.deep.Selection) selection = input;
     else if (!isDeep(input) && isObject(input)) {
-      const rels = this.deep.contains.relations.call;
       selection = this.selection();
       const exp = this.exp(input, selection);
       selection.from = exp;
@@ -1101,16 +1502,27 @@ export class Deep {
     return selection;
   }
 
-  _on: OnI;
+  /**
+   * Gets, or creates if not exists the event emitter for this Deep instance
+   * @returns Event emitter instance
+   */
   get on() {
     if (!this._on) this._on = On();
     return this._on;
   }
+
+  /**
+   * Emits an event from this Deep instance
+   * @param args - Event arguments
+   */
   emit(...args) {
     if (this._on) this._on.emit(...args);
   }
 }
 
+/**
+ * Contains class for managing contains relationships
+ */
 export class Contains {
   [key: string]: Deep;
   static _proxy = {

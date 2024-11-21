@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { test } from "node:test";
-import { Deep } from './deep';
+import { Deep, DeepEvent } from './deep';
+import benchmarks from "./benchmark";
 
 test('new Deep()', () => {
   const deep = new Deep();
@@ -532,10 +533,10 @@ test('select type, type.type', () => {
   assert.equal(counter, 4);
   a1.kill();
   assert.equal(selection1.call().size, 1);
-  assert.equal(counter, 5);
+  assert.equal(counter, 7);
   a2.kill();
   assert.equal(selection1.call().size, 0);
-  assert.equal(counter, 6);
+  assert.equal(counter, 10);
 });
 
 test('select from.type to.type', () => {
@@ -603,27 +604,194 @@ test('select result changes', () => {
   assert.equal(outerCounter, 2);
 });
 
-// test('watch symbol', () => {
-//   const deep = new Deep();
-//   const prevAllSize = deep.memory.all.size;
-//   const a = deep.wrap(Symbol());
-// });
+test('not operator', () => {
+  const deep = new Deep();
+  const prevAllSize = deep.memory.all.size;
+  
+  const a = deep.new();
+  const b = deep.new();
+  const c = deep.new();
+  
+  a.type = b;
+  b.type = c;
+  c.type = c;
+  c.to = a;
+  
+  // Проверяем базовый not
+  const notB = deep.select({ not: { type: b } });
+  assert.equal(notB.call().has(a), false);
+  assert.equal(notB.call().has(b), true);
+  assert.equal(notB.call().has(c), true);
+  
+  // Проверяем композицию not с другими условиями
+  const notBAndTypeC = deep.select({
+    not: { type: b },
+    to: a,
+  });
+  assert.equal(notBAndTypeC.call().has(a), false);
+  assert.equal(notBAndTypeC.call().has(b), false);
+  assert.equal(notBAndTypeC.call().has(c), true);
+});
 
-// test('subscribe', () => {
-//   const deep = new Deep();
-//   const A = deep.new();
-//   const B = deep.new();
-//   const potetial1 = deep.subscribe({
-//     type: B,
-//   });
-//   const a = A.new();
-//   const potetial2 = deep.subscribe({
-//     type: B, from: a,
-//   });
-//   const potetial3 = deep.subscribe({
-//     type: B, from: a, to: a,
-//   });
-//   const b = B.new();
-//   b.from = a;
-//   b.to = a;
-// });
+test('and operator', () => {
+  const deep = new Deep();
+  
+  const a = deep.new();
+  const b = deep.new();
+  const c = deep.new();
+  const d = deep.new();
+  
+  a.type = b;
+  b.type = c;
+  c.type = b;
+  c.to = a;
+  d.to = a;
+  
+  // Проверяем and с массивом условий
+  const andMultiple = deep.select({ 
+    and: [
+      { type: b },
+      { to: a }
+    ] 
+  });
+  assert.equal(andMultiple.call().has(a), false);
+  assert.equal(andMultiple.call().has(b), false);
+  assert.equal(andMultiple.call().has(c), true);
+  assert.equal(andMultiple.call().has(d), false);
+  
+  // Проверяем and с тремя условиями
+  const andThree = deep.select({
+    and: [
+      { type: b },
+      { to: a },
+      { type: { type: c } }
+    ]
+  });
+  assert.equal(andThree.call().has(a), false);
+  assert.equal(andThree.call().has(b), false);
+  assert.equal(andThree.call().has(c), true);
+  assert.equal(andThree.call().has(d), false);
+  
+  // Проверяем что and выбрасывает ошибку если не массив
+  assert.throws(() => {
+    deep.select({ and: { type: b } });
+  });
+});
+
+test('association events order', () => {
+  const deep = new Deep();
+  const events: DeepEvent[] = [];
+  
+  // Create an association
+  const association = deep.new();
+  association.on((event) => {
+    events.push(event);
+  });
+
+  // Create nodes to use in the association
+  const from = deep.new();
+  const to = deep.new();
+  const type = deep.new();
+  const value = 'test-value';
+
+  // Change all properties and verify events
+  association.type = type;
+  association.from = from;
+  association.to = to;
+  association.value = value;
+
+  // Verify events occurred in correct order
+  assert.equal(events.length, 4);
+
+  // Check type event
+  assert.equal(events[0].name, 'change');
+  assert.equal(events[0].prev.type, deep);
+  assert.equal(events[0].next.type, type);
+
+  // Check from event
+  assert.equal(events[1].name, 'change');
+  assert.equal(events[1].prev.from, undefined);
+  assert.equal(events[1].next.from, from);
+
+  // Check to event
+  assert.equal(events[2].name, 'change');
+  assert.equal(events[2].prev.to, undefined);
+  assert.equal(events[2].next.to, to);
+
+  // Check value event
+  assert.equal(events[3].name, 'change');
+  assert.equal(events[3].prev.value, undefined);
+  assert.equal(events[3].next.value, value);
+
+  // Change values in reverse order
+  events.length = 0; // Clear events array
+  
+  association.value = 'new-value';
+  association.to = deep.new();
+  association.from = deep.new();
+  association.type = deep.new();
+
+  // Verify events occurred in correct order for changes
+  assert.equal(events.length, 4);
+  
+  // Check value event
+  assert.equal(events[0].name, 'change');
+  assert.equal(events[0].prev.value, value);
+  assert.equal(events[0].next.value, 'new-value');
+
+  // Check to event
+  assert.equal(events[1].name, 'change');
+  assert.equal(events[1].prev.to, to);
+  assert(events[1].next.to instanceof Deep);
+
+  // Check from event
+  assert.equal(events[2].name, 'change');
+  assert.equal(events[2].prev.from, from);
+  assert(events[2].next.from instanceof Deep);
+
+  // Check type event
+  assert.equal(events[3].name, 'change');
+  assert.equal(events[3].prev.type, type);
+  assert(events[3].next.type instanceof Deep);
+
+  // Check that deep reference is present in all events
+  for (const event of events) {
+    assert(event.deep instanceof Deep, 'Event should have reference to Deep instance');
+    assert.equal(event.deep, association, 'Event deep should reference the association');
+  }
+});
+
+test('benchmark', async () => {
+  const deep = new Deep();
+  const { Benchmark, Benchmarked } = benchmarks(deep);
+
+  // Function that creates new Deep instances
+  const testFn = () => {
+    const d = deep.new();
+    const d2 = deep.new();
+    d.from = d2;
+    return d;
+  };
+
+  // Run benchmark
+  const benchmarked = await Benchmark.call(testFn);
+
+  // Check that result is a Deep instance
+  assert(benchmarked.typeof(Benchmarked));
+  
+  // Check that from contains the test function
+  assert(deep.isDeep(benchmarked.from));
+  assert.equal(benchmarked.from.value, testFn);
+
+  // Check that to contains benchmark results
+  assert(deep.isDeep(benchmarked.to));
+  const result = benchmarked.to.value;
+  assert(result.target);
+  assert(typeof result.hz === 'number');
+  assert(result.stats);
+  assert(result.times);
+
+  // Check that value contains hz
+  assert(typeof benchmarked.call, 'number');
+  assert.equal(benchmarked.value, result.hz);
+});

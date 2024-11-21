@@ -4,8 +4,7 @@ import React from 'react';
 import Head from 'next/head';
 
 import pckg from '../../package.json';
-import { Graph, GraphIntelligence, GraphRelayout, GraphSearch } from '../components/graph';
-import Test from '../components/test';
+import ECharts from '../components/echarts';
 
 export default function Page() {
   return <>
@@ -20,11 +19,7 @@ export default function Page() {
       minHeight: '100vh',
       position: 'relative',
     }}>
-      <Graph>
-        <GraphSearch/>
-        <GraphIntelligence/>
-        <GraphRelayout/>
-      </Graph>
+      <ECharts/>
     </Box>
   </>;
 }

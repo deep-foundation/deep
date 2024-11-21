@@ -23,7 +23,11 @@
       "declaration": true,
       "outDir": "dist",
       "rootDir": "./src",
-      "downlevelIteration": true
+      "downlevelIteration": true,
+      "baseUrl": ".",
+      "paths": {
+        "@/*": ["./src/*"]
+      }
   },
   "exclude": [
       "./src/app",
@@ -41,6 +45,7 @@
       "./postcss.config.mjs"
   ],
   "include": [
-      "src/**/*"
+      "src/**/*",
+      "src/@types/**/*.d.ts"
   ]
 }

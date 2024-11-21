@@ -2,6 +2,7 @@
 
 import React, { useMemo, createContext, useContext, useRef, useEffect, useState } from "react";
 import { Deep } from "./deep";
+import { useDebounceCallback } from '@react-hook/debounce';
 
 const deep = new Deep();
 
@@ -28,17 +29,25 @@ export function DeepProvider({
   </DeepContext.Provider>;
 }
 
-export function useSelect(exp): Deep[] {
+let i = 0;
+export function useSelect(exp): any[] {
   const deep = useDeep();
-  const selection = useMemo(() => {
+  const first = useMemo(() => {
     const selection = deep.select(exp);
-    selection.on(() => {
-      setResult(Array.from(selection.call()));
-    });
-    return selection;
+    const array = Array.from(selection.to);
+    selection.kill();
+    return array;
   }, []);
-  const [result, setResult] = useState(useMemo(() => Array.from(selection.to), []));
+  const [result, setResult] = useState(first);
+  const updateResults = useDebounceCallback((selection) => {
+    setResult(Array.from(selection.call()));
+  }, 300);
   useEffect(() => {
+    let ii = i++;
+    const selection = deep.select(exp);
+    selection.on((event) => {
+      if (event?.deep?.type != deep.Selection) updateResults(selection);
+    });
     return () => selection.kill();
   }, []);
   return result;

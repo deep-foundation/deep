@@ -1,0 +1,8 @@
+{
+  "entryPoints": ["./src/deep.ts"],
+  "out": "docs",
+  "json": "docs/documentation.json",
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "excludeExternals": true
+}
