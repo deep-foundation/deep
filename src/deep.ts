@@ -1078,6 +1078,18 @@ export class Deep {
 
 
   /**
+   * Gets a set of all unique Deep instances that have types from this Deep structure
+   * @returns Deep instance with .call == set of unique typed instances
+   */
+  get typeds() {
+    const set = new Set<Deep>();
+    for (const deep of this) {
+      if (deep.type) set.add(deep);
+    }
+    return this.wrap(set);
+  }
+
+  /**
    * Determines the Deep type of a given value
    * @param value - Value to check type of
    * @returns Deep instance representing the type, instance of this.deep.contains.Value
@@ -1597,6 +1609,73 @@ export class Deep {
       }
     }
     return this.wrap(result);
+  }
+
+  /**
+   * Gets a set of all unique types from this Deep structure
+   * @returns Deep instance with .call == set of unique types
+   */
+  get types() {
+    const set = new Set<Deep>();
+    for (const deep of this) {
+      const type = deep.type;
+      if (type) set.add(type);
+    }
+    return this.wrap(set);
+  }
+
+  /**
+   * Gets a set of all unique from references from this Deep structure
+   * @returns Deep instance with .call == set of unique from references
+   */
+  get froms() {
+    const set = new Set<Deep>();
+    for (const deep of this) {
+      const from = deep.from;
+      if (from) set.add(from);
+    }
+    return this.wrap(set);
+  }
+
+  /**
+   * Gets a set of all unique to references from this Deep structure
+   * @returns Deep instance with .call == set of unique to references
+   */
+  get tos() {
+    const set = new Set<Deep>();
+    for (const deep of this) {
+      const to = deep.to;
+      if (to) set.add(to);
+    }
+    return this.wrap(set);
+  }
+
+  /**
+   * Gets a set of all unique out references from this Deep structure
+   * @returns Deep instance with .call == set of unique out references
+   */
+  get outs() {
+    const set = new Set<Deep>();
+    for (const deep of this) {
+      for (const out of deep.out) {
+        set.add(out);
+      }
+    }
+    return this.wrap(set);
+  }
+
+  /**
+   * Gets a set of all unique in references from this Deep structure
+   * @returns Deep instance with .call == set of unique in references
+   */
+  get ins() {
+    const set = new Set<Deep>();
+    for (const deep of this) {
+      for (const inRef of deep.in) {
+        set.add(inRef);
+      }
+    }
+    return this.wrap(set);
   }
 }
 

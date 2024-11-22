@@ -178,9 +178,9 @@ All methods work uniformly across different data types, treating single items as
 - `toString()` → string - Returns string representation
 - `valueOf()` → any - Returns primitive value if possible
 
-### Link Operations
+### Operations
 
-#### Query Links
+#### Select
 - `select(expression)` → Selection - Creates a reactive selection of links based on expression
   - Expression can be:
     - Direct (One to one) relations:
@@ -233,10 +233,65 @@ All methods work uniformly across different data types, treating single items as
     complexQuery.call() // returns Deep instance with multiple results
     ```
 
-#### Modify Links (Coming Soon)
+#### Modify (Coming Soon)
 - `insert({ type, from, to, value })` → Deep - Creates new link
 - `update({ type?, from?, to?, value? })` → Deep - Updates existing link
 - `delete()` → boolean - Removes link
+
+### Relations
+
+Relations in Deep allow you to create complex interconnected structures. Here's an example with types A, B, C and their instances:
+
+```typescript
+// Define types
+const A = deep.new();
+const B = deep.new();
+const C = deep.new();
+
+// Create instances
+const a1 = deep.new();
+const b1 = deep.new();
+const c1 = deep.new();
+
+// Set types for instances
+a1.type = A;  // a1 is of type A
+b1.type = B;  // b1 is of type B
+c1.type = C;  // c1 is of type C
+
+// Create relationships
+a1.from = b1;  // a1 points from b1
+b1.to = c1;    // b1 points to c1
+c1.from = a1;  // c1 points from a1
+
+// Direct traversals
+a1.type;   // → A (get type of a1)
+a1.from;   // → b1 (get source node)
+a1.to;     // → undefined (no target node)
+a1.typed;  // → [a1] (get all instances of same type)
+a1.out;    // → [c1] (get all outgoing connections)
+a1.in;     // → [b1] (get all incoming connections)
+
+// Multiple traversals
+// You can chain traversals to navigate through the graph
+a1.out;         // → [c1] (get outgoing connections)
+a1.out.tos;     // → [] (get 'to' nodes of outgoing connections)
+a1.out.froms;   // → [a1] (get 'from' nodes of outgoing connections)
+a1.out.types;   // → [C] (get types of outgoing connections)
+
+// Complex traversal example
+// Get all nodes that are targets of our outgoing connections
+// and then get their outgoing connections
+a1.out.call.forEach(node => {
+  console.log(node.out.call); // show outgoing connections of each node
+});
+```
+
+In this example:
+- We have three types: A, B, C
+- Instances a1, b1, c1 form a triangle of relationships
+- We can traverse these relationships using direct properties (type, from, to, etc.)
+- We can perform multiple traversals by chaining operations
+- Each traversal returns a Deep instance that can be further queried
 
 ### Uniform Data Handling
 

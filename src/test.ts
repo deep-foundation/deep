@@ -339,7 +339,7 @@ test(`Number methods`, () => {
 test(`BigInt methods`, () => {
   const deep = new Deep();
   const prevAllSize = deep.memory.all.size;
-  const value = BigInt(123); 
+  const value = BigInt(123);
   const d = deep.new();
   d.value = value;
   assert.equal(d.has(value), true);
@@ -855,4 +855,73 @@ test('inof and outof with multiple types', () => {
   const allOut = a.out;
   assert(allOut instanceof Deep);
   assert.equal(allOut.size, 5);
+});
+
+test('collection getters (types, froms, tos, typeds, outs, ins)', () => {
+  const deep = new Deep();
+
+  // Create test instances
+  const Type1 = deep.new();
+  const Type2 = deep.new();
+  const instance1 = deep.new();
+  const instance2 = deep.new();
+  const instance3 = deep.new();
+
+  // Set up relationships
+  instance1.type = Type1;
+  instance2.type = Type2;
+  instance3.type = Type1;
+
+  instance1.from = instance2;
+  instance2.to = instance3;
+  instance3.from = instance1;
+
+  // Create a collection to test the getters
+  const collection = deep.wrap([instance1, instance2, instance3]);
+
+  // Test types getter
+  const types = collection.types;
+  assert(types.call instanceof Set);
+  assert(types.call.has(Type1));
+  assert(types.call.has(Type2));
+  assert.equal(types.call.size, 2);
+
+  // Test froms getter
+  const froms = collection.froms;
+  assert(froms.call instanceof Set);
+  assert(froms.call.has(instance2));
+  assert(froms.call.has(instance1));
+  assert.equal(froms.call.size, 2);
+
+  // Test tos getter
+  const tos = collection.tos;
+  assert(tos.call instanceof Set);
+  assert(tos.call.has(instance3));
+  assert.equal(tos.call.size, 1);
+
+  // Test typeds getter
+  const typeds = collection.typeds;
+  assert(typeds.call instanceof Set);
+  assert(typeds.call.has(instance1));
+  assert(typeds.call.has(instance2));
+  assert(typeds.call.has(instance3));
+  assert.equal(typeds.call.size, 3);
+
+  // Test outs getter
+  const outs = collection.outs;
+  assert(outs.call instanceof Set);
+  for (const deep of collection) {
+    for (const out of deep.out) {
+      assert(outs.call.has(out));
+    }
+  }
+
+  // Test ins getter
+  const ins = collection.ins;
+  assert(ins.call instanceof Set);
+  for (const deep of collection) {
+    for (const inRef of deep.in) {
+      assert(ins.call.has(inRef));
+    }
+  }
 });

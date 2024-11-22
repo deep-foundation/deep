@@ -74,3 +74,7 @@ yarn build
    - Don't create function variables for one-time use (e.g. in onChange)
    - Use inline functions for event handlers
    - Avoid unnecessary abstractions
+
+2. Follow Deep relationship naming conventions:
+   - Use PascalCase (capital first letter) for Type relationships (e.g., `Type`, `Contains`, `Value`)
+   - Use camelCase (lowercase first letter) for instance relationships (e.g., `type`, `from`, `to`, `value`)
