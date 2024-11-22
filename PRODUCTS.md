@@ -1,5 +1,7 @@
 # Deep Product Strategy & Solutions
 
+> [Investment Documentation](https://github.com/deep-foundation/deep/wiki)
+
 > Universal solution for working with any meaning, transformed into a suite of practical products
 
 ## 🎯 Vision
@@ -8,7 +10,7 @@ Deep aims to revolutionize how we interact with information by creating a unifie
 
 ## 🌟 Product Line
 
-### 1. 🎯 [Deep Core](PRODUCTS/core.md)
+### 1. 🎯 Deep Core
 *Universal lightweight meaning agent*
 - Standalone TypeScript/JavaScript library
 - Embeddable in any application
@@ -18,7 +20,7 @@ Deep aims to revolutionize how we interact with information by creating a unifie
 - **Target**: Developers
 - **Model**: Open Source (Public Domain)
 
-### 2. 🌐 [Deep Browser Extension](PRODUCTS/browser-extension.md)
+### 2. 🌐 Deep Browser Extension
 *Your gateway to semantic web browsing*
 - Collects browsing history and actions
 - Injects Deep components into web pages
@@ -27,7 +29,7 @@ Deep aims to revolutionize how we interact with information by creating a unifie
 - **Target**: Individual users
 - **Model**: Freemium
 
-### 3. 💻 [Deep VSCode Extension](PRODUCTS/vscode-extension.md)
+### 3. 💻 Deep VSCode Extension
 *Native semantic code navigation and editing*
 - Deep integration in VSCode's left panel
 - Semantic relationship tree navigation
@@ -39,7 +41,7 @@ Deep aims to revolutionize how we interact with information by creating a unifie
 - **Target**: Developers
 - **Model**: Free Open Source
 
-### 4. 🤖 [Deep Telegram Bot](PRODUCTS/telegram-bot.md)
+### 4. 🤖 Deep Telegram Bot
 *Interactive visualization and AI assistant*
 - Telegram bot with expandable React webapp
 - On-demand data visualization
@@ -62,7 +64,7 @@ Deep aims to revolutionize how we interact with information by creating a unifie
 - **Target**: Telegram users
 - **Model**: Usage-based (AI requests)
 
-### 5. 📱 [Deep Mobile](PRODUCTS/mobile.md)
+### 5. 📱 Deep Mobile
 *Your personal semantic companion*
 - Voice event capture and processing
 - Phone call and messenger integration
@@ -71,7 +73,7 @@ Deep aims to revolutionize how we interact with information by creating a unifie
 - **Target**: Individual users
 - **Model**: Freemium + Premium features
 
-### 6. 🖥️ [Deep Desktop](PRODUCTS/desktop.md)
+### 6. 🖥️ Deep Desktop
 *Your computer environment semantic controller*
 - RobotJS integration for system control
 - File system synchronization and monitoring
@@ -82,7 +84,7 @@ Deep aims to revolutionize how we interact with information by creating a unifie
 - **Target**: Power users
 - **Model**: Freemium + Premium features
 
-### 7. 🐧 [Deep OS](PRODUCTS/os.md)
+### 7. 🐧 Deep OS
 *Standalone semantic operating environment*
 - Linux-based bootable system
 - Run from USB drive or disk
@@ -99,7 +101,7 @@ Deep aims to revolutionize how we interact with information by creating a unifie
 - **Target**: Enterprise & Specialized Solutions
 - **Model**: Custom Licensing
 
-### 8. 📦 [Deep Box](PRODUCTS/box.md)
+### 8. 📦 Deep Box
 *Your personal semantic server*
 - 30x30 compact design
 - 20TB storage
@@ -109,7 +111,7 @@ Deep aims to revolutionize how we interact with information by creating a unifie
 - **Target**: Privacy-conscious users
 - **Model**: Hardware sales + Optional subscription
 
-### 9. 🏢 [Deep Enterprise](PRODUCTS/enterprise.md)
+### 9. 🏢 Deep Enterprise
 *Your organization's semantic memory*
 - On-premises or cloud deployment
 - Corporate AI assistant integration
@@ -118,7 +120,7 @@ Deep aims to revolutionize how we interact with information by creating a unifie
 - **Target**: Organizations
 - **Model**: Enterprise licensing
 
-### 10. 🤖 [Deep Skills Platform](PRODUCTS/skills-platform.md)
+### 10. 🤖 Deep Skills Platform
 *Your universal bot & automation platform*
 - Visual skill constructor
 - Multi-channel bot deployment
@@ -127,7 +129,7 @@ Deep aims to revolutionize how we interact with information by creating a unifie
 - **Target**: Businesses
 - **Model**: Usage-based + Subscription
 
-### 11. 🔗 [Deep Contract](PRODUCTS/contract.md)
+### 11. 🔗 Deep Contract
 *Decentralized semantic marketplace*
 - Smart contract for associative links (NEUTRON standard)
 - Monetization features:
@@ -156,7 +158,7 @@ Deep aims to revolutionize how we interact with information by creating a unifie
 - **Target**: Web3 developers & Content creators
 - **Model**: Transaction fees
 
-### 12. 🌐 [Deep Agent Network](PRODUCTS/agent-network.md)
+### 12. 🌐 Deep Agent Network
 *Your autonomous agent infrastructure*
 - JWT-secured agent communication
 - Partial memory synchronization
@@ -165,7 +167,7 @@ Deep aims to revolutionize how we interact with information by creating a unifie
 - **Target**: Developers
 - **Model**: Usage-based
 
-### 13. 🥽 [Deep VR](PRODUCTS/vr.md)
+### 13. 🥽 Deep VR
 *Your semantic space in virtual reality*
 - AFrame-based semantic visualization
 - Neural network-driven spatial organization

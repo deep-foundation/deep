@@ -1051,6 +1051,33 @@ export class Deep {
   }
 
   /**
+   * Gets Deep instances that have this instance as a value
+   * @returns Deep instance with .call == set of results.
+   */
+  get valued() {
+    return this.wrap(this.deep.memory.values.many(this));
+  }
+
+  /**
+   * Gets Deep instances that have this instance as a type.
+   * @returns Deep instance with .call == set of results.
+   */
+  get typed() { return this.wrap(this.deep.memory.types.many(this)); }
+
+  /**
+   * Gets Deep instances that have this instance as their 'from' reference
+   * @returns Deep instance with .call == set of results.
+   */
+  get out() { return this.wrap(this.deep.memory.froms.many(this)); }
+
+  /**
+   * Gets Deep instances that have this instance as their 'to' reference
+   * @returns Deep instance with .call == set of results.
+   */
+  get in() { return this.wrap(this.deep.memory.tos.many(this)); }
+
+
+  /**
    * Determines the Deep type of a given value
    * @param value - Value to check type of
    * @returns Deep instance representing the type, instance of this.deep.contains.Value
@@ -1212,33 +1239,6 @@ export class Deep {
       }
     }
   }
-
-  /**
-   * Gets Deep instances that have this instance as a value
-   * @returns Deep instance with .call == set of results.
-   */
-  get valued() {
-    return this.wrap(this.deep.memory.values.many(this));
-  }
-
-  /**
-   * Gets Deep instances that have this instance as a type.
-   * @returns Deep instance with .call == set of results.
-   */
-  get typed() { return this.wrap(this.deep.memory.types.many(this)); }
-
-  /**
-   * Gets Deep instances that have this instance as their 'from' reference
-   * @returns Deep instance with .call == set of results.
-   */
-  get out() { return this.wrap(this.deep.memory.froms.many(this)); }
-
-  /**
-   * Gets Deep instances that have this instance as their 'to' reference
-   * @returns Deep instance with .call == set of results.
-   */
-  get in() { return this.wrap(this.deep.memory.tos.many(this)); }
-
   /**
    * Checks if this Deep instance is of a specific type
    * @param check - Type to check against
