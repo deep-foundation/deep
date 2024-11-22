@@ -877,51 +877,103 @@ test('collection getters (types, froms, tos, typeds, outs, ins)', () => {
   instance3.from = instance1;
 
   // Create a collection to test the getters
-  const collection = deep.wrap([instance1, instance2, instance3]);
+  const instances = deep.wrap([instance1, instance2, instance3]);
+  const typing = deep.wrap([Type1, Type2]);
 
   // Test types getter
-  const types = collection.types;
-  assert(types.call instanceof Set);
-  assert(types.call.has(Type1));
-  assert(types.call.has(Type2));
-  assert.equal(types.call.size, 2);
+  const types = instances.types;
+  assert(types.has(Type1));
+  assert(types.has(Type2));
+  assert.equal(types.size, 2);
 
   // Test froms getter
-  const froms = collection.froms;
+  const froms = instances.froms;
   assert(froms.call instanceof Set);
-  assert(froms.call.has(instance2));
-  assert(froms.call.has(instance1));
-  assert.equal(froms.call.size, 2);
+  assert(froms.has(instance2));
+  assert(froms.has(instance1));
+  assert.equal(froms.size, 2);
 
   // Test tos getter
-  const tos = collection.tos;
+  const tos = instances.tos;
   assert(tos.call instanceof Set);
-  assert(tos.call.has(instance3));
-  assert.equal(tos.call.size, 1);
+  assert(tos.has(instance3));
+  assert.equal(tos.size, 1);
 
   // Test typeds getter
-  const typeds = collection.typeds;
+  const typeds = typing.typeds;
   assert(typeds.call instanceof Set);
-  assert(typeds.call.has(instance1));
-  assert(typeds.call.has(instance2));
-  assert(typeds.call.has(instance3));
-  assert.equal(typeds.call.size, 3);
+  assert(typeds.has(instance1));
+  assert(typeds.has(instance2));
+  assert(typeds.has(instance3));
+  assert.equal(typeds.size, 3);
 
   // Test outs getter
-  const outs = collection.outs;
+  const outs = instances.outs;
   assert(outs.call instanceof Set);
-  for (const deep of collection) {
+  for (const deep of instances) {
     for (const out of deep.out) {
-      assert(outs.call.has(out));
+      assert(outs.has(out));
     }
   }
 
   // Test ins getter
-  const ins = collection.ins;
+  const ins = instances.ins;
   assert(ins.call instanceof Set);
-  for (const deep of collection) {
+  for (const deep of instances) {
     for (const inRef of deep.in) {
-      assert(ins.call.has(inRef));
+      assert(ins.has(inRef));
     }
   }
+});
+
+test('pack function', () => {
+  const deep = new Deep();
+
+  // Create test instances
+  const Type1 = deep.new();
+  const instance1 = Type1.new();
+  const instance2 = Type1.new();
+  const instance3 = Type1.new();
+
+  instance1.from = instance2;
+  instance2.to = instance3;
+  instance3.value = { test: 'value1' };
+  instance1.value = { test: 'value2' };
+
+  // Create a collection to test pack
+  const selection = deep.select({ type: Type1 });
+
+  // Test packing
+  const packed = selection.pack;
+
+  // Verify structure
+  assert(Array.isArray(packed.deep));
+  assert(Array.isArray(packed.values));
+  assert.equal(packed.deep.length, 3);
+  assert.equal(packed.values.length, 2);
+
+  // Verify each packed item
+  const packedInstance1 = packed.deep.find(d => d.id === instance1.id());
+  const packedInstance2 = packed.deep.find(d => d.id === instance2.id());
+  const packedInstance3 = packed.deep.find(d => d.id === instance3.id());
+
+  assert(packedInstance1);
+  assert(packedInstance2);
+  assert(packedInstance3);
+
+  // Check relationships
+  assert.equal(packedInstance1?.type, Type1.id());
+  assert.equal(packedInstance1?.from, instance2.id());
+  assert.equal(packedInstance2?.type, Type1.id());
+  assert.equal(packedInstance2?.to, instance3.id());
+  assert.equal(packedInstance3?.type, Type1.id());
+
+  // Check values
+  assert(packed.values.some(v => v.test === 'value1'));
+  assert(packed.values.some(v => v.test === 'value2'));
+
+  // Test error cases
+  assert.throws(() => {
+    deep.pack;
+  });
 });

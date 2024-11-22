@@ -152,6 +152,17 @@ export interface DeepEvent {
   };
 }
 
+interface Pack {
+  deep: Array<{
+    id: string;
+    type?: string;
+    from?: string;
+    to?: string;
+    value?: number;
+  }>;
+  values: any[];
+}
+
 export class Deep {
   [key: string]: any;
 
@@ -1078,18 +1089,6 @@ export class Deep {
 
 
   /**
-   * Gets a set of all unique Deep instances that have types from this Deep structure
-   * @returns Deep instance with .call == set of unique typed instances
-   */
-  get typeds() {
-    const set = new Set<Deep>();
-    for (const deep of this) {
-      if (deep.type) set.add(deep);
-    }
-    return this.wrap(set);
-  }
-
-  /**
    * Determines the Deep type of a given value
    * @param value - Value to check type of
    * @returns Deep instance representing the type, instance of this.deep.contains.Value
@@ -1651,14 +1650,28 @@ export class Deep {
   }
 
   /**
+   * Gets a set of all unique typed references from this Deep structure
+   * @returns Deep instance with .call == set of unique out references
+   */
+  get typeds() {
+    const set = new Set<Deep>();
+    for (const deep of this) {
+      for (const s of deep.typed) {
+        set.add(s);
+      }
+    }
+    return this.wrap(set);
+  }
+
+  /**
    * Gets a set of all unique out references from this Deep structure
    * @returns Deep instance with .call == set of unique out references
    */
   get outs() {
     const set = new Set<Deep>();
     for (const deep of this) {
-      for (const out of deep.out) {
-        set.add(out);
+      for (const s of deep.out) {
+        set.add(s);
       }
     }
     return this.wrap(set);
@@ -1671,11 +1684,60 @@ export class Deep {
   get ins() {
     const set = new Set<Deep>();
     for (const deep of this) {
-      for (const inRef of deep.in) {
-        set.add(inRef);
+      for (const s of deep.in) {
+        set.add(s);
       }
     }
     return this.wrap(set);
+  }
+
+  /**
+   * Packs a Selection into a serializable format
+   * @returns An object containing serialized deep links and their values
+   * @throws Error if input is not a Deep instance or Selection
+   */
+  get pack(): Pack {
+    if (!isDeep(this) || !(this as Deep).typeof(this.deep.Selection)) {
+      throw new Error('pack() requires a Deep instance or Selection');
+    }
+
+    const result: Pack = {
+      deep: [],
+      values: []
+    };
+
+    // Process each Deep instance in the selection
+    for (const item of this.to) {
+      const link: Pack['deep'][0] = {
+        id: item.id()
+      };
+
+      // Add type if exists
+      if (item.type) {
+        link.type = item.type.id();
+      }
+
+      // Add from if exists
+      if (item.from) {
+        link.from = item.from.id();
+      }
+
+      // Add to if exists
+      if (item.to) {
+        link.to = item.to.id();
+      }
+
+      // Handle value if exists
+      const call = item.call;
+      if (call !== undefined) {
+        let valueIndex = result.values.findIndex(v => v === call);
+        if (valueIndex < 0) valueIndex = result.values.push(call);
+        link.value = valueIndex;
+      }
+
+      result.deep.push(link);
+    }
+    return result;
   }
 }
 
