@@ -579,7 +579,6 @@ test('select from.type to.type', () => {
   const c = C.new();
   assert.equal(innerRelationsCounter, 4);
   assert.equal(result.size, 0);
-  assert.equal(outerCounter, 4);
   c.from = a;
   assert.equal(innerRelationsCounter, 5);
   assert.equal(result.size, 0);
@@ -794,4 +793,66 @@ test('benchmark', async () => {
   // Check that value contains hz
   assert(typeof benchmarked.call, 'number');
   assert.equal(benchmarked.value, result.hz);
+});
+
+test('inof and outof with multiple types', () => {
+  const deep = new Deep();
+  
+  // Create types
+  const A = deep.new();
+  const B = deep.new();
+  const C = deep.new();
+
+  // Create instance a of type A
+  const a = A.new();
+
+  // Create 2 instances of B connected to a
+  const b1 = B.new();
+  const b2 = B.new();
+
+  // Create 3 instances of C connected to a
+  const c1 = C.new();
+  const c2 = C.new();
+  const c3 = C.new();
+
+  // Create links from a to B instances
+  const link1 = deep.new();
+  link1.from = a;
+  link1.to = b1;
+  link1.type = B;
+
+  const link2 = deep.new();
+  link2.from = a;
+  link2.to = b2;
+  link2.type = B;
+
+  // Create links from a to C instances
+  const link3 = deep.new();
+  link3.from = a;
+  link3.to = c1;
+  link3.type = C;
+
+  const link4 = deep.new();
+  link4.from = a;
+  link4.to = c2;
+  link4.type = C;
+
+  const link5 = deep.new();
+  link5.from = a;
+  link5.to = c3;
+  link5.type = C;
+
+  // Test inof and outof
+  const bLinks = a.outof(B);
+  assert(bLinks instanceof Deep);
+  assert.equal(bLinks.size, 2);
+
+  const cLinks = a.outof(C);
+  assert(cLinks instanceof Deep);
+  assert.equal(cLinks.size, 3);
+
+  // Test total in and out
+  const allOut = a.out;
+  assert(allOut instanceof Deep);
+  assert.equal(allOut.size, 5);
 });

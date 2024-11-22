@@ -41,9 +41,22 @@ let isPlainObject = it => it?.constructor === Object;
 let isDeep = it => typeof(it) === 'object' && it instanceof Deep;
 let isValue = it => !isDeep(it) && !isUndefined(it);
 
-class Index {
+/**
+ * Index class provides a dual-indexing system for managing relationships between values.
+ * It maintains both one-to-one and one-to-many mappings between keys and values.
+ */
+export class Index {
+  /** Internal map for one-to-many relationships */
   _many = new Map<any, Set<any>>;
+  
+  /** Internal map for one-to-one relationships */
   _one = new Map<any, any>;
+
+  /**
+   * Retrieves or creates a Set for storing multiple values associated with a key
+   * @param key The key to get or create a Set for
+   * @returns A Set containing all values associated with the key
+   */
   many(key: any): Set<any> {
     let set = this._many.get(key);
     if (!set) {
@@ -51,6 +64,13 @@ class Index {
     }
     return set;
   }
+
+  /**
+   * Associates a key with a value and maintains the reverse mapping
+   * @param key The key to associate
+   * @param value The value to associate with the key
+   * @returns The value that was set
+   */
   set(key: any, value: any): any {
     this._one.set(key, value);
     const set = this._many.get(value) || new Set();
@@ -58,9 +78,20 @@ class Index {
     set.add(key);
     return value;
   }
+
+  /**
+   * Retrieves the value associated with a key
+   * @param key The key to look up
+   * @returns The value associated with the key
+   */
   get(key: any): any {
     return this._one.get(key);
   }
+
+  /**
+   * Removes the association between a key and its value
+   * @param key The key to remove
+   */
   unset(key) {
     const value = this._one.get(key);
     this._one.delete(key);
@@ -69,12 +100,30 @@ class Index {
   }
 }
 
-class Memory {
+/**
+ * Memory class manages the internal state and relationships of Deep instances.
+ * It maintains indices for values, types, and relationships between nodes.
+ */
+export class Memory {
+  /** Index for storing and retrieving values associated with Deep instances */
   values: Index;
+  
+  /** Index for managing type relationships between Deep instances */
   types: Index;
+  
+  /** Index for tracking outgoing relationships (from -> to) */
   froms: Index;
+  
+  /** Index for tracking incoming relationships (to -> from) */
   tos: Index;
+  
+  /** Set containing all Deep instances in memory */
   all: Set<any>;
+
+  /**
+   * Initializes a new Memory instance with empty indices for values, types,
+   * and relationships. Creates a new storage space for Deep instances.
+   */
   constructor() {
     this.values = this.values || new Index();
     this.types = this.types || new Index();
@@ -128,9 +177,10 @@ export class Deep {
    * Creates a new Deep instance with the given deep as the root agent Deep with memory index.
    * @param deep - Parent Deep instance
    */
-  constructor(deep: Deep = this) {
-    this.deep = deep;
-    if (this == deep) {
+  constructor(deep?: Deep) {
+    this.deep = deep || this;
+    if (this == this.deep) {
+      const deep = this.deep;
       deep.memory = new Memory();
 
       const _insert = (type?: any, from?: any, to?: any, value?: any) => {
@@ -358,7 +408,7 @@ export class Deep {
       deep.contains.AnySort = deep.contains.MethodSort.new((current, callback: (a: any, b: any) => boolean): any => [current.callback]);
       _insert(deep.contains.Compatable, deep.contains.AnySort, deep.contains.Any);
 
-      deep.contains.AnyReduce = deep.contains.MethodReduce.new((current, callback: (accumulator?: any, currentValue?: any) => any, initialValue?: any): any => callback(initialValue, current.call));
+      deep.contains.AnyReduce = deep.contains.MethodReduce.new((current, callback: (accumulator: any, currentValue?: any) => any, initialValue?: any): any => callback(initialValue, current.call));
       _insert(deep.contains.Compatable, deep.contains.AnyReduce, deep.contains.Any);
 
       deep.contains.AnyFirst = deep.contains.MethodFirst.new((current): any => current.call);
@@ -1517,6 +1567,36 @@ export class Deep {
    */
   emit(...args) {
     if (this._on) this._on.emit(...args);
+  }
+
+  /**
+   * Returns a Deep instance containing a Set of nodes that have incoming links of the specified type
+   * @param type - The type of incoming links to filter by
+   * @returns Deep instance wrapping a Set of nodes with incoming links of the specified type
+   */
+  inof(type: Deep): Deep {
+    const result = new Set<Deep>();
+    for (const link of this.in.call) {
+      if (link.type === type) {
+        result.add(link.from);
+      }
+    }
+    return this.wrap(result);
+  }
+
+  /**
+   * Returns a Deep instance containing a Set of nodes that have outgoing links of the specified type
+   * @param type - The type of outgoing links to filter by
+   * @returns Deep instance wrapping a Set of nodes with outgoing links of the specified type
+   */
+  outof(type: Deep): Deep {
+    const result = new Set<Deep>();
+    for (const link of this.out.call) {
+      if (link.type === type) {
+        result.add(link.to);
+      }
+    }
+    return this.wrap(result);
   }
 }
 

@@ -36,10 +36,15 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# husky
+.husky
+
 # deep
 *.deep.json
 /server
 /client
 .temp
 ./bin
-./docs
+typedoc
+wiki
+.obsidian

@@ -6,208 +6,233 @@ interface TypeDocJson {
   name: string;
   kind: number;
   kindString?: string;
+  variant?: string;
+  flags?: any;
   children?: TypeDocJson[];
   signatures?: TypeDocJson[];
+  parameters?: TypeDocJson[];
   type?: any;
-  sources?: any[];
-  flags?: any;
   comment?: {
     shortText?: string;
     text?: string;
     returns?: string;
+    summary?: Array<{
+      kind: string;
+      text: string;
+    }>;
     tags?: Array<{
       tag: string;
       text: string;
     }>;
   };
-  parameters?: TypeDocJson[];
-  getSignature?: TypeDocJson[];
-  setSignature?: TypeDocJson[];
 }
 
-// Путь к JSON файлу с документацией
-const docsJsonPath = path.join(__dirname, '../docs/documentation.json');
-// Путь к итоговому API.md
-const apiMdPath = path.join(__dirname, '../API.md');
-
-// Проверяем существование JSON файла
-if (!fs.existsSync(docsJsonPath)) {
-  console.error('Documentation JSON not found. Please run TypeDoc first.');
-  process.exit(1);
-}
-
-// Функция для форматирования типа
-function formatType(type: any): string {
-  if (!type) return 'any';
+function getCommentText(comment?: TypeDocJson['comment']): string {
+  if (!comment) return '';
   
-  if (type.type === 'reference') {
-    return `\`${type.name}\``;
-  } else if (type.type === 'intrinsic') {
-    return `\`${type.name}\``;
-  } else if (type.type === 'union') {
-    return type.types.map(formatType).join(' | ');
-  } else if (type.type === 'array') {
-    return `${formatType(type.elementType)}[]`;
-  } else if (type.type === 'reflection') {
-    return '`object`';
+  let text = '';
+  
+  if (comment.summary) {
+    text += comment.summary.map(part => part.text).join('') + '\n\n';
   }
   
-  return `\`${type.type || 'any'}\``;
-}
-
-// Функция для форматирования параметров
-function formatParameters(parameters?: TypeDocJson[]): string {
-  if (!parameters || parameters.length === 0) return '';
-  
-  let result = '\n\n#### Parameters\n\n';
-  result += '| Name | Type | Description |\n';
-  result += '|------|------|-------------|\n';
-  
-  for (const param of parameters) {
-    const type = param.type ? formatType(param.type) : 'any';
-    const desc = param.comment?.shortText || '';
-    result += `| \`${param.name}\` | ${type} | ${desc} |\n`;
+  if (comment.shortText) {
+    text += comment.shortText + '\n\n';
   }
   
-  return result;
-}
-
-// Функция для форматирования возвращаемого значения
-function formatReturns(signature: TypeDocJson): string {
-  const returnType = signature.type ? formatType(signature.type) : 'void';
-  const returnDesc = signature.comment?.returns || '';
-  
-  return `\n\n#### Returns\n\n${returnType}${returnDesc ? ` - ${returnDesc}` : ''}`;
-}
-
-// Функция для форматирования сигнатуры метода
-function formatMethodSignature(signature: TypeDocJson): string {
-  const parameters = signature.parameters?.map(p => `${p.name}: ${formatType(p.type)}`).join(', ') || '';
-  const returnType = signature.type ? formatType(signature.type) : 'void';
-  return `(${parameters}): ${returnType}`;
-}
-
-// Функция для генерации документации члена класса
-function generateMemberDoc(member: TypeDocJson): string {
-  let doc = `### ${member.name}\n\n`;
-  
-  if (member.comment?.shortText) {
-    doc += `${member.comment.shortText}\n\n`;
+  if (comment.text) {
+    text += comment.text + '\n\n';
   }
   
-  if (member.comment?.text) {
-    doc += `${member.comment.text}\n\n`;
+  if (comment.returns) {
+    text += `**Returns:** ${comment.returns}\n\n`;
   }
   
-  if (member.kindString === 'Method') {
-    if (member.signatures) {
-      const signature = member.signatures[0];
-      doc += `\`\`\`typescript\n${member.name}${formatMethodSignature(signature)}\n\`\`\``;
-      doc += formatParameters(signature.parameters);
-      doc += formatReturns(signature);
-    }
-  } else if (member.kindString === 'Property') {
-    doc += `Type: ${formatType(member.type)}\n\n`;
-  } else if (member.kindString === 'Accessor') {
-    if (member.getSignature) {
-      const signature = member.getSignature[0];
-      doc += `Getter Type: ${formatType(signature.type)}\n\n`;
-      if (signature.comment?.shortText) {
-        doc += `${signature.comment.shortText}\n\n`;
+  if (comment.tags) {
+    comment.tags.forEach(tag => {
+      if (tag.tag === 'example') {
+        text += '**Example:**\n```typescript\n' + tag.text + '\n```\n\n';
+      } else {
+        text += `**@${tag.tag}** ${tag.text}\n\n`;
       }
-    }
-    if (member.setSignature) {
-      const signature = member.setSignature[0];
-      doc += `Setter Type: ${formatType(signature.parameters?.[0].type)}\n\n`;
-    }
+    });
   }
   
+  return text;
+}
+
+function generatePropertyDoc(property: TypeDocJson): string {
+  let doc = `### ${property.name}\n\n`;
+  
+  doc += getCommentText(property.comment);
+
+  if (property.type) {
+    doc += `**Type:** \`${formatType(property.type)}\`\n\n`;
+  }
+
+  if (property.flags && property.flags.isOptional) {
+    doc += '**Optional**\n\n';
+  }
+
   return doc;
 }
 
-// Функция для генерации документации класса
+function generateMethodDoc(method: TypeDocJson): string {
+  let doc = `### ${method.name}\n\n`;
+  
+  if (method.signatures && method.signatures[0]) {
+    const signature = method.signatures[0];
+    
+    doc += getCommentText(signature.comment);
+    
+    // Add method signature
+    doc += '```typescript\n';
+    doc += formatMethodSignature(signature);
+    doc += '\n```\n\n';
+
+    // Add parameter descriptions
+    if (signature.parameters && signature.parameters.length > 0) {
+      doc += '**Parameters:**\n\n';
+      signature.parameters.forEach(param => {
+        doc += `- \`${param.name}\` (\`${formatType(param.type)}\`)`;
+        if (param.comment) {
+          doc += `: ${param.comment.text || param.comment.shortText || ''}`;
+        }
+        doc += '\n';
+      });
+      doc += '\n';
+    }
+  }
+
+  return doc;
+}
+
+function formatType(type: any): string {
+  if (typeof type === 'string') return type;
+  if (type.type === 'reference') return type.name;
+  if (type.type === 'reflection') {
+    if (type.declaration && type.declaration.signatures) {
+      const sig = type.declaration.signatures[0];
+      const params = sig.parameters || [];
+      const paramTypes = params.map((p: any) => `${p.name}: ${formatType(p.type)}`).join(', ');
+      const returnType = sig.type ? formatType(sig.type) : 'void';
+      return `(${paramTypes}) => ${returnType}`;
+    }
+    return 'object';
+  }
+  if (type.type === 'array') return `${formatType(type.elementType)}[]`;
+  if (type.type === 'union') return type.types.map((t: any) => formatType(t)).join(' | ');
+  if (type.type === 'intersection') return type.types.map((t: any) => formatType(t)).join(' & ');
+  if (type.name) return type.name;
+  if (type.types) return type.types.map(formatType).join(' | ');
+  return 'any';
+}
+
+function formatMethodSignature(signature: TypeDocJson): string {
+  const parameters = signature.parameters || [];
+  const paramStr = parameters
+    .map(p => {
+      let str = p.name;
+      if (p.flags && p.flags.isOptional) str += '?';
+      str += ': ' + formatType(p.type);
+      return str;
+    })
+    .join(', ');
+  const returnType = signature.type ? `: ${formatType(signature.type)}` : '';
+  return `${signature.name}(${paramStr})${returnType}`;
+}
+
 function generateClassDoc(classData: TypeDocJson): string {
-  let doc = `## Class: ${classData.name}\n\n`;
+  let doc = `## ${classData.name}\n\n`;
   
-  if (classData.comment?.shortText) {
-    doc += `${classData.comment.shortText}\n\n`;
+  doc += getCommentText(classData.comment);
+
+  // Add constructor
+  const constructor = classData.children?.find(child => 
+    child.kindString === 'Constructor' || child.kind === 512
+  );
+  if (constructor && constructor.signatures) {
+    doc += '### Constructor\n\n';
+    doc += '```typescript\n';
+    doc += `constructor${formatMethodSignature(constructor.signatures[0])}\n`;
+    doc += '```\n\n';
+    
+    doc += getCommentText(constructor.signatures[0].comment);
   }
-  
-  if (classData.comment?.text) {
-    doc += `${classData.comment.text}\n\n`;
-  }
-  
-  // Группируем члены по категориям
-  const properties: TypeDocJson[] = [];
-  const methods: TypeDocJson[] = [];
-  const accessors: TypeDocJson[] = [];
-  
-  classData.children?.forEach(child => {
-    if (child.kindString === 'Property') {
-      properties.push(child);
-    } else if (child.kindString === 'Method') {
-      methods.push(child);
-    } else if (child.kindString === 'Accessor') {
-      accessors.push(child);
-    }
-  });
-  
-  // Добавляем свойства
+
+  // Group members by kind
+  const properties = classData.children?.filter(child => 
+    child.kindString === 'Property' || child.kind === 1024 || child.kind === 262144
+  ) || [];
+  const methods = classData.children?.filter(child => 
+    child.kindString === 'Method' || child.kind === 2048
+  ) || [];
+
+  // Sort members alphabetically
+  properties.sort((a, b) => a.name.localeCompare(b.name));
+  methods.sort((a, b) => a.name.localeCompare(b.name));
+
   if (properties.length > 0) {
-    doc += '## Properties\n\n';
+    doc += '### Properties\n\n';
     properties.forEach(prop => {
-      doc += generateMemberDoc(prop) + '\n\n---\n\n';
+      doc += generatePropertyDoc(prop);
     });
   }
-  
-  // Добавляем методы
+
   if (methods.length > 0) {
-    doc += '## Methods\n\n';
+    doc += '### Methods\n\n';
     methods.forEach(method => {
-      doc += generateMemberDoc(method) + '\n\n---\n\n';
+      doc += generateMethodDoc(method);
     });
   }
-  
-  // Добавляем аксессоры
-  if (accessors.length > 0) {
-    doc += '## Accessors\n\n';
-    accessors.forEach(accessor => {
-      doc += generateMemberDoc(accessor) + '\n\n---\n\n';
-    });
-  }
-  
+
   return doc;
 }
 
-// Читаем JSON файл
-const jsonContent = JSON.parse(fs.readFileSync(docsJsonPath, 'utf8'));
+async function main() {
+  try {
+    const jsonPath = path.join(process.cwd(), 'typedoc', 'documentation.json');
+    const apiPath = path.join(process.cwd(), 'API.md');
+    
+    const jsonContent = await fs.promises.readFile(jsonPath, 'utf8');
+    const documentation = JSON.parse(jsonContent);
 
-// Генерируем документацию
-let apiContent = `# Deep API Reference
+    let apiContent = '# Deep API Reference\n\n';
+    apiContent += '## Overview\n\n';
+    apiContent += 'Deep is a powerful semantic computing framework that enables the creation and manipulation of semantic graphs.\n';
+    apiContent += 'This API documentation covers the core functionality of the Deep framework.\n\n';
+    
+    apiContent += '## Installation\n\n';
+    apiContent += '```bash\n';
+    apiContent += 'npm install @deep-foundation/deep\n';
+    apiContent += '```\n\n';
+    
+    apiContent += '## Table of Contents\n\n';
+    
+    // Generate table of contents
+    const classes = documentation.children?.filter(child => 
+      child.kindString === 'Class' || child.kind === 128
+    ) || [];
+    
+    classes.sort((a, b) => a.name.localeCompare(b.name));
+    
+    classes.forEach(classData => {
+      apiContent += `- [${classData.name}](#${classData.name.toLowerCase()})\n`;
+    });
+    
+    apiContent += '\n## API Documentation\n\n';
 
-## Overview
+    // Generate documentation for each class
+    classes.forEach(child => {
+      apiContent += generateClassDoc(child);
+    });
 
-Deep is a powerful semantic computing framework that enables the creation and manipulation of semantic graphs.
-This API documentation covers the core functionality of the Deep framework.
-
-## Installation
-
-\`\`\`bash
-npm install @deep-foundation/deep
-\`\`\`
-
-## API Documentation
-
-`;
-
-// Находим все классы в документации
-jsonContent.children.forEach((child: TypeDocJson) => {
-  if (child.kindString === 'Class') {
-    apiContent += generateClassDoc(child);
+    await fs.promises.writeFile(apiPath, apiContent);
+    console.log('API documentation has been generated successfully!');
+  } catch (error) {
+    console.error('Error generating documentation:', error);
+    process.exit(1);
   }
-});
+}
 
-// Записываем итоговый API.md
-fs.writeFileSync(apiMdPath, apiContent);
-
-console.log('API documentation has been generated successfully!');
+main();

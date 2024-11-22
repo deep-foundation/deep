@@ -1,8 +1,17 @@
 {
   "entryPoints": ["./src/deep.ts"],
-  "out": "docs",
-  "json": "docs/documentation.json",
+  "out": "typedoc",
+  "json": "typedoc/documentation.json",
+  "plugin": ["typedoc-plugin-markdown"],
   "excludePrivate": true,
   "excludeProtected": true,
-  "excludeExternals": true
+  "excludeExternals": true,
+  "readme": "none",
+  "commentStyle": "all",
+  "includeVersion": true,
+  "sort": ["source-order"],
+  "validation": {
+    "invalidLink": true,
+    "notExported": true
+  }
 }

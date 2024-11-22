@@ -29,7 +29,8 @@
     "electron": "(cd electron; npm ci; npm run build); npx cap open @capacitor-community/electron",
     "assets": "npx @capacitor/assets generate --iconBackgroundColor 'transparent' --iconBackgroundColorDark 'transparent' --splashBackgroundColor 'transparent' --splashBackgroundColorDark 'transparent'; cp ./android/app/src/main/res/drawable-port-hdpi/splash.png ./electron/assets/splash.png; cp ./assets/logo.png ./electron/assets/appIcon.png; png-to-ico ./assets/logo.png > ./public/favicon.ico; cp ./public/favicon.ico./electron/assets/appIcon.ico.ico; cp ./assets/logo.png ./public/logo.png",
     "typedoc": "npm run build && npx typedoc && node dist/typedoc.js",
-    "docs": "typedoc && ts-node src/typedoc.ts"
+    "prepare": "husky",
+    "wiki": "git clone https://github.com/deep-foundation/deep.wiki.git wiki"
   },
   "repository": {
     "type": "git",
@@ -103,13 +104,14 @@
     "electron": "^26.2.2",
     "electron-builder": "~23.6.0",
     "electron-rebuild": "^3.2.9",
+    "husky": "^9.1.7",
     "png-to-ico": "^2.1.8",
     "postcss": "^8",
     "source-map-support": "^0.5.21",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5.6.3",
     "typedoc": "^0.25.4",
-    "typedoc-plugin-markdown": "^3.17.1"
+    "typedoc-plugin-markdown": "^3.17.1",
+    "typescript": "5.4"
   },
   "engines": {
     "node": "23"

@@ -27,7 +27,19 @@ Deep aims to revolutionize how we interact with information by creating a unifie
 - **Target**: Individual users
 - **Model**: Freemium
 
-### 3. 🤖 [Deep Telegram Bot](PRODUCTS/telegram-bot.md)
+### 3. 💻 [Deep VSCode Extension](PRODUCTS/vscode-extension.md)
+*Native semantic code navigation and editing*
+- Deep integration in VSCode's left panel
+- Semantic relationship tree navigation
+- Code-centric relationship editing
+- Native VSCode editor integration
+- Intuitive relationship visualization
+- Semantic code navigation
+- **Status**: Planning
+- **Target**: Developers
+- **Model**: Free Open Source
+
+### 4. 🤖 [Deep Telegram Bot](PRODUCTS/telegram-bot.md)
 *Interactive visualization and AI assistant*
 - Telegram bot with expandable React webapp
 - On-demand data visualization
@@ -50,7 +62,7 @@ Deep aims to revolutionize how we interact with information by creating a unifie
 - **Target**: Telegram users
 - **Model**: Usage-based (AI requests)
 
-### 4. 📱 [Deep Mobile](PRODUCTS/mobile.md)
+### 5. 📱 [Deep Mobile](PRODUCTS/mobile.md)
 *Your personal semantic companion*
 - Voice event capture and processing
 - Phone call and messenger integration
@@ -59,7 +71,7 @@ Deep aims to revolutionize how we interact with information by creating a unifie
 - **Target**: Individual users
 - **Model**: Freemium + Premium features
 
-### 5. 🖥️ [Deep Desktop](PRODUCTS/desktop.md)
+### 6. 🖥️ [Deep Desktop](PRODUCTS/desktop.md)
 *Your computer environment semantic controller*
 - RobotJS integration for system control
 - File system synchronization and monitoring
@@ -70,7 +82,7 @@ Deep aims to revolutionize how we interact with information by creating a unifie
 - **Target**: Power users
 - **Model**: Freemium + Premium features
 
-### 6. 🐧 [Deep OS](PRODUCTS/os.md)
+### 7. 🐧 [Deep OS](PRODUCTS/os.md)
 *Standalone semantic operating environment*
 - Linux-based bootable system
 - Run from USB drive or disk
@@ -87,7 +99,7 @@ Deep aims to revolutionize how we interact with information by creating a unifie
 - **Target**: Enterprise & Specialized Solutions
 - **Model**: Custom Licensing
 
-### 7. 📦 [Deep Box](PRODUCTS/box.md)
+### 8. 📦 [Deep Box](PRODUCTS/box.md)
 *Your personal semantic server*
 - 30x30 compact design
 - 20TB storage
@@ -97,7 +109,7 @@ Deep aims to revolutionize how we interact with information by creating a unifie
 - **Target**: Privacy-conscious users
 - **Model**: Hardware sales + Optional subscription
 
-### 8. 🏢 [Deep Enterprise](PRODUCTS/enterprise.md)
+### 9. 🏢 [Deep Enterprise](PRODUCTS/enterprise.md)
 *Your organization's semantic memory*
 - On-premises or cloud deployment
 - Corporate AI assistant integration
@@ -106,7 +118,7 @@ Deep aims to revolutionize how we interact with information by creating a unifie
 - **Target**: Organizations
 - **Model**: Enterprise licensing
 
-### 9. 🤖 [Deep Skills Platform](PRODUCTS/skills-platform.md)
+### 10. 🤖 [Deep Skills Platform](PRODUCTS/skills-platform.md)
 *Your universal bot & automation platform*
 - Visual skill constructor
 - Multi-channel bot deployment
@@ -115,7 +127,7 @@ Deep aims to revolutionize how we interact with information by creating a unifie
 - **Target**: Businesses
 - **Model**: Usage-based + Subscription
 
-### 10. 🔗 [Deep Contract](PRODUCTS/contract.md)
+### 11. 🔗 [Deep Contract](PRODUCTS/contract.md)
 *Decentralized semantic marketplace*
 - Smart contract for associative links (NEUTRON standard)
 - Monetization features:
@@ -144,7 +156,7 @@ Deep aims to revolutionize how we interact with information by creating a unifie
 - **Target**: Web3 developers & Content creators
 - **Model**: Transaction fees
 
-### 11. 🌐 [Deep Agent Network](PRODUCTS/agent-network.md)
+### 12. 🌐 [Deep Agent Network](PRODUCTS/agent-network.md)
 *Your autonomous agent infrastructure*
 - JWT-secured agent communication
 - Partial memory synchronization
@@ -152,6 +164,24 @@ Deep aims to revolutionize how we interact with information by creating a unifie
 - **Status**: Research
 - **Target**: Developers
 - **Model**: Usage-based
+
+### 13. 🥽 [Deep VR](PRODUCTS/vr.md)
+*Your semantic space in virtual reality*
+- AFrame-based semantic visualization
+- Neural network-driven spatial organization
+- Immersive memory navigation
+- Interactive association exploration
+- Spatial relationship manipulation
+- Neural context-aware positioning
+- Feel like Iron Man in your mind
+- Platform Support:
+  - Oculus Store (Android-based build)
+  - WebXR for browser access
+  - SteamVR compatibility
+- Cross-platform synchronization
+- **Status**: Concept
+- **Target**: VR enthusiasts & Power users
+- **Model**: Premium Experience
 
 ## 💰 Monetization Strategy
 
