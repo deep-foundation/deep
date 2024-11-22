@@ -3,7 +3,7 @@
   "title": "deep",
   "appId": "com.deep_foundation.deep.app",
   "macCategory": "public.app-category.developer-tools",
-  "version": "7.0.0-alpha.0",
+  "version": "7.0.0-alpha.1",
   "description": "Universal solution for working with any meaning",
   "license": "Unlicense",
   "main": "dist/cli.js",
