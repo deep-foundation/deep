@@ -280,6 +280,8 @@ test(`Symbol methods`, () => {
   assert.equal(d.has(Symbol()), false);
 
   assert.equal(d.get(value), value);
+  assert.equal(d.get(Symbol()), undefined);
+
   assert.equal(d.size, 1);
   assert.deepEqual(d.map(v => v), [value]);
   assert.equal(d.add(value), value);
@@ -302,6 +304,8 @@ test(`String methods`, () => {
   assert.equal(d.has('def'), false);
 
   assert.equal(d.get(value), value);
+  assert.equal(d.get('def'), undefined);
+
   assert.equal(d.size, 3);
   assert.deepEqual(d.map(v => v), [value]);
   assert.equal(d.add(value), value);
@@ -324,6 +328,8 @@ test(`Number methods`, () => {
   assert.equal(d.has(234), false);
 
   assert.equal(d.get(value), value);
+  assert.equal(d.get(234), undefined);
+
   assert.equal(d.size, 3);
   assert.deepEqual(d.map(v => v), [value]);
   assert.equal(d.add(value), value);
@@ -346,6 +352,8 @@ test(`BigInt methods`, () => {
   assert.equal(d.has(BigInt(234)), false);
 
   assert.equal(d.get(value), value);
+  assert.equal(d.get(BigInt(234)), undefined);
+
   assert.equal(d.size, 3);
   assert.deepEqual(d.map(v => v), [value]);
   assert.equal(d.add(value), value);
@@ -675,6 +683,31 @@ test('and operator', () => {
   assert.throws(() => {
     deep.select({ and: { type: b } });
   });
+});
+
+test('or operator', () => {
+  const deep = new Deep();
+  
+  // Create test instances
+  const Type1 = deep.new();
+  const Type2 = deep.new();
+  const instance1 = Type1.new();
+  const instance2 = Type1.new();
+  const instance3 = Type1.new();
+
+  // Test or operator
+  const orQuery = deep.select({
+    or: [
+      { type: Type1 },
+      { type: Type2 }
+    ]
+  });
+
+  const result = orQuery.call();
+  assert(result.has(instance1));
+  assert(result.has(instance2));
+  assert(result.has(instance3));
+  assert.equal(result.size, 3);
 });
 
 test('association events order', () => {

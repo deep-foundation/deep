@@ -383,7 +383,7 @@ export class Deep {
       deep.contains.AnyHas = deep.contains.MethodHas.new((current, it) => current.call === it);
       _insert(deep.contains.Compatable, deep.contains.AnyHas, deep.contains.Any);
 
-      deep.contains.AnyGet = deep.contains.MethodGet.new((current, it) => current.call === it ? it : it);
+      deep.contains.AnyGet = deep.contains.MethodGet.new((current, it) => current.call === it ? it : undefined);
       _insert(deep.contains.Compatable, deep.contains.AnyGet, deep.contains.Any);
 
       deep.contains.AnySize = deep.contains.MethodSize.new((current) => 1);
@@ -485,7 +485,7 @@ export class Deep {
       _insert(deep.contains.Compatable, deep.contains.SetAdd, deep.contains.Set);
 
       deep.contains.SetSet = deep.contains.MethodSet.new((current, key, value) => {
-        if (key !== value) throw new Error(`💁 Can't set into Set when key != value`);
+        if (key !== value) throw new Error(` Can't set into Set when key != value`);
         current.call.add(value);
         return current;
       });
@@ -924,7 +924,7 @@ export class Deep {
       return current;
     } else {
       for (let id of ids) return id.call;
-      throw new Error(`🤔 Unexpected, ids can't be empty here.`);
+      throw new Error(` Unexpected, ids can't be empty here.`);
     }
   }
 
@@ -943,7 +943,7 @@ export class Deep {
   set value(value) {
     const previous = this.call;
     if (isUndefined(value)) {
-      if (isValue(this.value)) throw new Error(`🤦 If .value is Value, it's can't be ereised!`);
+      if (isValue(this.value)) throw new Error(` If .value is Value, it's can't be ereised!`);
       this.deep.memory.values.unset(this);
     } else if (isValue(value) && this.type == this.deep.Id) {
       this.deep.memory.values.unset(this);
@@ -954,7 +954,7 @@ export class Deep {
     } else if (isDeep(value) && isValue(value.value)) {
       this.deep.memory.values.unset(this);
       this.deep.memory.values.set(this, value);
-    } else throw new Error('🙅 Value must be isValue(value) or isValue(value.value) or isUndefined(value)');
+    } else throw new Error(' Value must be isValue(value) or isValue(value.value) or isUndefined(value)');
     const current = this.value;
     if (previous !== current) {
       const event = this._createChangeEvent('change', 'value', previous, current);
@@ -1195,8 +1195,8 @@ export class Deep {
     else {
       const valued = this.deep.memory.values.many(value);
       if (valued.size) {
-        if (!valued.size) throw new Error(`🤔 Unexpected, value can't be in all, but not values.`);
-        if (valued.size != 1) throw new Error(`🤔 Unexpected, value can only one Deep in .memory.values.many.`);
+        if (!valued.size) throw new Error(` Unexpected, value can't be in all, but not values.`);
+        if (valued.size != 1) throw new Error(` Unexpected, value can only one Deep in .memory.values.many.`);
         for (let v of valued) {
           return v;
         }
@@ -1451,7 +1451,7 @@ export class Deep {
    * @returns Expanded deep.Exp
    */
   exp(input: any, selection: Deep) {
-    if (isDeep(input) || (!isObject(input))) throw new Error(`🙅 Exp must be plain object or array for and operator`);
+    if (isDeep(input) || (!isObject(input))) throw new Error(` Exp must be plain object or array for and operator`);
     const exp: any = this.deep.Exp.new({});
     
     if (isArray(input)) {
@@ -1476,7 +1476,7 @@ export class Deep {
             this.exp(input[key], nestedSelection);
             exp.call[key] = nestedSelection;
             nestedSelection.on((e) => relation.emit(e));
-          } else throw new Error(`🙅 Only Deep or plain objects Exp can be value in exp (${key})!`);
+          } else throw new Error(` Only Deep or plain objects Exp can be value in exp (${key})!`);
           relation.from = selection;
           relation.to = exp.call[key];
           relation.on((e) => selection.emit(e));
@@ -1530,6 +1530,12 @@ export class Deep {
               set = arrayOfSets.reduce((result, set) => {
                 return result.intersection(set.call);
               }, currentSet);
+            } else if (relation.typeof(this.deep.contains.or)) {
+              const arrayOfSets = relation.to.call();
+              set = arrayOfSets.reduce((result, item) => {
+                const itemSet = item.call;
+                return result ? new Set([...result, ...itemSet]) : itemSet;
+              }, set);
             }
           } else if (relation.typeof(this.deep.Order)) {
             const nextSet = relation.to.call();
@@ -1764,8 +1770,8 @@ export class Contains {
       return founded;
     },
     set(target, key, value, receiver) {
-      if (key === 'deep') throw new Error('🙅 Key "deep" is reserved in contains!');
-      if (!isDeep(value)) throw new Error('🙅 Value must be Deep!');
+      if (key === 'deep') throw new Error(' Key "deep" is reserved in contains!');
+      if (!isDeep(value)) throw new Error(' Value must be Deep!');
       let founded: Deep | void = undefined;
       const Contain = target.deep.deep.Contain;
       for (let contain of target.deep.out.call) {

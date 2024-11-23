@@ -196,7 +196,7 @@ All methods work uniformly across different data types, treating single items as
     - Logical operators for filtering:
       - [x] `and` - Array of expressions that all must match
       - [x] `not` - Expression that must not match
-      - [ ] `or` - Array of expressions where at least one must match
+      - [x] `or` - Array of expressions where at least one must match
     - Condition types (comparison operators):
       - [ ] `eq` - Equal to
       - [ ] `neq` - Not equal to
@@ -249,14 +249,14 @@ const B = deep.new();
 const C = deep.new();
 
 // Create instances
-const a1 = deep.new();
-const b1 = deep.new();
-const c1 = deep.new();
+const a1 = A.new();
+const b1 = B.new();
+const c1 = C.new();
 
-// Set types for instances
-a1.type = A;  // a1 is of type A
-b1.type = B;  // b1 is of type B
-c1.type = C;  // c1 is of type C
+// (If we create a1,b1,c1 from deep.new(), not from A,B,C.new()), type can be setted manually:
+// a1.type = A;  // a1 is of type A
+// b1.type = B;  // b1 is of type B
+// c1.type = C;  // c1 is of type C
 
 // Create relationships
 a1.from = b1;  // a1 points from b1
