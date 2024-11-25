@@ -70,7 +70,8 @@ Core Functionality:
 - [x] Uniform interface for all data types
 - [x] Reactive event system
 - [x] Complex querying with logical operators
-- [x] Chainable operations on collections
+- [ ] Event generation and applying
+- [ ] Export Selection to JSON and import as Selection
 - [ ] Transaction support
 - [ ] Distributed computation support
 
@@ -293,13 +294,6 @@ In this example:
 - We can perform multiple traversals by chaining operations
 - Each traversal returns a Deep instance that can be further queried
 
-### Uniform Data Handling
-
-A key feature of Deep is its uniform approach to handling both single items and collections:
-- When working with a single item, it's treated as a collection of one element where the item serves as both key and value
-- The same methods work consistently across different data types (Symbol, Promise, Boolean, String, Number, BigInt, Set, Map, Array, Object, Function)
-- This uniformity allows for seamless transitions between single and multiple data operations
-
 ### Association in Deep
 
 An association (link) consists of the following components:
@@ -307,6 +301,38 @@ An association (link) consists of the following components:
 - **from** - link source (Deep)
 - **to** - link target (Deep)
 - **value** - link value (can be any data type)
+
+When creating associations in Deep, there are several important patterns to understand:
+
+#### Creating Associations from Other Associations
+
+When you create a new association using the `.new()` method from an existing association:
+1. The association you're calling `.new()` from becomes the type of the new association
+2. The optional argument passed to `.new()` becomes the value of the new association
+3. For primitive JavaScript values (strings, numbers, booleans), the value is automatically wrapped in a special container for deduplication
+   
+Example:
+```typescript
+const Type = deep.new();
+const instance1 = Type.new('value1'); // Creates new association with Type as type and wrapped 'value1' as value
+const instance2 = Type.new('value1'); // Reuses the same wrapped value due to deduplication
+console.log(instance1.value); // Deep with .value == 'value1'
+console.log(instance1.value === instance2.value); // true - same wrapped value reference
+console.log(instance1.call, 'value1'); // true - возвращает конечное значение
+```
+
+This pattern enables:
+- Type-safe association creation
+- Automatic value deduplication
+- Memory optimization for primitive values
+- Consistent handling of values across the system
+
+### Uniform Data Handling
+
+A key feature of Deep is its uniform approach to handling both single items and collections:
+- When working with a single item, it's treated as a collection of one element where the item serves as both key and value
+- The same methods work consistently across different data types (Symbol, Promise, Boolean, String, Number, BigInt, Set, Map, Array, Object, Function)
+- This uniformity allows for seamless transitions between single and multiple data operations
 
 ### Association Capabilities
 - Creating new associations
@@ -316,12 +342,10 @@ An association (link) consists of the following components:
 - Searching links by various parameters
 
 ### Project Features
-- Support for various data types (Symbol, Promise, Boolean, String, Number, BigInt, Set, Map, Array, Object, Function)
-- Event system
-- Change observation
-- Support for both web and native platforms (iOS, Android, Electron)
-- Graph visualization
-- Modern UI
+- Support for various .value types (Symbol, Promise, Boolean, String, Number, BigInt, Set, Map, Array, Object, Function)
+- Event system `deep.on(event => {})`
+- Change observation `selection.on(event => {})`
+- Support for terminal (cli) web (NextJS) and native platforms (iOS, Android, Electron)
 
 ### Technical Characteristics
 - TypeScript as the main language

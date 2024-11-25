@@ -1,6 +1,8 @@
 import { search } from '@inquirer/prompts';
-import { Deep } from "./deep";
-import { Repl } from "./repl";
+import { Deep } from "./deep.js";
+import { Repl } from "./repl.js";
+import { LangChain } from "./langchain.js";
 
 const deep = new Deep();
-export const repl = Repl({ deep });
+const ask = await LangChain();
+export const repl = Repl({ deep, LangChain, ask });

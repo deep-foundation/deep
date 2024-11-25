@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useMemo, createContext, useContext, useRef, useEffect, useState } from "react";
-import { Deep } from "./deep";
+import { Deep } from "./deep.js";
 import { useDebounceCallback } from '@react-hook/debounce';
 
 const deep = new Deep();

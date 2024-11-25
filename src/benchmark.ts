@@ -1,6 +1,6 @@
-import On from './on';
+import On from './on.js';
 import _Benchmark from 'benchmark';
-import { Deep } from './deep';
+import { Deep } from './deep.js';
 
 export default function benchmarks(deep: Deep) {
   // Create Benchmark and Benchmarked types

@@ -48,3 +48,4 @@ next-env.d.ts
 typedoc
 wiki
 .obsidian
+.models

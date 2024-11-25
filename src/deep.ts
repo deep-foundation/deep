@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Observable } from '@gullerya/object-observer';
-import On, { OnI } from './on';
+import On, { OnI } from './on.js';
 
 let isSymbol = it => typeof it === "symbol";
 let isUndefined = it => it === undefined;
@@ -205,20 +205,20 @@ export class Deep {
 
       const Value = deep.new();
 
-      deep.Symbol = _insert(Value);
-      deep.Undefined = _insert(Value);
-      deep.Promise = _insert(Value);
-      deep.Boolean = _insert(Value);
-      deep.String = _insert(Value);
-      deep.Number = _insert(Value);
-      deep.BigInt = _insert(Value);
-      deep.Set = _insert(Value);
-      deep.WeakSet = _insert(Value);
-      deep.Map = _insert(Value);
-      deep.WeakMap = _insert(Value);
-      deep.Array = _insert(Value);
-      deep.Object = _insert(Value);
-      deep.Function = _insert(Value);
+      deep.Symbol = Value.new();
+      deep.Undefined = Value.new();
+      deep.Promise = Value.new();
+      deep.Boolean = Value.new();
+      deep.String = Value.new();
+      deep.Number = Value.new();
+      deep.BigInt = Value.new();
+      deep.Set = Value.new();
+      deep.WeakSet = Value.new();
+      deep.Map = Value.new();
+      deep.WeakMap = Value.new();
+      deep.Array = Value.new();
+      deep.Object = Value.new();
+      deep.Function = Value.new();
 
       const Contain = deep.new(); const c = deep.new();
       c.type = Contain; c.from = deep; c.to = Contain; c.value = 'Contain';
@@ -243,6 +243,8 @@ export class Deep {
 
       deep.Many = deep.contains.Many = Relation.new();
       deep.One = deep.contains.One = Relation.new();
+
+      deep.contains.id = deep.__id = Relation.new();
 
       deep.contains.type = deep.__type = deep.contains.One.new();
       deep.contains.typed = deep.__typed = deep.contains.Many.new();
@@ -929,6 +931,19 @@ export class Deep {
   }
 
   /**
+   * Gets a Deep instance by its id
+   * @param id - ID value to search for
+   * @param agent - Optional agent Deep instance, default this.deep
+   * @returns Deep instance with the specified id, or undefined if not found
+   */
+  getById(value: string, agent: Deep = this.deep): Deep | undefined {
+    for (let id of this.deep.Id.typed) {
+      if (id.value == value && id.from == agent) return id.to;
+    }
+    return undefined;
+  }
+
+  /**
    * Gets the value stored in this Deep instance, can be other Deep instance.
    * @returns Stored value
    */
@@ -1451,21 +1466,33 @@ export class Deep {
    * @returns Expanded deep.Exp
    */
   exp(input: any, selection: Deep) {
-    if (isDeep(input) || (!isObject(input))) throw new Error(` Exp must be plain object or array for and operator`);
-    const exp: any = this.deep.Exp.new({});
-    
-    if (isArray(input)) {
+    let exp;
+    if (isDeep(input)) {
+      return this.exp({ id: input }, selection);
+    } else if (isArray(input)) {
+      exp = this.deep.Exp.new([]);
       for (let i in input) {
         const e = input[i];
         const nestedSelection = this.selection();
         const relation = this.deep.Order.new();
         this.exp(e, nestedSelection);
+        exp.call[i] = nestedSelection;
         relation.from = selection;
         relation.to = nestedSelection;
         relation.value = i;
         relation.on((e) => selection.emit(e));
       }
     } else {
+      exp = this.deep.Exp.new({});
+      if (input.hasOwnProperty('id')) {
+        if (isDeep(input.id) || isString(input.id)) {
+          exp.call.id = input.id;
+          const relation = this.deep.__id.new();
+          relation.from = selection;
+          relation.to = input.id;
+          relation.on((e) => selection.emit(e));
+        } else throw new Error(`🙅 Only Deep or string can be value in exp (id)!`);
+      }
       for (let key in this.deep.contains.relations.call) {
         if (input.hasOwnProperty(key)) {
           const relation = this.deep.contains[key].new();
@@ -1476,9 +1503,9 @@ export class Deep {
             this.exp(input[key], nestedSelection);
             exp.call[key] = nestedSelection;
             nestedSelection.on((e) => relation.emit(e));
-          } else throw new Error(` Only Deep or plain objects Exp can be value in exp (${key})!`);
+          } else throw new Error(`🙅 Only Deep or plain objects Exp can be value in exp (${key})!`);
           relation.from = selection;
-          relation.to = exp.call[key];
+          relation.to = exp.call[key]; // nestedSelection
           relation.on((e) => selection.emit(e));
         }
       }
@@ -1509,7 +1536,13 @@ export class Deep {
       let set;
       for (let relation of relations) {
         if (relation.typeof(this.deep.Relation)) {
-          if (relation.typeof(this.deep.Many)) {
+          if (relation.typeof(this.deep.__id)) {
+            if (isDeep(relation.to)) {
+              set = set ? set.intersection(new Set([relation.to])) : new Set([relation.to]);
+            } else if (isString(relation.to.call)) {
+              throw new Error('🤦 Sorry not relized yet.');
+            } else throw new Error('🙅 Only Deep and string can be .id');
+          } else if (relation.typeof(this.deep.Many)) {
             const nextSet = new Set([relation.to[rels[relation.type.name].invert]]);
             set = set ? set.intersection(nextSet) : nextSet;
           } else if (relation.typeof(this.deep.One)) {
@@ -1737,13 +1770,78 @@ export class Deep {
       const call = item.call;
       if (call !== undefined) {
         let valueIndex = result.values.findIndex(v => v === call);
-        if (valueIndex < 0) valueIndex = result.values.push(call);
+        if (valueIndex < 0) valueIndex = result.values.push(call) - 1;
         link.value = valueIndex;
       }
 
       result.deep.push(link);
     }
     return result;
+  }
+
+  /**
+   * Unpacks a serialized Pack format back into a Selection
+   * @param pckg - The package to unpack, containing deep links and values
+   * @param agent - Optional agent Deep instance, default this.deep
+   * @returns A Selection containing the unpacked Deep instances
+   */
+  unpack(pckg: Pack, agent: Deep = this.deep): Deep {
+    // Map для хранения уже созданных deep по их id
+    const deepsMap = new Map<string, Deep>();
+    const or = [];
+
+    // Функция для получения или создания deep по его описанию из пакета
+    const getOrCreateDeep = (deepData: Pack['deep'][0]): Deep => {
+      // Проверяем есть ли уже такой deep
+      let deep = deepsMap.get(deepData.id);
+      if (deep) return deep;
+
+      // Проверяем существует ли deep с таким id в текущем агенте
+      deep = this.getById(deepData.id, agent);
+      if (deep) {
+        deepsMap.set(deepData.id, deep);
+        return deep;
+      }
+
+      // Создаем новый deep
+      deep = this.new(deepData.value !== undefined ? pckg.values[deepData.value] : undefined);
+      deep.id(deepData.id, agent); // Устанавливаем тот же id
+      deepsMap.set(deepData.id, deep);
+      
+      return deep;
+    };
+
+    // Первый проход - создаем все deep
+    for (const deepData of pckg.deep) {
+      const deep = getOrCreateDeep(deepData);
+      or.push(deep);
+    }
+
+    // Второй проход - устанавливаем связи
+    for (const deepData of pckg.deep) {
+      const deep = deepsMap.get(deepData.id);
+      if (!deep) continue;
+
+      // Устанавливаем type если указан
+      if (deepData.type) {
+        const type = deepsMap.get(deepData.type) || this.getById(deepData.type, agent);
+        if (type) deep.type = type;
+      }
+
+      // Устанавливаем from если указан
+      if (deepData.from) {
+        const from = deepsMap.get(deepData.from) || this.getById(deepData.from, agent);
+        if (from) deep.from = from;
+      }
+
+      // Устанавливаем to если указан
+      if (deepData.to) {
+        const to = deepsMap.get(deepData.to) || this.getById(deepData.to, agent);
+        if (to) deep.to = to;
+      }
+    }
+
+    return this.select({ or });
   }
 }
 

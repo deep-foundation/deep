@@ -1,18 +1,18 @@
 #!/usr/bin/env node
 
 // Main functionality exports
-export * from './deep';
-export * from './on';
-export * from './benchmark';
+export * from './deep.js';
+export * from './on.js';
+export * from './benchmark.js';
 
 // CLI handling
-if (require.main === module) {
+if (import.meta.url === import.meta.resolve('./main.js')) {
   const { argv } = process;
   const args = argv.slice(2);
   
   // Check if CLI mode is requested
   if (args.includes('--cli')) {
-    import('./cli').then(({ repl }) => {
+    import('./cli.js').then(({ repl }) => {
       // CLI is automatically started in cli.ts
     });
   }
