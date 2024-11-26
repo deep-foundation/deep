@@ -78,3 +78,17 @@ yarn build
 2. Follow Deep relationship naming conventions:
    - Use PascalCase (capital first letter) for Type relationships (e.g., `Type`, `Contains`, `Value`)
    - Use camelCase (lowercase first letter) for instance relationships (e.g., `type`, `from`, `to`, `value`)
+
+## Commits and Releases
+For publishing, it is necessary to:
+1. Increase the version level, usually patch
+2. Extract changes description from `git status` and `git diff` for all modified files
+3. Format the message according to the following template:
+```
+Version: type(scope): summary
+
+body
+
+Breaking Changes:
+- list of breaking changes (if any)
+```

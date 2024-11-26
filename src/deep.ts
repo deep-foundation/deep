@@ -1629,7 +1629,7 @@ export class Deep {
     const result = new Set<Deep>();
     for (const link of this.in.call) {
       if (link.type === type) {
-        result.add(link.from);
+        result.add(link);
       }
     }
     return this.wrap(result);
@@ -1644,7 +1644,7 @@ export class Deep {
     const result = new Set<Deep>();
     for (const link of this.out.call) {
       if (link.type === type) {
-        result.add(link.to);
+        result.add(link);
       }
     }
     return this.wrap(result);
@@ -1936,6 +1936,35 @@ export class Deep {
       current = current.contains[p];
     }
     return current;
+  }
+
+  /**
+   * Возвращает путь к текущему deep через входящие Contain связи
+   * @returns массив строк - путь через contains
+   */
+  path(): string[] {
+    const result: string[] = [];
+    const exists = new Set<any>();
+    let current: Deep | undefined = this;
+    
+    while (current) {
+      const contains = current.inof(this.deep.Contain);
+      if (!contains.size) break;
+      
+      const contain = contains.first;
+      if (!contain) break;
+      
+      // Находим ключ в contains, по которому хранится текущий deep
+      const from = contain.from;
+      if (!from) break;
+      
+      if (exists.has(from)) break;
+      result.unshift(contain?.call);
+      exists.add(from);
+      current = from;
+    }
+    
+    return result;
   }
 }
 

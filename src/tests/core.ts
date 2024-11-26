@@ -863,7 +863,6 @@ test('collection getters (types, froms, tos, typeds, outs, ins)', () => {
 test('go method', () => {
   const deep = new Deep();
   
-  // Создаем тестовую структуру
   const a = deep.new();
   deep.contains.a = a;
   const b = deep.new();
@@ -871,13 +870,35 @@ test('go method', () => {
   const c = deep.new();
   b.contains.c = c;
   
-  // Проверяем успешный поиск
   assert.equal(deep.go('a', 'b', 'c'), c);
   assert.equal(deep.go('a', 'b'), b);
   assert.equal(deep.go('a'), a);
   
-  // Проверяем неуспешный поиск
   assert.equal(deep.go('x'), undefined);
   assert.equal(deep.go('a', 'x'), undefined);
   assert.equal(deep.go('a', 'b', 'x'), undefined);
+});
+
+test('path method', () => {
+  const deep = new Deep();
+
+  const a = deep.new();
+  deep.contains.a = a;
+  const b = deep.new();
+  a.contains.b = b;
+  const c = deep.new();
+  b.contains.c = c;
+
+  assert.deepEqual(c.path(), ['a', 'b', 'c']);
+  assert.deepEqual(b.path(), ['a', 'b']);
+  assert.deepEqual(a.path(), ['a']);
+  assert.deepEqual(deep.path(), ['deep']);
+
+  const x = deep.new();
+  deep.contains.x = x;
+  const y = deep.new();
+  x.contains.y = y;
+  y.contains.c = c;
+
+  assert.deepEqual(c.path(), ['a', 'b', 'c']);
 });
