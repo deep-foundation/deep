@@ -160,7 +160,10 @@ interface Pack {
     to?: string;
     value?: number;
   }>;
-  values: any[];
+  values: Array<{
+    value?: any;
+    type: string;
+  }>;
 }
 
 export class Deep {
@@ -1491,7 +1494,7 @@ export class Deep {
           relation.from = selection;
           relation.to = input.id;
           relation.on((e) => selection.emit(e));
-        } else throw new Error(`🙅 Only Deep or string can be value in exp (id)!`);
+        } else throw new Error(` Only Deep or string can be value in exp (id)!`);
       }
       for (let key in this.deep.contains.relations.call) {
         if (input.hasOwnProperty(key)) {
@@ -1503,7 +1506,7 @@ export class Deep {
             this.exp(input[key], nestedSelection);
             exp.call[key] = nestedSelection;
             nestedSelection.on((e) => relation.emit(e));
-          } else throw new Error(`🙅 Only Deep or plain objects Exp can be value in exp (${key})!`);
+          } else throw new Error(` Only Deep or plain objects Exp can be value in exp (${key})!`);
           relation.from = selection;
           relation.to = exp.call[key]; // nestedSelection
           relation.on((e) => selection.emit(e));
@@ -1540,8 +1543,8 @@ export class Deep {
             if (isDeep(relation.to)) {
               set = set ? set.intersection(new Set([relation.to])) : new Set([relation.to]);
             } else if (isString(relation.to.call)) {
-              throw new Error('🤦 Sorry not relized yet.');
-            } else throw new Error('🙅 Only Deep and string can be .id');
+              throw new Error(' Sorry not relized yet.');
+            } else throw new Error(' Only Deep and string can be .id');
           } else if (relation.typeof(this.deep.Many)) {
             const nextSet = new Set([relation.to[rels[relation.type.name].invert]]);
             set = set ? set.intersection(nextSet) : nextSet;
@@ -1598,7 +1601,7 @@ export class Deep {
       selection.from = exp;
       selection.call();
     }
-    else throw new Error(`🙅 Exp must be an object!`);
+    else throw new Error(` Exp must be an object!`);
     return selection;
   }
 
@@ -1731,6 +1734,95 @@ export class Deep {
   }
 
   /**
+   * Converts a Deep value into a Pack Value object
+   * @param deep - Deep instance containing the value
+   * @returns Pack Value object with type and serialized value
+   */
+  valuePack(deep: Deep): Pack['values'][0] {
+    try {
+      const value = deep.value;
+      const typeDeep = this._is(value);
+      const typeName = typeDeep.name;
+
+      switch(typeName) {
+        case 'Symbol':
+          return { type: typeName };
+        case 'Function':
+          return { value: value.toString(), type: typeName };
+        case 'Set':
+        case 'WeakSet':
+          return { value: Array.from(value), type: typeName };
+        case 'Map':
+        case 'WeakMap':
+          return { value: Array.from(value.entries()), type: typeName };
+        default:
+          return { value, type: typeName };
+      }
+    } catch(error) {
+      throw new Error(` Error packing value: ${error.message}`);
+    }
+  }
+
+  /**
+   * Converts a Pack Value object back into a Deep value
+   * @param packedValue - Pack Value object with type and value
+   * @returns Deep instance with unpacked value
+   */
+  valueUnpack(packedValue: Pack['values'][0]): Deep {
+    try {
+      let typeDeep;
+      for (const type of [this.Symbol, this.Undefined, this.Promise, this.Boolean, 
+                         this.String, this.Number, this.BigInt, this.Set, 
+                         this.WeakSet, this.Map, this.WeakMap, this.Array, 
+                         this.Object, this.Function]) {
+        if (type.name === packedValue.type) {
+          typeDeep = type;
+          break;
+        }
+      }
+      if (!typeDeep) {
+        throw new Error(` Unknown type ${packedValue.type} for value`);
+      }
+
+      switch(packedValue.type) {
+        case 'Symbol':
+          return this.wrap(Symbol());
+        case 'Function':
+          try {
+            const fn = eval(`(${packedValue.value})`);
+            return this.wrap(fn);
+          } catch (error) {
+            throw new Error(` Error evaluating function: ${error.message}`);
+          }
+        case 'Set':
+          return this.wrap(new Set(packedValue.value));
+        case 'WeakSet':
+          const weakSet = new WeakSet();
+          for (const item of packedValue.value) {
+            if (typeof item === 'object' && item !== null) {
+              weakSet.add(item);
+            }
+          }
+          return this.wrap(weakSet);
+        case 'Map':
+          return this.wrap(new Map(packedValue.value));
+        case 'WeakMap':
+          const weakMap = new WeakMap();
+          for (const [key, value] of packedValue.value) {
+            if (typeof key === 'object' && key !== null) {
+              weakMap.set(key, value);
+            }
+          }
+          return this.wrap(weakMap);
+        default:
+          return this.wrap(packedValue.value);
+      }
+    } catch(error) {
+      throw new Error(` Error unpacking value: ${error.message}`);
+    }
+  }
+
+  /**
    * Packs a Selection into a serializable format
    * @returns An object containing serialized deep links and their values
    * @throws Error if input is not a Deep instance or Selection
@@ -1745,32 +1837,32 @@ export class Deep {
       values: []
     };
 
-    // Process each Deep instance in the selection
     for (const item of this.to) {
       const link: Pack['deep'][0] = {
         id: item.id()
       };
 
-      // Add type if exists
       if (item.type) {
         link.type = item.type.id();
       }
 
-      // Add from if exists
       if (item.from) {
         link.from = item.from.id();
       }
 
-      // Add to if exists
       if (item.to) {
         link.to = item.to.id();
       }
 
-      // Handle value if exists
       const call = item.call;
       if (call !== undefined) {
-        let valueIndex = result.values.findIndex(v => v === call);
-        if (valueIndex < 0) valueIndex = result.values.push(call) - 1;
+        const packedValue = this.valuePack(item.value);
+        let valueIndex = result.values.findIndex(v => 
+          v.value === packedValue.value && v.type === packedValue.type
+        );
+        if (valueIndex < 0) {
+          valueIndex = result.values.push(packedValue) - 1;
+        }
         link.value = valueIndex;
       }
 
@@ -1786,55 +1878,49 @@ export class Deep {
    * @returns A Selection containing the unpacked Deep instances
    */
   unpack(pckg: Pack, agent: Deep = this.deep): Deep {
-    // Map для хранения уже созданных deep по их id
     const deepsMap = new Map<string, Deep>();
     const or = [];
 
-    // Функция для получения или создания deep по его описанию из пакета
     const getOrCreateDeep = (deepData: Pack['deep'][0]): Deep => {
-      // Проверяем есть ли уже такой deep
       let deep = deepsMap.get(deepData.id);
       if (deep) return deep;
 
-      // Проверяем существует ли deep с таким id в текущем агенте
       deep = this.getById(deepData.id, agent);
       if (deep) {
         deepsMap.set(deepData.id, deep);
         return deep;
       }
-
-      // Создаем новый deep
-      deep = this.new(deepData.value !== undefined ? pckg.values[deepData.value] : undefined);
-      deep.id(deepData.id, agent); // Устанавливаем тот же id
+      if (!deep) deep = this.new();
+      if (deepData.value !== undefined) {
+        const packedValue = pckg.values[deepData.value];
+        deep.value = this.valueUnpack(packedValue);
+      }
+      
+      deep.id(deepData.id, agent);
       deepsMap.set(deepData.id, deep);
       
       return deep;
     };
 
-    // Первый проход - создаем все deep
     for (const deepData of pckg.deep) {
       const deep = getOrCreateDeep(deepData);
       or.push(deep);
     }
 
-    // Второй проход - устанавливаем связи
     for (const deepData of pckg.deep) {
       const deep = deepsMap.get(deepData.id);
       if (!deep) continue;
 
-      // Устанавливаем type если указан
       if (deepData.type) {
         const type = deepsMap.get(deepData.type) || this.getById(deepData.type, agent);
         if (type) deep.type = type;
       }
 
-      // Устанавливаем from если указан
       if (deepData.from) {
         const from = deepsMap.get(deepData.from) || this.getById(deepData.from, agent);
         if (from) deep.from = from;
       }
 
-      // Устанавливаем to если указан
       if (deepData.to) {
         const to = deepsMap.get(deepData.to) || this.getById(deepData.to, agent);
         if (to) deep.to = to;
