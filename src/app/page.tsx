@@ -1,10 +1,11 @@
 import Box from '@mui/material/Box';
 import React from 'react';
 
+// @ts-ignore
 import Head from 'next/head';
 
 import pckg from '../../package.json';
-import ECharts from '../components/echarts';
+import ECharts from '../components/echarts.js';
 
 export default function Page() {
   return <>

@@ -8,6 +8,12 @@ const nextConfig = {
   },
   distDir: pckg.serverPath,
   basePath: '',
+  webpack: (config) => {
+    config.resolve.extensionAlias = {
+      '.js': ['.ts', '.tsx', '.js', '.jsx'],
+    };
+    return config;
+  },
 };
 
 const CLIENT = +process.env.CLIENT;
@@ -24,21 +30,5 @@ if (BASE_PATH) {
   console.log('deep:', 'BASE_PATH detected:', BASE_PATH);
   nextConfig.basePath = BASE_PATH;
 }
-
-// nextConfig.webpack = (config, { dev, isServer }) => {
-//   config.optimization.minimizer.forEach((minimizer) => {
-//     if (minimizer.constructor.name === 'TerserPlugin') {
-//       minimizer.options.exclude = [
-//         /src\/deep.ts$/,
-//         /src\/being\.ts$/,
-//         /src\/potentials\.ts$/,
-//         /src\/on\.ts$/,
-//       ];
-//     }
-//   });
-//   config.optimization.minimize = false;
-
-//   return config;
-// };
 
 export default nextConfig;

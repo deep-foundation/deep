@@ -1,12 +1,8 @@
 import { ChatLlamaCpp } from "@langchain/community/chat_models/llama_cpp";
 import { HumanMessage } from "@langchain/core/messages";
 import path from 'path';
-import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const llamaPath = path.join(__dirname, "..", ".models", "llama-2-7b-chat.gguf");
+const llamaPath = path.join(process.cwd(), ".models", "llama-2-7b-chat.gguf");
 export async function LangChain() {
     try {
         console.log('Initializing model...');

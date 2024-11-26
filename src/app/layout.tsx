@@ -3,8 +3,10 @@ import { AppRouterCacheProvider } from '@mui/material-nextjs/v15-appRouter';
 import CssBaseline from '@mui/material/CssBaseline';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import './style.css';
-import { DeepProvider } from '../react';
-import { theme } from '../theme';
+import { DeepProvider } from '../react.js';
+import { theme } from '../theme.js';
+
+const _CssBaseline: any = CssBaseline;
 
 export default function RootLayout({
   children,
@@ -20,7 +22,7 @@ export default function RootLayout({
 
       }}>
         <AppRouterCacheProvider>
-          <CssBaseline/>
+          <_CssBaseline />
           <ThemeProvider theme={theme}>
             <DeepProvider>
               {children}

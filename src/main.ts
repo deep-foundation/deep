@@ -5,15 +5,12 @@ export * from './deep.js';
 export * from './on.js';
 export * from './benchmark.js';
 
-// CLI handling
-if (import.meta.url === import.meta.resolve('./main.js')) {
-  const { argv } = process;
-  const args = argv.slice(2);
-  
-  // Check if CLI mode is requested
-  if (args.includes('--cli')) {
-    import('./cli.js').then(({ repl }) => {
-      // CLI is automatically started in cli.ts
-    });
-  }
+const { argv } = process;
+const args = argv.slice(2);
+
+// Check if CLI mode is requested
+if (args.includes('--cli')) {
+  import('./cli.js').then(({ repl }) => {
+    // CLI is automatically started in cli.ts
+  });
 }

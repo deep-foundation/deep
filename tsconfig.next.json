@@ -13,10 +13,10 @@
     "incremental": true,
     "module": "esnext",
     "esModuleInterop": true,
-    "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
+    "allowImportingTsExtensions": true,
     "plugins": [
       {
         "name": "next"
@@ -24,8 +24,11 @@
     ],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
-    }
+      "@/*": [
+        "./src/*"
+      ]
+    },
+    "moduleResolution": "node"
   },
   "include": [
     "**/*.ts",
