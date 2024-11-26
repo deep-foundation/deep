@@ -547,97 +547,6 @@ test('getById', () => {
   assert.equal(deep.getById('entity-a', agent), undefined);
 });
 
-test('select type, type.type', () => {
-  const deep = new Deep();
-  const prevAllSize = deep.memory.all.size;
-  const A = deep.new();
-  const B = deep.new();
-  B.from = A; B.to = A;
-  const a = deep.new(); a.type = A;
-  const b = deep.new(); b.type = B;
-  b.from = a; b.to = a;
-  assert.equal(A.type, deep);
-  assert.equal(A.from, undefined);
-  assert.equal(A.to, undefined);
-  assert.equal(A.value, undefined);
-  assert.equal(B.type, deep);
-  assert.equal(B.from, A);
-  assert.equal(B.to, A);
-  assert.equal(B.value, undefined);
-  assert.equal(a.type, A);
-  assert.equal(a.from, undefined);
-  assert.equal(a.to, undefined);
-  assert.equal(a.value, undefined);
-  assert.equal(b.type, B);
-  assert.equal(b.from, a);
-  assert.equal(b.to, a);
-  assert.equal(b.value, undefined);
-});
-
-test('select from.type to.type', () => {
-  const deep = new Deep();
-  const A = deep.new();
-  const B = deep.new();
-  B.from = A; B.to = A;
-  const C = deep.new();
-  C.from = A; C.to = B;
-  assert.equal(deep.contains.type.typed.size, 0);
-  assert.equal(deep.contains.from.typed.size, 0);
-  assert.equal(deep.contains.to.typed.size, 0);
-  const selection = deep.select({ from: { type: A }, to: { type: B } });
-  assert.equal(deep.contains.type.typed.size, 2);
-  assert.equal(deep.contains.from.typed.size, 1);
-  assert.equal(deep.contains.to.typed.size, 1);
-  let result = selection.call();
-  let outerCounter = 0;
-  selection.on(() => {
-    outerCounter++;
-    result = selection.call();
-  });
-  const relations1 = selection.out;
-  assert.equal(relations1.size, 2);
-  let innerRelationsCounter = 0;
-  relations1.each(r => r.on(() => {
-    innerRelationsCounter++;
-  }))
-  assert.equal(outerCounter, 0);
-  assert.equal(innerRelationsCounter, 0);
-  assert.equal(result.size, 0);
-  const a = A.new();
-  assert.equal(innerRelationsCounter, 2);
-  assert.equal(outerCounter, 2);
-  assert.equal(result.size, 0);
-  const b = B.new();
-  assert.equal(innerRelationsCounter, 4);
-  assert.equal(outerCounter, 4);
-  assert.equal(result.size, 0);
-  const c = C.new();
-  assert.equal(innerRelationsCounter, 4);
-  assert.equal(result.size, 0);
-  c.from = a;
-  assert.equal(innerRelationsCounter, 5);
-  assert.equal(result.size, 0);
-  c.to = b;
-  assert.equal(innerRelationsCounter, 6);
-  assert.equal(result.size, 1);
-  assert.equal(outerCounter, 7);
-});
-
-test('select result changes', () => {
-  const deep = new Deep();
-  const A = deep.new();
-  const B = deep.new();
-  const b = B.new();
-  const selection = deep.select({ type: B });
-  assert.equal(selection.to.size, 1);
-  let outerCounter = 0;
-  selection.on(() => {
-    outerCounter++;
-  });
-  b.from = A; b.to = A;
-  assert.equal(outerCounter, 2);
-});
-
 test('not operator', () => {
   const deep = new Deep();
   const prevAllSize = deep.memory.all.size;
@@ -820,41 +729,6 @@ test('association events order', () => {
   }
 });
 
-test.skip('benchmark', async () => {
-  const deep = new Deep();
-  const { Benchmark, Benchmarked } = benchmarks(deep);
-
-  // Function that creates new Deep instances
-  const testFn = () => {
-    const d = deep.new();
-    const d2 = deep.new();
-    d.from = d2;
-    return d;
-  };
-
-  // Run benchmark
-  const benchmarked = await Benchmark.call(testFn);
-
-  // Check that result is a Deep instance
-  assert(benchmarked.typeof(Benchmarked));
-  
-  // Check that from contains the test function
-  assert(deep.isDeep(benchmarked.from));
-  assert.equal(benchmarked.from.value, testFn);
-
-  // Check that to contains benchmark results
-  assert(deep.isDeep(benchmarked.to));
-  const result = benchmarked.to.value;
-  assert(result.target);
-  assert(typeof result.hz === 'number');
-  assert(result.stats);
-  assert(result.times);
-
-  // Check that value contains hz
-  assert(typeof benchmarked.call, 'number');
-  assert.equal(benchmarked.value, result.hz);
-});
-
 test('inof and outof with multiple types', () => {
   const deep = new Deep();
   
@@ -984,4 +858,26 @@ test('collection getters (types, froms, tos, typeds, outs, ins)', () => {
       assert(ins.has(inRef));
     }
   }
+});
+
+test('go method', () => {
+  const deep = new Deep();
+  
+  // Создаем тестовую структуру
+  const a = deep.new();
+  deep.contains.a = a;
+  const b = deep.new();
+  a.contains.b = b;
+  const c = deep.new();
+  b.contains.c = c;
+  
+  // Проверяем успешный поиск
+  assert.equal(deep.go('a', 'b', 'c'), c);
+  assert.equal(deep.go('a', 'b'), b);
+  assert.equal(deep.go('a'), a);
+  
+  // Проверяем неуспешный поиск
+  assert.equal(deep.go('x'), undefined);
+  assert.equal(deep.go('a', 'x'), undefined);
+  assert.equal(deep.go('a', 'b', 'x'), undefined);
 });

@@ -4,6 +4,7 @@
 export * from './deep.js';
 export * from './on.js';
 export * from './benchmark.js';
+export * from './pckg.js';
 
 const { argv } = process;
 const args = argv.slice(2);

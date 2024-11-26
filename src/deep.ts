@@ -254,20 +254,20 @@ export class Deep {
       deep.contains.from = deep.__from = deep.contains.One.new();
       deep.contains.out = deep.__out = deep.contains.Many.new();
       deep.contains.to = deep.__to = deep.contains.One.new();
-      deep.contains.out = deep.__out = deep.contains.Many.new();
+      deep.contains.in = deep.__in = deep.contains.Many.new();
       deep.contains.value = deep.__value = deep.contains.One.new();
       deep.contains.valued = deep.__valued = deep.contains.Many.new();
 
       const Condition = deep.Condition = deep.contains.Condition = Relation.new();
 
-      deep.contains.eq = Condition.new();
-      deep.contains.neq = Condition.new();
-      deep.contains.gt = Condition.new();
-      deep.contains.lt = Condition.new();
-      deep.contains.gte = Condition.new();
-      deep.contains.lte = Condition.new();
-      deep.contains.in = Condition.new();
-      deep.contains.nin = Condition.new();
+      // deep.contains.eq = Condition.new();
+      // deep.contains.neq = Condition.new();
+      // deep.contains.gt = Condition.new();
+      // deep.contains.lt = Condition.new();
+      // deep.contains.gte = Condition.new();
+      // deep.contains.lte = Condition.new();
+      // deep.contains.in = Condition.new();
+      // deep.contains.nin = Condition.new();
 
       const Logic = deep.Logic = deep.contains.Logic = Relation.new();
 
@@ -1499,9 +1499,7 @@ export class Deep {
       for (let key in this.deep.contains.relations.call) {
         if (input.hasOwnProperty(key)) {
           const relation = this.deep.contains[key].new();
-          if (isDeep(input[key])) {
-            exp.call[key] = input[key];
-          } else if (isPlainObject(input[key])) {
+          if (isDeep(input[key]) || isPlainObject(input[key])) {
             const nestedSelection = this.selection();
             this.exp(input[key], nestedSelection);
             exp.call[key] = nestedSelection;
@@ -1546,7 +1544,7 @@ export class Deep {
               throw new Error(' Sorry not relized yet.');
             } else throw new Error(' Only Deep and string can be .id');
           } else if (relation.typeof(this.deep.Many)) {
-            const nextSet = new Set([relation.to[rels[relation.type.name].invert]]);
+            const nextSet = relation.to.call()[`${rels[relation.type.name].invert}s`].call;
             set = set ? set.intersection(nextSet) : nextSet;
           } else if (relation.typeof(this.deep.One)) {
             const nextSet = relation.to.type === this.deep.Selection ?
@@ -1769,21 +1767,17 @@ export class Deep {
    * @returns Deep instance with unpacked value
    */
   valueUnpack(packedValue: Pack['values'][0]): Deep {
+    let typeDeep;
+    for (const type of this.deep.contains.Value.typed) {
+      if (type.name === packedValue.type) {
+        typeDeep = type;
+        break;
+      }
+    }
+    if (!typeDeep) {
+      throw new Error(` Unknown type ${packedValue.type} for value`);
+    }
     try {
-      let typeDeep;
-      for (const type of [this.Symbol, this.Undefined, this.Promise, this.Boolean, 
-                         this.String, this.Number, this.BigInt, this.Set, 
-                         this.WeakSet, this.Map, this.WeakMap, this.Array, 
-                         this.Object, this.Function]) {
-        if (type.name === packedValue.type) {
-          typeDeep = type;
-          break;
-        }
-      }
-      if (!typeDeep) {
-        throw new Error(` Unknown type ${packedValue.type} for value`);
-      }
-
       switch(packedValue.type) {
         case 'Symbol':
           return this.wrap(Symbol());
@@ -1928,6 +1922,20 @@ export class Deep {
     }
 
     return this.select({ or });
+  }
+
+  /**
+   * Проходит по пути из строк через contains и возвращает найденный deep или undefined
+   * @param paths массив строк, представляющих путь через contains
+   * @returns найденный deep или undefined
+   */
+  go(...paths: string[]): Deep | undefined {
+    let current: Deep = this;
+    for (const p of paths) {
+      if (!current?.contains?.[p]) return undefined;
+      current = current.contains[p];
+    }
+    return current;
   }
 }
 

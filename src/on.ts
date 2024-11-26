@@ -9,6 +9,7 @@ export function On(customOn?: any): OnI {
   let callbacks: any[] = []; // Deeps in future
   const on = function (callback) {
     callbacks.push(customOn ? customOn(...arguments) : callback);
+    return () => on.off(callback);
   };
   on.off = (callback) => {
     callbacks = callbacks.filter(c => c != callback);

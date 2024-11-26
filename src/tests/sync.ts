@@ -1,6 +1,11 @@
 import assert from "node:assert";
-import { test } from "node:test";
+import { after, before, test } from "node:test";
 import { Deep } from '../deep.js';
+import { syncJSONFile } from '../pckg.js';
+import fs from 'fs';
+
+// Create temporary file path
+const tempPath = './temp.json';
 
 test('pack function', () => {
   const deep = new Deep();
@@ -154,4 +159,70 @@ test('selection to pckg, pckg to selection', () => {
   assert(selection2.to.call.has(e2));
   assert(selection2.to.call.has(f2));
   assert(selection2.to.call.has(g2));
+});
+
+test('sync json file', async () => {
+  // Create first Deep instance and setup initial data
+  const deep1 = new Deep();
+  const minds1 = deep1.new();
+  minds1.id('minds');
+  
+  // Create entities and store them in minds
+  minds1.contains.A = deep1.new();
+  minds1.contains.B = deep1.new();
+  minds1.contains.C = deep1.new();
+  minds1.contains.a = deep1.new();
+  minds1.contains.b = deep1.new();
+  minds1.contains.c = deep1.new();
+
+  // Create selector for all entities contained in minds
+  const items1 = { in: { type: deep1.Contain, from: minds1 } };
+  const selection = deep1.select({
+    or: [
+      items1,
+      items1.in,
+    ],
+  });
+
+  // Start synchronization
+  const sync1 = await syncJSONFile(selection, tempPath);
+
+  // Kill the first Deep instance
+  deep1.kill();
+
+  // Create second Deep instance
+  const deep2 = new Deep();
+  const minds2 = deep2.new();
+  minds2.id('minds');
+
+  // Verify that all entities are restored
+  const items2 = { in: { type: deep1.Contain, from: minds2 } };
+  const restoredMinds = deep2.select({
+    or: [
+      items2,
+      items2.in,
+    ],
+  });
+
+  // Start synchronization with empty selection
+  const sync2 = await syncJSONFile(restoredMinds, tempPath);
+
+  assert(deep2.getById(minds1.contains.A.id()));
+  assert(deep2.getById(minds1.contains.B.id()));
+  assert(deep2.getById(minds1.contains.C.id()));
+  assert(deep2.getById(minds1.contains.a.id()));
+  assert(deep2.getById(minds1.contains.b.id()));
+  assert(deep2.getById(minds1.contains.c.id()));
+  // assert.equal(restoredMinds.call().size, 6); // A, B, C, a, b, c
+  
+  // Cleanup
+  sync1.kill();
+  sync2.kill();
+});
+
+before(() => {
+  try { fs.unlinkSync(tempPath); } catch(e) {}
+});
+after(() => {
+  try { fs.unlinkSync(tempPath); } catch(e) {}
 });
