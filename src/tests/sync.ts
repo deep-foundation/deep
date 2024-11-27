@@ -1,11 +1,11 @@
 import assert from "node:assert";
 import { after, before, test } from "node:test";
 import { Deep } from '../deep.js';
-import { syncJSONFile } from '../pckg.js';
+// import { syncJSONFile } from '../pckg.js';
 import fs from 'fs';
 
 // Create temporary file path
-const tempPath = './temp.json';
+const tempPath = './.temp';
 
 test('pack function', () => {
   const deep = new Deep();
@@ -161,64 +161,109 @@ test('selection to pckg, pckg to selection', () => {
   assert(selection2.to.call.has(g2));
 });
 
-test('sync json file', async () => {
-  // Create first Deep instance and setup initial data
-  const deep1 = new Deep();
-  const minds1 = deep1.new();
-  minds1.id('minds');
-  
-  // Create entities and store them in minds
-  minds1.contains.A = deep1.new();
-  minds1.contains.B = deep1.new();
-  minds1.contains.C = deep1.new();
-  minds1.contains.a = deep1.new();
-  minds1.contains.b = deep1.new();
-  minds1.contains.c = deep1.new();
+test('selection events', () => {
+  const deep = new Deep();
+  const minds = deep.new();
+  minds.id('minds');
+  deep.Contain.id('Contain');
 
-  // Create selector for all entities contained in minds
-  const items1 = { in: { type: deep1.Contain, from: minds1 } };
-  const selection = deep1.select({
+  // Array to store events
+  const events: string[] = [];
+
+  // Create selector for everything contained in minds
+  const items = { in: { type: deep.Contain, from: minds } };
+  const selection = deep.select({
     or: [
-      items1,
-      items1.in,
+      items,
+      items.in,
     ],
   });
 
-  // Start synchronization
-  const sync1 = await syncJSONFile(selection, tempPath);
-
-  // Kill the first Deep instance
-  deep1.kill();
-
-  // Create second Deep instance
-  const deep2 = new Deep();
-  const minds2 = deep2.new();
-  minds2.id('minds');
-
-  // Verify that all entities are restored
-  const items2 = { in: { type: deep1.Contain, from: minds2 } };
-  const restoredMinds = deep2.select({
-    or: [
-      items2,
-      items2.in,
-    ],
+  // Subscribe to selection events
+  selection.on((event: any) => {
+    events.push(`${event.name}:${event.deep.id()}`);
   });
 
-  // Start synchronization with empty selection
-  const sync2 = await syncJSONFile(restoredMinds, tempPath);
+  // Execute operations and check events
+  minds.contains.a = deep.new();
+  // assert.deepEqual(events[0], 'new:' + minds.contains.a.id());
 
-  assert(deep2.getById(minds1.contains.A.id()));
-  assert(deep2.getById(minds1.contains.B.id()));
-  assert(deep2.getById(minds1.contains.C.id()));
-  assert(deep2.getById(minds1.contains.a.id()));
-  assert(deep2.getById(minds1.contains.b.id()));
-  assert(deep2.getById(minds1.contains.c.id()));
-  // assert.equal(restoredMinds.call().size, 6); // A, B, C, a, b, c
-  
-  // Cleanup
-  sync1.kill();
-  sync2.kill();
+  minds.contains.B = deep.new();
+  // assert.deepEqual(events[1], 'new:' + minds.contains.B.id());
+
+  minds.contains.b = minds.contains.B.new(123);
+
+  selection.call();
+  assert.deepEqual(events, [
+    'add:' + minds.contains.a.id(),
+    'add:' + minds.contains.B.id(),
+    'add:' + minds.contains.b.id(),
+    'add:' + minds.contains.a.inof(deep.Contain).first.id(),
+    'add:' + minds.contains.B.inof(deep.Contain).first.id(),
+    'add:' + minds.contains.b.inof(deep.Contain).first.id(),
+  ]);
 });
+
+// test('sync json file', async () => {
+//   // Create first Deep instance and setup initial data
+//   const deep1 = new Deep();
+//   const minds1 = deep1.new();
+//   minds1.id('minds');
+//   deep1.Contain.id('Contain');
+  
+//   // Create entities and store them in minds
+//   minds1.contains.A = deep1.new();
+//   minds1.contains.B = deep1.new();
+//   minds1.contains.C = deep1.new();
+//   minds1.contains.a = deep1.new();
+//   minds1.contains.b = deep1.new();
+//   minds1.contains.c = deep1.new();
+
+//   // Create selector for all entities contained in minds
+//   const items1 = { in: { type: deep1.Contain, from: minds1 } };
+//   const selection = deep1.select({
+//     or: [
+//       items1,
+//       items1.in,
+//     ],
+//   });
+
+//   // Start synchronization
+//   const sync1 = await syncJSONFile(selection, tempPath);
+
+//   // Kill the first Deep instance
+//   deep1.kill();
+
+//   // Create second Deep instance
+//   const deep2 = new Deep();
+//   const minds2 = deep2.new();
+//   minds2.id('minds');
+//   deep2.Contain.id('Contain');
+
+//   // Verify that all entities are restored
+//   const items2 = { in: { type: deep1.Contain, from: minds2 } };
+//   const restoredMinds = deep2.select({
+//     or: [
+//       items2,
+//       items2.in,
+//     ],
+//   });
+
+//   // Start synchronization with empty selection
+//   const sync2 = await syncJSONFile(restoredMinds, tempPath);
+
+//   assert(deep2.getById(minds1.contains.A.id()));
+//   assert(deep2.getById(minds1.contains.B.id()));
+//   assert(deep2.getById(minds1.contains.C.id()));
+//   assert(deep2.getById(minds1.contains.a.id()));
+//   assert(deep2.getById(minds1.contains.b.id()));
+//   assert(deep2.getById(minds1.contains.c.id()));
+//   assert.equal(restoredMinds.call().size, 6); // A, B, C, a, b, c
+  
+//   // Cleanup
+//   sync1.kill();
+//   sync2.kill();
+// });
 
 before(() => {
   try { fs.unlinkSync(tempPath); } catch(e) {}

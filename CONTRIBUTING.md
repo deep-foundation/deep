@@ -83,7 +83,8 @@ yarn build
 For publishing, it is necessary to:
 1. Increase the version level, usually patch
 2. Extract changes description from `git status` and `git diff` for all modified files
-3. Format the message according to the following template:
+3. Remove all NOT ENGLISH words from the all src/* files
+4. Format the message according to the following template:
 ```
 Version: type(scope): summary
 

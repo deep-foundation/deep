@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { test } from "node:test";
-import { Deep, DeepEvent } from '../deep.js';
+import { Deep, Event } from '../deep.js';
 import benchmarks from "../benchmark.js";
 
 test('new Deep()', () => {
@@ -648,7 +648,389 @@ test('or operator', () => {
 
 test('association events order', () => {
   const deep = new Deep();
-  const events: DeepEvent[] = [];
+  const events: Event[] = [];
+  
+  // Create an association
+  const association = deep.new();
+  association.on((event) => {
+    events.push(event);
+  });
+
+  // Create nodes to use in the association
+  const from = deep.new();
+  const to = deep.new();
+  const type = deep.new();
+  const value = 'test-value';
+
+  // Change all properties and verify events
+  association.type = type;
+  association.from = from;
+  association.to = to;
+  association.value = value;
+
+  // Verify events occurred in correct order
+  assert.equal(events.length, 4);
+
+  // Check type event
+  assert.equal(events[0].name, 'change');
+  assert.equal(events[0].prev.type, deep);
+  assert.equal(events[0].next.type, type);
+
+  // Check from event
+  assert.equal(events[1].name, 'change');
+  assert.equal(events[1].prev.from, undefined);
+  assert.equal(events[1].next.from, from);
+
+  // Check to event
+  assert.equal(events[2].name, 'change');
+  assert.equal(events[2].prev.to, undefined);
+  assert.equal(events[2].next.to, to);
+
+  // Check value event
+  assert.equal(events[3].name, 'change');
+  assert.equal(events[3].prev.value, undefined);
+  assert.equal(events[3].next.value, value);
+
+  // Change values in reverse order
+  events.length = 0; // Clear events array
+  
+  association.value = 'new-value';
+  association.to = deep.new();
+  association.from = deep.new();
+  association.type = deep.new();
+
+  // Verify events occurred in correct order for changes
+  assert.equal(events.length, 4);
+  
+  // Check value event
+  assert.equal(events[0].name, 'change');
+  assert.equal(events[0].prev.value, value);
+  assert.equal(events[0].next.value, 'new-value');
+
+  // Check to event
+  assert.equal(events[1].name, 'change');
+  assert.equal(events[1].prev.to, to);
+  assert(events[1].next.to instanceof Deep);
+
+  // Check from event
+  assert.equal(events[2].name, 'change');
+  assert.equal(events[2].prev.from, from);
+  assert(events[2].next.from instanceof Deep);
+
+  // Check type event
+  assert.equal(events[3].name, 'change');
+  assert.equal(events[3].prev.type, type);
+  assert(events[3].next.type instanceof Deep);
+
+  // Check that deep reference is present in all events
+  for (const event of events) {
+    assert(event.deep instanceof Deep, 'Event should have reference to Deep instance');
+    assert.equal(event.deep, association, 'Event deep should reference the association');
+  }
+});
+
+test('inof and outof with multiple types', () => {
+  const deep = new Deep();
+  
+  // Create types
+  const A = deep.new();
+  const B = deep.new();
+  const C = deep.new();
+
+  // Create instance a of type A
+  const a = A.new();
+
+  // Create 2 instances of B connected to a
+  const b1 = B.new();
+  const b2 = B.new();
+
+  // Create 3 instances of C connected to a
+  const c1 = C.new();
+  const c2 = C.new();
+  const c3 = C.new();
+
+  // Create links from a to B instances
+  const link1 = deep.new();
+  link1.from = a;
+  link1.to = b1;
+  link1.type = B;
+
+  const link2 = deep.new();
+  link2.from = a;
+  link2.to = b2;
+  link2.type = B;
+
+  // Create links from a to C instances
+  const link3 = deep.new();
+  link3.from = a;
+  link3.to = c1;
+  link3.type = C;
+
+  const link4 = deep.new();
+  link4.from = a;
+  link4.to = c2;
+  link4.type = C;
+
+  const link5 = deep.new();
+  link5.from = a;
+  link5.to = c3;
+  link5.type = C;
+
+  // Test inof and outof
+  const bLinks = a.outof(B);
+  assert(bLinks instanceof Deep);
+  assert.equal(bLinks.size, 2);
+
+  const cLinks = a.outof(C);
+  assert(cLinks instanceof Deep);
+  assert.equal(cLinks.size, 3);
+
+  // Test total in and out
+  const allOut = a.out;
+  assert(allOut instanceof Deep);
+  assert.equal(allOut.size, 5);
+});
+
+test('collection getters (types, froms, tos, typeds, outs, ins)', () => {
+  const deep = new Deep();
+
+  // Create test instances
+  const Type1 = deep.new();
+  const Type2 = deep.new();
+  const instance1 = deep.new();
+  const instance2 = deep.new();
+  const instance3 = deep.new();
+
+  // Set up relationships
+  instance1.type = Type1;
+  instance2.type = Type2;
+  instance3.type = Type1;
+
+  instance1.from = instance2;
+  instance2.to = instance3;
+  instance3.from = instance1;
+
+  // Create a collection to test the getters
+  const instances = deep.wrap([instance1, instance2, instance3]);
+  const typing = deep.wrap([Type1, Type2]);
+
+  // Test types getter
+  const types = instances.types;
+  assert(types.has(Type1));
+  assert(types.has(Type2));
+  assert.equal(types.size, 2);
+
+  // Test froms getter
+  const froms = instances.froms;
+  assert(froms.call instanceof Set);
+  assert(froms.has(instance2));
+  assert(froms.has(instance1));
+  assert.equal(froms.size, 2);
+
+  // Test tos getter
+  const tos = instances.tos;
+  assert(tos.call instanceof Set);
+  assert(tos.has(instance3));
+  assert.equal(tos.size, 1);
+
+  // Test typeds getter
+  const typeds = typing.typeds;
+  assert(typeds.call instanceof Set);
+  assert(typeds.has(instance1));
+  assert(typeds.has(instance2));
+  assert(typeds.has(instance3));
+  assert.equal(typeds.size, 3);
+
+  // Test outs getter
+  const outs = instances.outs;
+  assert(outs.call instanceof Set);
+  for (const deep of instances) {
+    for (const out of deep.out) {
+      assert(outs.has(out));
+    }
+  }
+
+  // Test ins getter
+  const ins = instances.ins;
+  assert(ins.call instanceof Set);
+  for (const deep of instances) {
+    for (const inRef of deep.in) {
+      assert(ins.has(inRef));
+    }
+  }
+});
+
+test('go method', () => {
+  const deep = new Deep();
+  
+  const a = deep.new();
+  deep.contains.a = a;
+  const b = deep.new();
+  a.contains.b = b;
+  const c = deep.new();
+  b.contains.c = c;
+  
+  assert.equal(deep.go('a', 'b', 'c'), c);
+  assert.equal(deep.go('a', 'b'), b);
+  assert.equal(deep.go('a'), a);
+  
+  assert.equal(deep.go('x'), undefined);
+  assert.equal(deep.go('a', 'x'), undefined);
+  assert.equal(deep.go('a', 'b', 'x'), undefined);
+});
+
+test('path method', () => {
+  const deep = new Deep();
+
+  const a = deep.new();
+  deep.contains.a = a;
+  const b = deep.new();
+  a.contains.b = b;
+  const c = deep.new();
+  b.contains.c = c;
+
+  assert.deepEqual(c.path(), ['a', 'b', 'c']);
+  assert.deepEqual(b.path(), ['a', 'b']);
+  assert.deepEqual(a.path(), ['a']);
+  assert.deepEqual(deep.path(), ['deep']);
+
+  const x = deep.new();
+  deep.contains.x = x;
+  const y = deep.new();
+  x.contains.y = y;
+  y.contains.c = c;
+
+  assert.deepEqual(c.path(), ['a', 'b', 'c']);
+});
+
+test('Check that we can find entities by their IDs', () => {
+  const deep = new Deep();
+  const agent = deep.new();
+
+  // Create multiple entities with IDs
+  const a = deep.new();
+  const b = deep.new();
+  const c = deep.new();
+
+  const aId = a.id('entity-a');
+  const bId = b.id('entity-b');
+  const cId = c.id('entity-c', agent); // ID with a different agent
+
+  // Check that we can find entities by their IDs
+  assert.equal(deep.getById('entity-a'), a);
+  assert.equal(deep.getById('entity-b'), b);
+  assert.equal(deep.getById('entity-c', agent), c);
+
+  // Check that we get undefined for a non-existent ID
+  assert.equal(deep.getById('non-existent'), undefined);
+  
+  // Check that we don't find the entity if the agent doesn't match
+  assert.equal(deep.getById('entity-c'), undefined);
+  assert.equal(deep.getById('entity-a', agent), undefined);
+});
+
+test('not operator', () => {
+  const deep = new Deep();
+  const prevAllSize = deep.memory.all.size;
+  
+  const a = deep.new();
+  const b = deep.new();
+  const c = deep.new();
+  
+  a.type = b;
+  b.type = c;
+  c.type = c;
+  c.to = a;
+  
+  // Check the basic not
+  const notB = deep.select({ not: { type: b } });
+  assert.equal(notB.call().has(a), false);
+  assert.equal(notB.call().has(b), true);
+  assert.equal(notB.call().has(c), true);
+  
+  // Check the composition of not with other conditions
+  const notBAndTypeC = deep.select({
+    not: { type: b },
+    to: a,
+  });
+  assert.equal(notBAndTypeC.call().has(a), false);
+  assert.equal(notBAndTypeC.call().has(b), false);
+  assert.equal(notBAndTypeC.call().has(c), true);
+});
+
+test('and operator', () => {
+  const deep = new Deep();
+  
+  const a = deep.new();
+  const b = deep.new();
+  const c = deep.new();
+  const d = deep.new();
+  
+  a.type = b;
+  b.type = c;
+  c.type = b;
+  c.to = a;
+  d.to = a;
+  
+  // Check and with an array of conditions
+  const andMultiple = deep.select({ 
+    and: [
+      { type: b },
+      { to: a }
+    ] 
+  });
+  assert.equal(andMultiple.call().has(a), false);
+  assert.equal(andMultiple.call().has(b), false);
+  assert.equal(andMultiple.call().has(c), true);
+  assert.equal(andMultiple.call().has(d), false);
+  
+  // Check and with three conditions
+  const andThree = deep.select({
+    and: [
+      { type: b },
+      { to: a },
+      { type: { type: c } }
+    ]
+  });
+  assert.equal(andThree.call().has(a), false);
+  assert.equal(andThree.call().has(b), false);
+  assert.equal(andThree.call().has(c), true);
+  assert.equal(andThree.call().has(d), false);
+  
+  // Check that and throws an error if not an array
+  assert.throws(() => {
+    deep.select({ and: { type: b } });
+  });
+});
+
+test('or operator', () => {
+  const deep = new Deep();
+  
+  // Create test instances
+  const Type1 = deep.new();
+  const Type2 = deep.new();
+  const instance1 = Type1.new();
+  const instance2 = Type1.new();
+  const instance3 = Type1.new();
+
+  // Test or operator
+  const orQuery = deep.select({
+    or: [
+      { type: Type1 },
+      { type: Type2 }
+    ]
+  });
+
+  const result = orQuery.call();
+  assert(result.has(instance1));
+  assert(result.has(instance2));
+  assert(result.has(instance3));
+  assert.equal(result.size, 3);
+});
+
+test('association events order', () => {
+  const deep = new Deep();
+  const events: Event[] = [];
   
   // Create an association
   const association = deep.new();

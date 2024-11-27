@@ -133,8 +133,8 @@ export class Memory {
   }
 }
 
-export interface DeepEvent {
-  name: 'change';
+export interface Event {
+  name: 'change' | 'new' | 'kill' | 'add' | 'remove';
   deep: Deep;
   prev: {
     id?: string;
@@ -890,8 +890,8 @@ export class Deep {
     field?: 'id' | 'type' | 'from' | 'to' | 'value',
     previousValue?: any,
     currentValue?: any
-  ): DeepEvent {
-    const event: DeepEvent = {
+  ): Event {
+    const event: Event = {
       name: 'change',
       deep: this,
       prev: {},
@@ -909,7 +909,7 @@ export class Deep {
   /**
    * Gets the deep.Id instance .to this Deep instance .from current this.deep agent. If no ID is set, one will be created.
    * @param value - Optional ID value
-   * @param agent - Optional agent Deep instance
+   * @param agent - Optional agent Deep instance, default this.deep
    * @returns ID value
    */
   id(value?: string, agent: Deep = this.deep): string {
@@ -1483,7 +1483,7 @@ export class Deep {
         relation.from = selection;
         relation.to = nestedSelection;
         relation.value = i;
-        relation.on((e) => selection.emit(e));
+        relation.on((e: Event) => selection.emit(e));
       }
     } else {
       exp = this.deep.Exp.new({});
@@ -1493,7 +1493,7 @@ export class Deep {
           const relation = this.deep.__id.new();
           relation.from = selection;
           relation.to = input.id;
-          relation.on((e) => selection.emit(e));
+          relation.on((e: Event) => selection.emit(e));
         } else throw new Error(` Only Deep or string can be value in exp (id)!`);
       }
       for (let key in this.deep.contains.relations.call) {
@@ -1503,11 +1503,11 @@ export class Deep {
             const nestedSelection = this.selection();
             this.exp(input[key], nestedSelection);
             exp.call[key] = nestedSelection;
-            nestedSelection.on((e) => relation.emit(e));
+            nestedSelection.on((e: Event) => relation.emit(e));
           } else throw new Error(` Only Deep or plain objects Exp can be value in exp (${key})!`);
           relation.from = selection;
           relation.to = exp.call[key]; // nestedSelection
-          relation.on((e) => selection.emit(e));
+          relation.on((e: Event) => selection.emit(e));
         }
       }
       for (let logic of this.deep.Logic.typed) {
@@ -1519,7 +1519,7 @@ export class Deep {
           exp.call[logic.name] = nestedSelection;
           relation.from = selection;
           relation.to = exp.call[logic.name];
-          relation.on((e) => selection.emit(e));
+          relation.on((e: Event) => selection.emit(e));
         }
       }
     }
@@ -1533,52 +1533,56 @@ export class Deep {
   selection() {
     const rels = this.deep.contains.relations.call;
     const selection = this.deep.Selection.new(() => {
-      const relations = selection.out;
+      const inRelations = selection.inof(this.deep.Relation);
+      const outRelations = selection.outof(this.deep.Relation);
       let set;
-      for (let relation of relations) {
-        if (relation.typeof(this.deep.Relation)) {
-          if (relation.typeof(this.deep.__id)) {
-            if (isDeep(relation.to)) {
-              set = set ? set.intersection(new Set([relation.to])) : new Set([relation.to]);
-            } else if (isString(relation.to.call)) {
-              throw new Error(' Sorry not relized yet.');
-            } else throw new Error(' Only Deep and string can be .id');
-          } else if (relation.typeof(this.deep.Many)) {
-            const nextSet = relation.to.call()[`${rels[relation.type.name].invert}s`].call;
-            set = set ? set.intersection(nextSet) : nextSet;
-          } else if (relation.typeof(this.deep.One)) {
-            const nextSet = relation.to.type === this.deep.Selection ?
-            relation.to.call().reduce((result, d) => result.union(d[rels[relation.type.name].invert].call), new Set()) :
-            relation.to[rels[relation.type.name].invert].call;
-            set = set ? set.intersection(nextSet) : nextSet;
-          } else if (relation.typeof(this.deep.Condition)) {
-            
-          } else if (relation.typeof(this.deep.Logic)) {
-            if (relation.typeof(this.deep.contains.not)) {
-              const currentSet = set || this.deep.Everything.call;
-              const notSet = relation.to.call().call;
-              set = currentSet.difference(notSet);
-            } else if (relation.typeof(this.deep.contains.and)) {
-              const currentSet = set || this.deep.Everything.call;
-              const arrayOfSets = relation.to.call();
-              set = arrayOfSets.reduce((result, set) => {
-                return result.intersection(set.call);
-              }, currentSet);
-            } else if (relation.typeof(this.deep.contains.or)) {
-              const arrayOfSets = relation.to.call();
-              set = arrayOfSets.reduce((result, item) => {
-                const itemSet = item.call;
-                return result ? new Set([...result, ...itemSet]) : itemSet;
-              }, set);
-            }
-          } else if (relation.typeof(this.deep.Order)) {
-            const nextSet = relation.to.call();
-            set = set ? (set.push(nextSet), set) : [nextSet];
+      for (let relation of outRelations) {
+        if (relation.typeof(this.deep.__id)) {
+          if (isDeep(relation.to)) {
+            set = set ? set.intersection(new Set([relation.to])) : new Set([relation.to]);
+          } else if (isString(relation.to.call)) {
+            throw new Error(' Sorry not relized yet.');
+          } else throw new Error(' Only Deep and string can be .id');
+        } else if (relation.typeof(this.deep.Many)) {
+          const nextSet = relation.to.call()[`${rels[relation.type.name].invert}s`].call;
+          set = set ? set.intersection(nextSet) : nextSet;
+        } else if (relation.typeof(this.deep.One)) {
+          const nextSet = relation.to.type === this.deep.Selection ?
+          relation.to.call().reduce((result, d) => result.union(d[rels[relation.type.name].invert].call), new Set()) :
+          relation.to[rels[relation.type.name].invert].call;
+          set = set ? set.intersection(nextSet) : nextSet;
+        } else if (relation.typeof(this.deep.Condition)) {
+          
+        } else if (relation.typeof(this.deep.Logic)) {
+          if (relation.typeof(this.deep.contains.not)) {
+            const currentSet = set || this.deep.Everything.call;
+            const notSet = relation.to.call().call;
+            set = currentSet.difference(notSet);
+          } else if (relation.typeof(this.deep.contains.and)) {
+            const currentSet = set || this.deep.Everything.call;
+            const arrayOfSets = relation.to.call();
+            set = arrayOfSets.reduce((result, set) => {
+              return result.intersection(set.call);
+            }, currentSet);
+          } else if (relation.typeof(this.deep.contains.or)) {
+            const arrayOfSets = relation.to.call();
+            set = arrayOfSets.reduce((result, item) => {
+              const itemSet = item.call;
+              return result ? new Set([...result, ...itemSet]) : itemSet;
+            }, set);
           }
+        } else if (relation.typeof(this.deep.Order)) {
+          const nextSet = relation.to.call();
+          set = set ? (set.push(nextSet), set) : [nextSet];
         }
       }
       if (!set) set = this.deep.Everything.call;
       const result = this.wrap(set);
+      if (!inRelations.size) {
+        const oldSet = selection.to?.call || new Set();
+        const newSet = result.call;
+        this.emitDifference(oldSet, newSet, selection);
+      }
       selection.to = result;
       return selection.to;
     });
@@ -1604,6 +1608,40 @@ export class Deep {
   }
 
   /**
+   * Emits difference events between two sets
+   * @param before - Set of items before change
+   * @param after - Set of items after change
+   * @param target - Deep instance to emit events on
+   */
+  public emitDifference(before: Set<Deep>, after: Set<Deep>, target: Deep): void {
+    // Find added elements (present in after, not in before)
+    for (const item of after) {
+      if (!before.has(item)) {
+        const event: Event = {
+          name: 'add',
+          deep: item,
+          prev: { value: null },
+          next: { value: item }
+        };
+        target.emit(event);
+      }
+    }
+
+    // Find removed elements (present in before, not in after)
+    for (const item of before) {
+      if (!after.has(item)) {
+        const event: Event = {
+          name: 'remove',
+          deep: item,
+          prev: { value: item },
+          next: { value: null }
+        };
+        target.emit(event);
+      }
+    }
+  }
+
+  /**
    * Gets, or creates if not exists the event emitter for this Deep instance
    * @returns Event emitter instance
    */
@@ -1616,8 +1654,14 @@ export class Deep {
    * Emits an event from this Deep instance
    * @param args - Event arguments
    */
-  emit(...args) {
-    if (this._on) this._on.emit(...args);
+  emit(...args: any[]): void {
+    if (this._on) {
+      const event = args[0];
+      if (typeof event === 'object' && !event.deep) {
+        event.deep = this;
+      }
+      this._on.emit(...args);
+    }
   }
 
   /**
@@ -1628,7 +1672,7 @@ export class Deep {
   inof(type: Deep): Deep {
     const result = new Set<Deep>();
     for (const link of this.in.call) {
-      if (link.type === type) {
+      if (link.typeof(type)) {
         result.add(link);
       }
     }
@@ -1643,7 +1687,7 @@ export class Deep {
   outof(type: Deep): Deep {
     const result = new Set<Deep>();
     for (const link of this.out.call) {
-      if (link.type === type) {
+      if (link.typeof(type)) {
         result.add(link);
       }
     }
@@ -1925,9 +1969,9 @@ export class Deep {
   }
 
   /**
-   * Проходит по пути из строк через contains и возвращает найденный deep или undefined
-   * @param paths массив строк, представляющих путь через contains
-   * @returns найденный deep или undefined
+   * Proceeds along the path through strings through contains and returns the found deep or undefined
+   * @param paths array of strings representing the path through contains
+   * @returns found deep or undefined
    */
   go(...paths: string[]): Deep | undefined {
     let current: Deep = this;
@@ -1939,8 +1983,8 @@ export class Deep {
   }
 
   /**
-   * Возвращает путь к текущему deep через входящие Contain связи
-   * @returns массив строк - путь через contains
+   * Returns the path to the current deep through incoming Contain connections
+   * @returns array of strings - path through contains
    */
   path(): string[] {
     const result: string[] = [];
@@ -1954,7 +1998,7 @@ export class Deep {
       const contain = contains.first;
       if (!contain) break;
       
-      // Находим ключ в contains, по которому хранится текущий deep
+      // Find the key in contains where the current deep is stored
       const from = contain.from;
       if (!from) break;
       
@@ -2013,3 +2057,7 @@ export class Contains {
     this.deep = deep;
   }
 }
+
+// Global instance of Deep
+export const deep = new Deep();
+export default deep;

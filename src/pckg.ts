@@ -1,6 +1,7 @@
 import { Deep } from './deep.js';
 import chokidar from 'chokidar';
 import fs from 'fs/promises';
+// import { RemoteFile } from './remote-file.js';
 
 /**
  * Synchronizes a JSON file with a Deep selection.
@@ -11,6 +12,7 @@ import fs from 'fs/promises';
  * @param path - Path to the JSON file
  * @returns The selection created from file content
  */
+/*
 export async function syncJSONFile(inputSelection: Deep, path: string): Promise<Deep> {
   const deep = inputSelection.deep;
   let SyncJSONFile = deep.contains.SyncJSONFile;
@@ -89,5 +91,7 @@ export async function syncJSONFile(inputSelection: Deep, path: string): Promise<
 
   return syncJSONFile;
 }
+*/
 
-export default syncJSONFile;
+// export { RemoteFile };
+// export default RemoteFile;

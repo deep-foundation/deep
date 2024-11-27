@@ -31,10 +31,10 @@ test('select type, type.type', () => {
 
 test('select from.type to.type', () => {
   const deep = new Deep();
-  const A = deep.new();
-  const B = deep.new();
+  const A = deep.contains.A = deep.new();
+  const B = deep.contains.B = deep.new();
   B.from = A; B.to = A;
-  const C = deep.new();
+  const C = deep.contains.C = deep.new();
   C.from = A; C.to = B;
   assert.equal(deep.contains.type.typed.size, 0);
   assert.equal(deep.contains.from.typed.size, 0);
@@ -45,9 +45,11 @@ test('select from.type to.type', () => {
   assert.equal(deep.contains.to.typed.size, 1);
   let result = selection.call();
   let outerCounter = 0;
-  selection.on(() => {
-    outerCounter++;
-    result = selection.call();
+  selection.on((e) => {
+    if (['new', 'change', 'kill'].includes(e.name)) {
+      outerCounter++;
+      result = selection.call();
+    }
   });
   const relations1 = selection.out;
   assert.equal(relations1.size, 2);
@@ -86,8 +88,10 @@ test('select result changes', () => {
   const selection = deep.select({ type: B });
   assert.equal(selection.to.size, 1);
   let outerCounter = 0;
-  selection.on(() => {
-    outerCounter++;
+  selection.on((e) => {
+    if (['new', 'change', 'kill'].includes(e.name)) {
+      outerCounter++;
+    }
   });
   b.from = A; b.to = A;
   assert.equal(outerCounter, 2);

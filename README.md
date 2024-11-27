@@ -182,23 +182,62 @@ All methods work uniformly across different data types, treating single items as
 ### Operations
 
 #### Select
+
+<details>
+<summary>Examples</summary>
+
+```typescript
+const A = deep.new();
+const B = deep.new();
+const C = deep.new();
+const X = deep.new();
+
+const a = A.new();
+const b1 = B.new();
+b1.from = a;
+const c = C.new();
+c.from = a;
+
+const x = X.new();
+const b2 = B.new();
+b2.from = x;
+
+// Search by specific relations
+deep.select({ type: C }).to; // Deep<Set<[c]>>
+
+// Search for links that referenced from B
+deep.select({ 
+  out: { type: B }
+}).to; // Deep<Set<[a,x]>>
+
+// Get only those links from which both B and C instances originate at least one
+deep.select({
+  and: [
+    { out: { type: B } },
+    { out: { type: C } },
+  ]
+}).to; // Deep<Set<[a]>>
+```
+</details>
+
 - `select(expression)` → Selection - Creates a reactive selection of links based on expression
-  - Expression can be:
-    - Direct (One to one) relations:
-      - [x] `type` - Get or set link type (returns Deep instance or undefined)
-      - [x] `from` - Get or set source node (returns Deep instance or undefined)
-      - [x] `to` - Get or set target node (returns Deep instance or undefined)
-      - [x] `value` - Get or set link value (returns Deep instance or JS primitive)
-    - Reverse (One to many) relations:
-      - [x] `typed` - Get links that have this as their type
-      - [x] `out` - Get links that have this as their from
-      - [x] `in` - Get links that have this as their to
-      - [x] `valued` - Get links that have this as their value
-    - Logical operators for filtering:
-      - [x] `and` - Array of expressions that all must match
-      - [x] `not` - Expression that must not match
-      - [x] `or` - Array of expressions where at least one must match
-    - Condition types (comparison operators):
+  - Expression is an object that can contain the following keys, where each key's value can be either another expression object or a Deep instance:
+    - Direct selectors:
+      - [x] `type` - Filter links by type
+      - [x] `from` - Filter links by source node
+      - [x] `to` - Filter links by target node
+      - [x] `id` - Filter links by id
+      - [x] `value` - Filter links by value
+    - Reverse selectors:
+      - [x] `typed` - Filter links where they have this as their type
+      - [x] `out` - Filter links where they have this as their from
+      - [x] `in` - Filter links where they have this as their to
+      - [x] `valued` - Filter links where they have this as their value
+    - Logic operators:
+      - [x] `not` - Exclude links matching the expression
+      - [x] `and` - Include links matching all expressions
+      - [x] `or` - Include links matching any expression (must be an array where each item can be an expression object or a Deep instance)
+    - Conditions (comparison operators):
       - [ ] `eq` - Equal to
       - [ ] `neq` - Not equal to
       - [ ] `gt` - Greater than
@@ -233,6 +272,14 @@ All methods work uniformly across different data types, treating single items as
     })
     complexQuery.call() // returns Deep instance with multiple results
     ```
+
+#### Selection
+
+Selection is a special type of association that represents a dynamic query result. When created:
+- It executes immediately once and stores the result in `selection.to`
+- `selection.to` always contains the latest query result
+- Calling `selection.call()` re-executes the query and updates the results
+- The selection automatically updates when the underlying data changes
 
 #### Modify (Coming Soon)
 - `insert({ type, from, to, value })` → Deep - Creates new link
