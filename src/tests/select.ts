@@ -100,14 +100,14 @@ test('select result changes', () => {
 test('select contain typed size', () => {
   const deep = new Deep();
   
-  // Запоминаем начальное количество deep.Contain.typed
+  // Remember initial count of deep.Contain.typed
   const initialContainTypedSize = deep.Contain.typed.size;
   
-  // Делаем два разных запроса, которые должны дать одинаковый результат
+  // Make two different queries that should give the same result
   const selection1 = deep.select({ type: deep.Contain });
   const selection2 = deep.select({ in: { type: deep.Contain } });
   
-  // Проверяем что количество найденных элементов совпадает
+  // Check that the number of found elements matches
   assert.equal(selection1.to.size, selection2.to.size);
   assert.equal(initialContainTypedSize, selection1.to.size);
 });

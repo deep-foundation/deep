@@ -1,8 +1,15 @@
 export interface OnI {
   (callback): void;
   off: (callback) => void;
-  emit(...args): any[];
+  emit(event: DeepEvent): void;
   kill(): void;
+}
+
+export interface DeepEvent {
+  name: string;
+  deep: any;
+  prev: any;
+  next: any;
 }
 
 export function On(customOn?: any): OnI {
@@ -14,14 +21,28 @@ export function On(customOn?: any): OnI {
   on.off = (callback) => {
     callbacks = callbacks.filter(c => c != callback);
   };
-  on.emit = (...args) => {
-    const results: any[] = [];
-    for (let callback of callbacks) {
-      const result = callback(...args);
-      results.push(result);
+
+  on.emit = (event: DeepEvent) => {
+    // Convert 'change' events to 'update' events for selections
+    if (event.name === 'change' && event.deep.type === 'Selection') {
+      const updateEvent = {
+        name: 'update',
+        deep: event.deep,
+        prev: { value: event.prev.value },
+        next: { value: event.next.value }
+      };
+      on.emitToListeners(updateEvent);
+    } else {
+      on.emitToListeners(event);
     }
-    return results;
   };
+
+  on.emitToListeners = (event: DeepEvent) => {
+    for (const callback of callbacks) {
+      callback(event);
+    }
+  };
+
   on.kill = () => {
     callbacks = [];
   };

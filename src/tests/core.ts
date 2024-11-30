@@ -532,17 +532,17 @@ test('getById', () => {
 
   const aId = a.id('entity-a');
   const bId = b.id('entity-b');
-  const cId = c.id('entity-c', agent); // ID с другим агентом
+  const cId = c.id('entity-c', agent); // ID with a different agent
 
-  // Проверяем что можем найти сущности по их ID
+  // Check that we can find entities by their IDs
   assert.equal(deep.getById('entity-a'), a);
   assert.equal(deep.getById('entity-b'), b);
   assert.equal(deep.getById('entity-c', agent), c);
 
-  // Проверяем что получаем undefined для несуществующего ID
+  // Check that we get undefined for a non-existent ID
   assert.equal(deep.getById('non-existent'), undefined);
   
-  // Проверяем что не находим сущность если агент не совпадает
+  // Check that we don't find entity if agent doesn't match
   assert.equal(deep.getById('entity-c'), undefined);
   assert.equal(deep.getById('entity-a', agent), undefined);
 });
@@ -560,13 +560,13 @@ test('not operator', () => {
   c.type = c;
   c.to = a;
   
-  // Проверяем базовый not
+  // Check basic not
   const notB = deep.select({ not: { type: b } });
   assert.equal(notB.call().has(a), false);
   assert.equal(notB.call().has(b), true);
   assert.equal(notB.call().has(c), true);
   
-  // Проверяем композицию not с другими условиями
+  // Check composition of not with other conditions
   const notBAndTypeC = deep.select({
     not: { type: b },
     to: a,
@@ -590,7 +590,7 @@ test('and operator', () => {
   c.to = a;
   d.to = a;
   
-  // Проверяем and с массивом условий
+  // Check and with array of conditions
   const andMultiple = deep.select({ 
     and: [
       { type: b },
@@ -602,7 +602,7 @@ test('and operator', () => {
   assert.equal(andMultiple.call().has(c), true);
   assert.equal(andMultiple.call().has(d), false);
   
-  // Проверяем and с тремя условиями
+  // Check and with three conditions
   const andThree = deep.select({
     and: [
       { type: b },
@@ -615,7 +615,7 @@ test('and operator', () => {
   assert.equal(andThree.call().has(c), true);
   assert.equal(andThree.call().has(d), false);
   
-  // Проверяем что and выбрасывает ошибку если не массив
+  // Check that and throws error if not an array
   assert.throws(() => {
     deep.select({ and: { type: b } });
   });
@@ -915,16 +915,16 @@ test('Check that we can find entities by their IDs', () => {
   const aId = a.id('entity-a');
   const bId = b.id('entity-b');
   const cId = c.id('entity-c', agent); // ID with a different agent
-
+  
   // Check that we can find entities by their IDs
   assert.equal(deep.getById('entity-a'), a);
   assert.equal(deep.getById('entity-b'), b);
   assert.equal(deep.getById('entity-c', agent), c);
-
+  
   // Check that we get undefined for a non-existent ID
   assert.equal(deep.getById('non-existent'), undefined);
   
-  // Check that we don't find the entity if the agent doesn't match
+  // Check that we don't find entity if agent doesn't match
   assert.equal(deep.getById('entity-c'), undefined);
   assert.equal(deep.getById('entity-a', agent), undefined);
 });
@@ -932,7 +932,7 @@ test('Check that we can find entities by their IDs', () => {
 test('not operator', () => {
   const deep = new Deep();
   const prevAllSize = deep.memory.all.size;
-  
+
   const a = deep.new();
   const b = deep.new();
   const c = deep.new();
@@ -942,13 +942,13 @@ test('not operator', () => {
   c.type = c;
   c.to = a;
   
-  // Check the basic not
+  // Check basic not
   const notB = deep.select({ not: { type: b } });
   assert.equal(notB.call().has(a), false);
   assert.equal(notB.call().has(b), true);
   assert.equal(notB.call().has(c), true);
   
-  // Check the composition of not with other conditions
+  // Check composition of not with other conditions
   const notBAndTypeC = deep.select({
     not: { type: b },
     to: a,
@@ -972,13 +972,14 @@ test('and operator', () => {
   c.to = a;
   d.to = a;
   
-  // Check and with an array of conditions
+  // Check and with array of conditions
   const andMultiple = deep.select({ 
     and: [
       { type: b },
       { to: a }
     ] 
   });
+  
   assert.equal(andMultiple.call().has(a), false);
   assert.equal(andMultiple.call().has(b), false);
   assert.equal(andMultiple.call().has(c), true);
@@ -997,7 +998,7 @@ test('and operator', () => {
   assert.equal(andThree.call().has(c), true);
   assert.equal(andThree.call().has(d), false);
   
-  // Check that and throws an error if not an array
+  // Check that and throws error if not an array
   assert.throws(() => {
     deep.select({ and: { type: b } });
   });

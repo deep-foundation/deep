@@ -69,6 +69,9 @@ Core Functionality:
 - [x] Universal associative graph data structure
 - [x] Uniform interface for all data types
 - [x] Reactive event system
+  - [x] Value change tracking
+  - [x] Selection-based event propagation
+  - [x] Difference tracking for collections
 - [x] Complex querying with logical operators
 - [ ] Event generation and applying
 - [ ] Export Selection to JSON and import as Selection
@@ -154,7 +157,7 @@ AI Integration:
 
 The **Deep** class is the core of the system - it represents a universal agent capable of performing operations on any type of data. Each instance of Deep is an active agent that can interact with any other Deep instance or data type through a rich set of methods:
 
-### Data Operations
+#### Data Operations
 
 All methods work uniformly across different data types, treating single items as collections of one element where the item serves as both key and value. This approach allows for consistent data manipulation regardless of whether you're working with a single item or a collection.
 
@@ -179,46 +182,49 @@ All methods work uniformly across different data types, treating single items as
 - `toString()` → string - Returns string representation
 - `valueOf()` → any - Returns primitive value if possible
 
-### Operations
+#### Selection
 
-#### Select
+Selections in Deep are powerful reactive queries that not only retrieve data but also track changes in real-time. They provide a comprehensive event system that propagates changes throughout the semantic graph:
 
-<details>
-<summary>Examples</summary>
+- **Value Change Events**: Track modifications to node values within the selection
+- **Selection Events**: Monitor changes in selection contents (additions/removals)
+- **Difference Tracking**: Track detailed changes in selections over time
+- **Event Propagation**: Events automatically propagate through related selections
 
+Example of tracking value changes in a selection:
 ```typescript
-const A = deep.new();
-const B = deep.new();
-const C = deep.new();
-const X = deep.new();
+const Type1 = deep.new();
+const instance = Type1.new();
 
-const a = A.new();
-const b1 = B.new();
-b1.from = a;
-const c = C.new();
-c.from = a;
+// Create and monitor a selection
+const selection = deep.select({ type: Type1 });
+selection.on((event) => {
+  if (event.name === 'change' && event.field === 'value') {
+    console.log('Value changed:', event);
+  }
+});
 
-const x = X.new();
-const b2 = B.new();
-b2.from = x;
-
-// Search by specific relations
-deep.select({ type: C }).to; // Deep<Set<[c]>>
-
-// Search for links that referenced from B
-deep.select({ 
-  out: { type: B }
-}).to; // Deep<Set<[a,x]>>
-
-// Get only those links from which both B and C instances originate at least one
-deep.select({
-  and: [
-    { out: { type: B } },
-    { out: { type: C } },
-  ]
-}).to; // Deep<Set<[a]>>
+// Changes to instance will trigger selection events
+instance.value = 'new value';
 ```
-</details>
+
+Example of difference tracking:
+```typescript
+const selection = deep.select({ type: Type1 });
+const difference = deep.Difference.call(selection);
+
+// Make some changes
+instance1.value = 'test1';
+instance2.kill();
+const instance3 = Type1.new();
+
+// Get patch of changes
+const patch = difference.call();
+console.log('Events:', patch.call.events.length);
+console.log('Added:', patch.call.added.length);
+console.log('Updated:', patch.call.updated.length);
+console.log('Removed:', patch.call.removed.length);
+```
 
 - `select(expression)` → Selection - Creates a reactive selection of links based on expression
   - Expression is an object that can contain the following keys, where each key's value can be either another expression object or a Deep instance:
@@ -272,14 +278,6 @@ deep.select({
     })
     complexQuery.call() // returns Deep instance with multiple results
     ```
-
-#### Selection
-
-Selection is a special type of association that represents a dynamic query result. When created:
-- It executes immediately once and stores the result in `selection.to`
-- `selection.to` always contains the latest query result
-- Calling `selection.call()` re-executes the query and updates the results
-- The selection automatically updates when the underlying data changes
 
 #### Modify (Coming Soon)
 - `insert({ type, from, to, value })` → Deep - Creates new link

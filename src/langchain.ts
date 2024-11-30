@@ -8,16 +8,16 @@ export async function LangChain() {
         console.log('Initializing model...');
         const model = await ChatLlamaCpp.initialize({ 
             modelPath: llamaPath,
-            contextSize: 256,      // Минимальный контекст
-            threads: 16,           // Максимум потоков
-            batchSize: 4096,       // Максимальный batch
+            contextSize: 256,      // Minimum context size
+            threads: 16,           // Maximum threads
+            batchSize: 4096,       // Maximum batch size
             f16Kv: true,
             useMmap: true,
             useMlock: true,
             temperature: 0.7,
             topP: 0.9,
             topK: 40,
-            gpuLayers: 0          // Отключаем GPU для ускорения на CPU
+            gpuLayers: 0          // Disable GPU for CPU acceleration
         });
         
         async function ask(message) {

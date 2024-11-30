@@ -161,6 +161,95 @@ test('selection to pckg, pckg to selection', () => {
   assert(selection2.to.call.has(g2));
 });
 
+test('Difference tracking', () => {
+  const deep = new Deep();
+  
+  // Create test data
+  const Type1 = deep.new();
+  const instance1 = Type1.new();
+  const instance2 = Type1.new();
+  
+  // Create selection to track
+  const selection = deep.select({ type: Type1 });
+  
+  // Create difference tracker
+  const difference = deep.Difference.call(selection);
+  
+  // Check initial patch
+  const initialPatch = difference.to;
+  assert(initialPatch.type === deep.Patch);
+  assert.equal(initialPatch.call.events.length, 0);
+  assert.equal(initialPatch.call.added.length, 2); // instance1 and instance2
+  assert.equal(initialPatch.call.updated.length, 0);
+  assert.equal(initialPatch.call.removed.length, 0);
+  
+  // Make some changes
+  const instance3 = Type1.new();
+  instance1.value = 'test1';
+  instance2.kill();
+  
+  // Check events were tracked
+  const currentPatch = difference.to;
+  assert.equal(currentPatch.call.events.length, 0);
+  assert.equal(currentPatch.call.added.length, 2); // instance1 and instance2
+  assert.equal(currentPatch.call.updated.length, 0);
+  assert.equal(currentPatch.call.removed.length, 0);
+
+  instance1.value = 'test2';
+  
+  // Create new patch with no changes
+  const newPatch = difference.call();
+  assert.equal(newPatch.call.events.length, 4);
+  assert.equal(newPatch.call.added.length, 1);
+  assert.equal(newPatch.call.updated.length, 2);
+  assert.equal(newPatch.call.removed.length, 1);
+});
+
+test('Difference tracking with multiple changes', () => {
+  const deep = new Deep();
+  
+  // Create test data
+  const Type1 = deep.new();
+  const instance1 = Type1.new();
+  const instance2 = Type1.new();
+  
+  // Create selection to track
+  const selection = deep.select({ type: Type1 });
+  
+  // Create difference tracker
+  const difference = deep.Difference.call(selection);
+  
+  // Check initial patch
+  const initialPatch = difference.to;
+  assert(initialPatch.type === deep.Patch);
+  assert.equal(initialPatch.call.events.length, 0);
+  assert.equal(initialPatch.call.added.length, 2); // instance1 and instance2
+  assert.equal(initialPatch.call.updated.length, 0);
+  assert.equal(initialPatch.call.removed.length, 0);
+  
+  // Make some changes
+  const instance3 = Type1.new();
+  instance1.value = 'test';
+  instance2.kill();
+  const instance4 = Type1.new();
+  instance1.value = 'test2';
+  instance3.kill();
+  
+  // Check events were tracked
+  const currentPatch = difference.call();
+  assert.equal(currentPatch.call.events.length, 4);
+  assert.equal(currentPatch.call.added.length, 1);   // instance3 and instance4
+  assert.equal(currentPatch.call.updated.length, 2); // instance1
+  assert.equal(currentPatch.call.removed.length, 1); // instance2 and instance3
+  
+  // Create new patch
+  const newPatch = difference.call();
+  assert.equal(newPatch.call.events.length, 0);
+  assert.equal(newPatch.call.added.length, 0);
+  assert.equal(newPatch.call.updated.length, 0);
+  assert.equal(newPatch.call.removed.length, 0);
+});
+
 test('selection events', () => {
   const deep = new Deep();
   const minds = deep.new();
@@ -168,7 +257,7 @@ test('selection events', () => {
   deep.Contain.id('Contain');
 
   // Array to store events
-  const events: string[] = [];
+  let events: string[] = [];
 
   // Create selector for everything contained in minds
   const items = { in: { type: deep.Contain, from: minds } };
@@ -181,7 +270,7 @@ test('selection events', () => {
 
   // Subscribe to selection events
   selection.on((event: any) => {
-    events.push(`${event.name}:${event.deep.id()}`);
+    if (['add', 'remove', 'update'].includes(event.name)) events.push(`${event.name}:${event.deep.id()}`);
   });
 
   // Execute operations and check events
@@ -191,7 +280,7 @@ test('selection events', () => {
   minds.contains.B = deep.new();
   // assert.deepEqual(events[1], 'new:' + minds.contains.B.id());
 
-  minds.contains.b = minds.contains.B.new(123);
+  const b = minds.contains.b = minds.contains.B.new(123);
 
   selection.call();
   assert.deepEqual(events, [
@@ -201,6 +290,25 @@ test('selection events', () => {
     'add:' + minds.contains.a.inof(deep.Contain).first.id(),
     'add:' + minds.contains.B.inof(deep.Contain).first.id(),
     'add:' + minds.contains.b.inof(deep.Contain).first.id(),
+  ]);
+  events =[];
+
+  minds.contains.b.type = undefined;
+
+  selection.call();
+  assert.deepEqual(events, [
+    'update:' + minds.contains.b.id(),
+  ]);
+
+  events =[];
+
+  const cb = b.inof(deep.Contain).first;
+  minds.contains.b = undefined;
+
+  selection.call();
+  assert.deepEqual(events, [
+    'remove:' + b.id(),
+    'remove:' + cb.id(),
   ]);
 });
 

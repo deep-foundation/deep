@@ -134,7 +134,7 @@ export class Memory {
 }
 
 export interface Event {
-  name: 'change' | 'new' | 'kill' | 'add' | 'remove';
+  name: 'change' | 'new' | 'kill' | 'update' | 'add' | 'remove';
   deep: Deep;
   prev: {
     id?: string;
@@ -152,7 +152,14 @@ export interface Event {
   };
 }
 
-interface Pack {
+export interface Patch {
+  events: Event[];
+  added: Event[];
+  updated: Event[];
+  removed: Event[];
+}
+
+export interface Pack {
   deep: Array<{
     id: string;
     type?: string;
@@ -873,6 +880,63 @@ export class Deep {
       });
       _insert(deep.contains.Compatable, deep.contains.ObjectJoin, deep.contains.Object);
 
+      deep.Patch = deep.contains.Patch = deep.new();
+
+      let nextPatch = { events: [], added: [], updated: [], removed: [] } as Patch;
+
+      deep.Difference = deep.contains.Difference = deep.new((selection: Deep) => {
+        const difference = deep.Difference.new(() => {
+          difference.from.call();
+          difference.to.kill();
+          const newPatch = deep.Patch.new(nextPatch);
+          difference.to = newPatch;
+          nextPatch = { events: [], added: [], updated: [], removed: [] } as Patch;
+          return newPatch;
+        });
+
+        difference.from = selection;
+        
+        const initialPatch = deep.Patch.new({
+          events: [],
+          added: selection.to.map(item => ({
+            name: 'add',
+            deep: item,
+            prev: {},
+            next: {
+              id: item.id(),
+              type: item.type,
+              from: item.from,
+              to: item.to,
+              value: item.value
+            }
+          })),
+          updated: [],
+          removed: []
+        } as Patch);
+        difference.to = initialPatch;
+
+        selection.on((event: Event) => {
+          if (['add', 'update', 'remove'].includes(event.name)) {
+            const currentPatch = difference.to;
+            nextPatch.events.push(event);
+            
+            switch(event.name) {
+              case 'add':
+                nextPatch.added.push(event);
+                break;
+              case 'update':
+                nextPatch.updated.push(event);
+                break;
+              case 'remove':
+                nextPatch.removed.push(event);
+                break;
+            }
+          }
+        });
+
+        return difference;
+      });
+
       deep._events = true;
     }
   }
@@ -958,6 +1022,15 @@ export class Deep {
    * Sets the value in this Deep instance. Value wrap into untyped Deep instance, if this Deep is typed. Values not duplicating inside this.deep.memory.
    * @param value - Value to set
    */
+  /**
+ * Sets the value for this Deep instance. If the value is undefined, it will unset the current value.
+ * If the value is considered a valid value or a Deep instance containing a valid value, it will be set.
+ * Throws an error if the value is not valid or if trying to erase a value that is a Value instance.
+ * Emits a change event with name 'change' if the value is successfully changed.
+ * 
+ * @param value - The value to set for this Deep instance
+ * @throws Error - If value is not valid or if attempting to erase a Value instance
+ */
   set value(value) {
     const previous = this.call;
     if (isUndefined(value)) {
@@ -974,9 +1047,23 @@ export class Deep {
       this.deep.memory.values.set(this, value);
     } else throw new Error(' Value must be isValue(value) or isValue(value.value) or isUndefined(value)');
     const current = this.value;
-    if (previous !== current) {
-      const event = this._createChangeEvent('change', 'value', previous, current);
+    if (previous !== current?.call) {
+      const event = this._createChangeEvent('change', 'value', previous, current?.call);
       this.on.emit(event);
+      
+      // Propagate through related selections
+      let notifiedSelections = new Set();
+      for (let d of this.deep.memory.types.many(this.deep.__value)) {
+        if (d?.to?.to && d.to.type == this.deep.Selection && d.to.to.call.has(this)) {
+          d.emit(event);
+          notifiedSelections.add(d.to);
+        }
+      }
+      // Propagate through all selections
+      for (let selection of this.deep.memory.types.many(this.deep.Selection)) {
+        if (!notifiedSelections.has(notifiedSelections) && selection.to && !isArray(selection.to.call) && selection.to.call.has(this)) 
+          selection.emit(event);
+      }
     }
   }
 
@@ -1226,12 +1313,14 @@ export class Deep {
    * Removes this Deep instance and all its references, also kill event emitting.
    */
   kill() {
-    this.deep.memory.all.delete(this);
-    this.deep.memory.values.unset(this);
-    this.from = undefined;
-    this.to = undefined;
-    this.type = undefined;
-    if (this._on) this._on.kill();
+    if (this.deep.memory.all.has(this)) {
+      this.deep.memory.all.delete(this);
+      this.deep.memory.values.unset(this);
+      this.from = undefined;
+      this.to = undefined;
+      this.type = undefined;
+      if (this._on) this._on.kill();
+    }
   }
 
   /**
@@ -1532,6 +1621,7 @@ export class Deep {
    */
   selection() {
     const rels = this.deep.contains.relations.call;
+    let changes = [];
     const selection = this.deep.Selection.new(() => {
       const inRelations = selection.inof(this.deep.Relation);
       const outRelations = selection.outof(this.deep.Relation);
@@ -1582,10 +1672,17 @@ export class Deep {
         const oldSet = selection.to?.call || new Set();
         const newSet = result.call;
         this.emitDifference(oldSet, newSet, selection);
+        for (let change of changes) {
+          if (oldSet.has(change.deep) && newSet.has(change.deep)) selection.emit({ ...change, name: 'update' });
+        }
+        changes = [];
       }
       selection.to = result;
       return selection.to;
     });
+    selection.on(event => {
+      if (event.name === 'change') changes.push(event);
+    })
     return selection;
   }
 
@@ -1608,15 +1705,22 @@ export class Deep {
   }
 
   /**
-   * Emits difference events between two sets
+   * Emits difference events between two sets and returns the difference
    * @param before - Set of items before change
    * @param after - Set of items after change
    * @param target - Deep instance to emit events on
+   * @returns Object containing added and removed items
    */
-  public emitDifference(before: Set<Deep>, after: Set<Deep>, target: Deep): void {
+  public emitDifference(before: Set<Deep>, after: Set<Deep>, target: Deep): { added: Deep[], removed: Deep[] } {
+    const difference = {
+      added: [] as Deep[],
+      removed: [] as Deep[],
+    };
+
     // Find added elements (present in after, not in before)
     for (const item of after) {
       if (!before.has(item)) {
+        difference.added.push(item);
         const event: Event = {
           name: 'add',
           deep: item,
@@ -1630,6 +1734,7 @@ export class Deep {
     // Find removed elements (present in before, not in after)
     for (const item of before) {
       if (!after.has(item)) {
+        difference.removed.push(item);
         const event: Event = {
           name: 'remove',
           deep: item,
@@ -1639,6 +1744,8 @@ export class Deep {
         target.emit(event);
       }
     }
+
+    return difference;
   }
 
   /**
@@ -2036,18 +2143,22 @@ export class Contains {
     },
     set(target, key, value, receiver) {
       if (key === 'deep') throw new Error(' Key "deep" is reserved in contains!');
-      if (!isDeep(value)) throw new Error(' Value must be Deep!');
       let founded: Deep | void = undefined;
       const Contain = target.deep.deep.Contain;
-      for (let contain of target.deep.out.call) {
-        if (contain.type === Contain && contain.value.value === key) {
-          founded = contain.to;
+      let contain;
+      for (let c of target.deep.out.call) {
+        if (c.type === Contain && c.call === key) {
+          contain = c;
+          break;
         }
       }
-      if (!founded) {
-        founded = value;
-        const c = target.deep.deep.Contain.new();
-        c.from = target.deep; c.to = founded; c.value = key;
+      if (isDeep(value)) {
+        if (!contain) contain = target.deep.deep.Contain.new();
+        contain.from = target.deep;
+        contain.to = value;
+        contain.value = key;
+      } else if(typeof (value) === 'undefined') {
+        if (contain) contain.kill();
       }
       return true;
     },
