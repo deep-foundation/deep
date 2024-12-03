@@ -312,6 +312,43 @@ test('selection events', () => {
   ]);
 });
 
+test('Watch functionality', () => {
+  const deep = new Deep();
+
+  const A = deep.new();
+
+  const a1 = deep.new();
+  const a2 = A.new();
+  const a3 = A.new();
+  
+  // Create selection to watch
+  const selection = deep.select({ type: A });
+  
+  // Create difference for selection
+  const difference = deep.Difference.call(selection);
+  
+  // Create watch for difference
+  const watch = deep.Watch.call(difference);
+  
+  // Test add event
+  a1.type = A;
+  assert.equal(difference.to.call.added.length, 0);
+  assert.equal(difference.to.call.updated.length, 1);
+  assert.equal(difference.to.call.removed.length, 0);
+  
+  // Test update event
+  a1.value = 'test';
+  assert.equal(difference.to.call.added.length, 0);
+  assert.equal(difference.to.call.updated.length, 1);
+  assert.equal(difference.to.call.removed.length, 0);
+  
+  // Test remove event
+  a1.type = a3;
+  assert.equal(difference.to.call.added.length, 0);
+  assert.equal(difference.to.call.updated.length, 0);
+  assert.equal(difference.to.call.removed.length, 1);
+});
+
 // test('sync json file', async () => {
 //   // Create first Deep instance and setup initial data
 //   const deep1 = new Deep();

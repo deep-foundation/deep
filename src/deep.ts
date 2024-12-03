@@ -937,6 +937,34 @@ export class Deep {
         return difference;
       });
 
+      deep.Watch = deep.contains.Watch = deep.new((difference: Deep) => {
+        const watch = deep.Watch.new(() => {
+          const newPatch = difference.call();
+          watch.to = newPatch;
+          watch.emit(newPatch);
+          return newPatch;
+        });
+        watch.from = difference;
+        const selection = difference.from;
+        selection.on((event: Event) => {
+          console.log('watch on', event);
+          if (
+            ['new', 'change', 'kill'].includes(event.name) &&
+            event.deep.type != deep.Selection
+          ) {
+            watch.call();
+          }
+          // if (['add', 'update', 'remove'].includes(event.name)) {
+          //   watch.call();
+          // }
+        });
+
+        // Make initial call to set initial state
+        watch.to = difference.to;
+
+        return watch;
+      });
+
       deep._events = true;
     }
   }
@@ -1079,8 +1107,8 @@ export class Deep {
    */
   set type(it: Deep | undefined) {
     const previous = this.type;
-    if (isUndefined(it)) this.deep.memory.types.unset(this);
-    else this.deep.memory.types.set(this, it);
+    this.deep.memory.types.unset(this);
+    if (!isUndefined(it)) this.deep.memory.types.set(this, it);
     if (!this.deep._events) return;
     if ((this.type != this.deep.Selection && this.type != this.deep.Id) && previous !== it) {
       this.on.emit(this._createChangeEvent('change', 'type', previous, it));
