@@ -13,40 +13,23 @@
     "incremental": true,
     "module": "esnext",
     "esModuleInterop": true,
+    "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
-    "allowImportingTsExtensions": true,
     "plugins": [
       {
         "name": "next"
       }
-    ],
-    "baseUrl": ".",
-    "paths": {
-      "@/*": [
-        "./src/*"
-      ]
-    },
-    "moduleResolution": "node"
+    ]
   },
   "include": [
-    "**/*.ts",
-    "**/*.tsx",
     "next-env.d.ts",
-    "server/types/**/*.ts",
     ".next/types/**/*.ts",
-    "src/@types/**/*.d.ts"
+    "**/*.ts",
+    "**/*.tsx"
   ],
   "exclude": [
-    "android",
-    "electron",
-    "ios",
-    "vscode",
-    "server",
-    "client",
-    "capacitor",
-    "capacitor.config.ts",
-    ".temp"
+    "node_modules"
   ]
 }

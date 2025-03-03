@@ -8,12 +8,6 @@ const nextConfig = {
   },
   distDir: pckg.serverPath,
   basePath: '',
-  webpack: (config) => {
-    config.resolve.extensionAlias = {
-      '.js': ['.ts', '.tsx', '.js', '.jsx'],
-    };
-    return config;
-  },
 };
 
 const CLIENT = +process.env.CLIENT;

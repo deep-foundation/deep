@@ -1,0 +1,26 @@
+.hex-container {
+  width: 100px;
+  height: 100px;
+  position: relative;
+  display: inline-block;
+}
+
+.hex {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: #2196F3;
+  /* Для правильного шестиугольника с равными сторонами */
+  clip-path: polygon(25% 0,
+                    75% 0,
+                    100% 50%,
+                    75% 100%,
+                    25% 100%,
+                    0 50%);
+  transition: background-color 0.3s ease;
+  cursor: pointer;
+}
+
+.hex:hover {
+  background: #4CAF50;
+}
