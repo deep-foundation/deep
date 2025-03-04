@@ -42,13 +42,35 @@ export const isBigInt = it => typeof it === "bigint";
 export const isFunction = it => typeof it === "function";
 export const isNull = it => it === null;
 export const isUndefined = it => it === undefined;
-export const isPromise = it => it instanceof Promise;
+export const isPromise = it => it?.[Symbol.toStringTag] === 'Promise';
+export const isPromiseLike = it => it && it.then && typeof it.then === 'function';
+export const isConstructor = it => {
+  try { new (it)(); return true; } catch (e) { return false; }
+}
 export const isSet = it => it instanceof Set;
 export const isWeakSet = it => it instanceof WeakSet;
 export const isMap = it => it instanceof Map;
 export const isWeakMap = it => it instanceof WeakMap;
 export const isArray = it => Array.isArray(it);
+export const isRegExp = it => it instanceof RegExp;
+export const isDate = it => it instanceof Date;
 export const isObject = it => typeof it === "object" && it !== null;
+
+/**
+ * Проверяет, является ли объект экземпляром Deep
+ * 
+ * @param {*} it - Проверяемое значение
+ * @returns {boolean} true, если значение является экземпляром Deep
+ */
+export const isDeep = it => it && (it instanceof Deep || (it.deep && it.deep instanceof Deep));
+
+/**
+ * Проверяет, является ли объект значением (не Deep и не undefined)
+ * 
+ * @param {*} it - Проверяемое значение
+ * @returns {boolean} true, если значение не Deep и не undefined
+ */
+export const isValue = it => it !== undefined && it !== null && !isDeep(it);
 
 // Deep - универсальная ассоциативная сущность восприятия.
 // Класс Deep - ядро, требующее проксирования для полноценной работы.
@@ -120,7 +142,18 @@ export class Deep extends Function {
     deep.emit({ event: Deep.new, prev: undefined, next: deep.this });
     return deep;
   }
-  // Проксирование класса Deep в ассоциативную ссылочную сущность Deep.
+  
+  /**
+   * Проксирование класса Deep в ассоциативную ссылочную сущность Deep.
+   * 
+   * ВАЖНО: Этот метод ДОЛЖЕН возвращать объект, обернутый в Proxy,
+   * чтобы обеспечить доступ к полям и методам Deep через проксирование.
+   * Возвращение простого this приведет к ошибкам при вызове методов,
+   * таких как emit, on, off и других, которые существуют только на 
+   * проксированной версии объекта.
+   *
+   * @returns {Proxy} Проксированный экземпляр Deep с доступом ко всем методам Deep.fields
+   */
   get deep() {
     return new Proxy(this, Deep.proxy);
   }
@@ -483,19 +516,76 @@ export class Deep extends Function {
     // Операции над множествами
 
     /**
-     * Выделение ассоциаций по выражению (expression)
-     * Комбинирует из отношений один результат с потоком событий.
-     * Принимает объект с ключами, которые должны быть одним из следующих типов отношений:
-     * - type/typed - для поиска по типу
-     * - from/out - для поиска по исходящим связям
-     * - to/in - для поиска по входящим связям
-     * - value/valued - для поиска по значению
+     * Создает экземпляр And для логического И условий в выражении 
      * 
      * @example
-     * // Найти все экземпляры типа User
+     * // Создать экземпляр And с условием
+     * deep.And({ type: User })
+     * 
+     * // Использовать массив условий (эквивалентно And)
+     * deep.And([{ type: User }, { from: someObject }])
+     * 
+     * @param {object} instance - Текущий экземпляр Deep
+     * @param {symbol} op - Операция (get|set|apply)
+     * @param {Array} args - Аргументы метода, первый аргумент - expression
+     * @returns {Deep} Новый экземпляр Deep, содержащий результат операции И
+     */
+    And(instance, op/*get|set*/, args = []) {
+      if (op == Deep.proxy.get) {
+        return Deep.fields.And._apply || (Deep.fields.And._apply = function () { return Deep.fields.And(this, Deep.proxy.apply, arguments); });
+      } else if (op == Deep.proxy.set) {
+      } else if (op == Deep.proxy.delete) {
+      } else if (op !== Deep.proxy.apply) throw new Error('unexpected');
+      
+      const [expression] = args;
+      const deep = Deep.new();
+      
+      // Если выражение - массив, каждый элемент обрабатываем как отдельное выражение And
+      if (Array.isArray(expression)) {
+        const subResults = [];
+        for (const subExpr of expression) {
+          subResults.push(deep.And(subExpr));
+        }
+        // Реализуем пересечение результатов
+        let result;
+        for (let subResult of subResults) {
+          if (result) result = result.intersection(subResult.this);
+          else result = subResult.this;
+        }
+        return Deep.new(result);
+      }
+      
+      // Обработка обычного объекта выражения
+      let and = new Set();
+      for (let key in expression) {
+        const inverted = Deep.invert.get(Deep.fields[key]);
+        const many = inverted(Deep.new(expression[key]), Deep.proxy.get).many;
+        and.add(many);
+      }
+      
+      let result;
+      for (let many of and) {
+        if (result) result = result.intersection(many.this);
+        else result = many.this;
+      }
+      
+      // Сохраняем исходное выражение в поле from, а результат в поле to
+      const andInstance = Deep.new(result);
+      andInstance.from = expression;
+      andInstance.to = result;
+      
+      return andInstance;
+    },
+    
+    /**
+     * Выборка элементов по заданным условиям.
+     * Метод select является прослойкой для метода And.
+     * 
+     * @example
+     * // Найти всех пользователей
      * deep.select({ type: User })
      * 
-     * // Найти все экземпляры, связанные с объектом через отношение from
+     * // Найти все экземпляры, исходящие от someObject
      * deep.select({ from: someObject })
      * 
      * // Найти все экземпляры, у которых есть отношение как to, так и type
@@ -512,20 +602,9 @@ export class Deep extends Function {
       } else if (op == Deep.proxy.set) {
       } else if (op == Deep.proxy.delete) {
       } else if (op !== Deep.proxy.apply) throw new Error('unexpected');
-      const [expression] = args;
-      // по каждому ключу найти тех кто соответствует
-      let and = new Set();
-      for (let key in expression) {
-        const inverted = Deep.invert.get(Deep.fields[key]);
-        const many = inverted(Deep.new(expression[key]), Deep.proxy.get).many;
-        and.add(many);
-      }
-      let result;
-      for (let many of and) {
-        if (result) result = result.intersection(many.this);
-        else result = many.this;
-      }
-      return Deep.new(result);
+      
+      // Используем метод And для создания экземпляра
+      return instance.deep.And(...args);
     },
     // Обновление ассоциаций по expression 
     update(instance, op/*get*/, args = []) {
@@ -877,6 +956,88 @@ export class Deep extends Function {
       instance.deep.emit({ event: Deep.fields.valueOf, args, result });
       return result;
     },
+
+    /**
+     * Проверяет, является ли объект экземпляром And
+     * 
+     * @param {*} value - Проверяемое значение
+     * @returns {boolean} true, если значение является экземпляром And
+     */
+    'typeof': function typeof_(instance, op = Deep.proxy.get, args = []) {
+      if (op == Deep.proxy.get) return Deep.fields.typeof._apply || (Deep.fields.typeof._apply = function () { return Deep.fields.typeof(this, Deep.proxy.apply, arguments); });
+      else if (op !== Deep.proxy.apply) throw new Error('unexpected');
+      
+      const [check] = args;
+      if (!check) return false;
+      
+      // Получаем this проверяемого типа
+      const checkThis = Deep.this(check);
+      
+      // Безопасное получение типа текущего объекта
+      let typeThis;
+      try {
+        typeThis = Deep.type.one(instance.this);
+      } catch (e) {
+        return false;
+      }
+      
+      // Проверка прямого соответствия
+      if (typeThis === checkThis) return true;
+      
+      // Проверка в иерархии типов
+      if (typeThis && typeThis !== instance.this) {
+        try {
+          return Deep.fields.typeof(Deep.new(typeThis), Deep.proxy.apply, [checkThis]);
+        } catch (e) {
+          return false;
+        }
+      }
+      
+      return false;
+    },
+    
+    /**
+     * Получает массив всех типов в иерархии типов.
+     * 
+     * @example
+     * // Получить все типы в иерархии
+     * const types = deep.typeofs();
+     * 
+     * @param {object} instance - Текущий экземпляр Deep
+     * @param {symbol} op - Операция (get|apply)
+     * @param {Array} args - Аргументы метода, первый аргумент - опциональный массив для добавления типов
+     * @returns {Array} Массив типов
+     */
+    'typeofs': function typeofs(instance, op = Deep.proxy.get, args = []) {
+      if (op == Deep.proxy.get) return Deep.fields.typeofs._apply || (Deep.fields.typeofs._apply = function () { return Deep.fields.typeofs(this, Deep.proxy.apply, arguments); });
+      else if (op !== Deep.proxy.apply) throw new Error('unexpected');
+      
+      const [array = []] = args;
+      array.length = 0; // Очищаем существующий массив
+      
+      try {
+        // Получаем тип текущего объекта
+        let currentType = Deep.type.one(instance.this);
+        
+        // Проверяем, что это валидный тип - не относится к асинхронным хукам Node.js
+        if (currentType && !String(currentType).includes('node:async_hooks')) {
+          // Создаем объект типа и добавляем в массив
+          array.push(Deep.new(currentType));
+          
+          // Получаем предка текущего типа
+          let parentType = Deep.type.one(currentType);
+          // Добавляем всех предков в цепочке
+          while (parentType && !String(parentType).includes('node:async_hooks')) {
+            array.push(Deep.new(parentType));
+            parentType = Deep.type.one(parentType);
+          }
+        }
+      } catch (e) {
+        // Игнорируем ошибки
+      }
+      
+      return array;
+    },
   };
   // Правила проксирования.
   static proxy = (() => ({
@@ -919,4 +1080,20 @@ export class Deep extends Function {
     [Deep.fields.value, Deep.fields.valued],
     [Deep.fields.valued, Deep.fields.value],
   ]);
+
+  /**
+   * Проверяет, является ли объект экземпляром Deep
+   * 
+   * @param {*} it - Проверяемое значение
+   * @returns {boolean} true, если значение является экземпляром Deep
+   */
+  static isDeep(it) { return isDeep(it); }
+  
+  /**
+   * Проверяет, является ли объект значением (не Deep и не undefined)
+   * 
+   * @param {*} it - Проверяемое значение
+   * @returns {boolean} true, если значение не Deep и не undefined
+   */
+  static isValue(it) { return isValue(it); }
 }

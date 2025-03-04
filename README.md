@@ -279,6 +279,66 @@ entity.off(handler);
 - `in` - входящие связи
 - `valued` - сущности с определенным значением
 
+### Методы для работы с типами
+
+#### `typeof(type)`
+
+Проверяет, является ли экземпляр типом `type` или наследником этого типа. 
+
+```javascript
+const TypeA = new deep();
+const TypeB = new deep();
+Deep.type.set(TypeB.this, TypeA.this); // TypeB наследует TypeA
+
+const a1 = new TypeA();
+const b1 = new TypeB();
+
+a1.typeof(TypeA); // true, a1 - экземпляр TypeA
+a1.typeof(TypeB); // false, a1 не является экземпляром TypeB
+b1.typeof(TypeA); // true, b1 относится к TypeB, который наследует TypeA
+b1.typeof(TypeB); // true, b1 - экземпляр TypeB
+```
+
+#### `typeofs()`
+
+Возвращает массив всех типов экземпляра в иерархии наследования, начиная с непосредственного типа.
+
+```javascript
+const TypeA = new deep();
+const TypeB = new deep();
+const TypeC = new deep();
+Deep.type.set(TypeB.this, TypeA.this); // TypeB наследует TypeA
+Deep.type.set(TypeC.this, TypeB.this); // TypeC наследует TypeB
+
+const c1 = new TypeC();
+const types = c1.typeofs(); // [TypeC, TypeB, TypeA]
+```
+
+### Статические методы
+
+#### `Deep.isDeep(it)`
+
+Проверяет, является ли значение экземпляром Deep.
+
+```javascript
+const a1 = new deep();
+Deep.isDeep(a1); // true
+Deep.isDeep("string"); // false
+Deep.isDeep(null); // false
+```
+
+#### `Deep.isValue(it)`
+
+Проверяет, является ли значение "значением" (не экземпляром Deep и не undefined/null).
+
+```javascript
+Deep.isValue("string"); // true
+Deep.isValue(123); // true
+Deep.isValue(new deep()); // false
+Deep.isValue(undefined); // false
+Deep.isValue(null); // false
+```
+
 ## Архитектура
 
 Deep построен на основе следующих ключевых компонентов:
