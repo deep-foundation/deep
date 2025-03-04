@@ -1,3 +1,36 @@
+// Добавляем методы для работы с множествами в прототип Set, если они еще не определены
+if (!Set.prototype.intersection) {
+  Set.prototype.intersection = function(otherSet) {
+    const result = new Set();
+    for (const item of this) {
+      if (otherSet.has(item)) {
+        result.add(item);
+      }
+    }
+    return result;
+  };
+}
+
+if (!Set.prototype.union) {
+  Set.prototype.union = function(otherSet) {
+    const result = new Set(this);
+    for (const item of otherSet) {
+      result.add(item);
+    }
+    return result;
+  };
+}
+
+if (!Set.prototype.difference) {
+  Set.prototype.difference = function(otherSet) {
+    const result = new Set(this);
+    for (const item of otherSet) {
+      result.delete(item);
+    }
+    return result;
+  };
+}
+
 import { Memory } from './memory.js';
 import { On } from './on.js';
 
@@ -130,15 +163,53 @@ export class Deep extends Function {
 
     // События
 
+    /**
+     * Подписка на события экземпляра Deep.
+     * Регистрирует callback-функцию, которая будет вызываться при генерации события.
+     * Возвращает функцию для отписки от события.
+     * 
+     * @example
+     * // Подписка на события с сохранением функции отписки
+     * const off = entity.on(event => {
+     *   console.log('Событие:', event);
+     * });
+     * 
+     * // Отписка от событий с использованием возвращаемой функции
+     * off();
+     * 
+     * // Альтернативный способ отписки через метод off
+     * const handler = event => {
+     *   console.log('Событие:', event);
+     * };
+     * entity.on(handler);
+     * entity.off(handler);
+     * 
+     * @param {object} instance - Текущий экземпляр Deep
+     * @param {symbol} op - Операция (get)
+     * @param {Array} args - Аргументы метода (не используются)
+     * @returns {Function} Функция, принимающая callback для обработки событий и возвращающая функцию отписки
+     */
     on(instance, op, args) {
       if (op == Deep.proxy.get) {
         return (callback) => {
           let on = Deep.events.get(instance.this);
           if (!on) Deep.events.set(instance.this, on = new On());
-          on.on(callback);
+          return on.on(callback);
         };
       } else throw new Error('unexpected');
     },
+    
+    /**
+     * Генерация события для экземпляра Deep.
+     * 
+     * @example
+     * entity.emit({ event: Deep.changes.updated, prev: oldValue, next: newValue });
+     * 
+     * @param {object} instance - Текущий экземпляр Deep
+     * @param {symbol} op - Операция (get)
+     * @param {Array} args - Аргументы метода (не используются)
+     * @returns {Function} Функция для генерации событий
+     */
     emit(instance, op, args) {
       if (op == Deep.proxy.get) {
         return (...data) => {
@@ -149,6 +220,20 @@ export class Deep extends Function {
         };
       } else throw new Error('unexpected');
     },
+    
+    /**
+     * Отписка от событий экземпляра Deep.
+     * Удаляет callback-функцию из списка обработчиков.
+     * 
+     * @example
+     * // Отписка от событий
+     * entity.off(handler);
+     * 
+     * @param {object} instance - Текущий экземпляр Deep
+     * @param {symbol} op - Операция (get)
+     * @param {Array} args - Аргументы метода (не используются)
+     * @returns {Function} Функция, принимающая callback для удаления из обработчиков
+     */
     off(instance, op, args) {
       if (op == Deep.proxy.get) {
         return (callback) => {
@@ -397,9 +482,30 @@ export class Deep extends Function {
 
     // Операции над множествами
 
-    // Выделение ассоциаций по expression
-    // Комбинирует из отношений один результат с потоком событий
-    // Может работать как функция генератор, или как сеттер для существующего выделения
+    /**
+     * Выделение ассоциаций по выражению (expression)
+     * Комбинирует из отношений один результат с потоком событий.
+     * Принимает объект с ключами, которые должны быть одним из следующих типов отношений:
+     * - type/typed - для поиска по типу
+     * - from/out - для поиска по исходящим связям
+     * - to/in - для поиска по входящим связям
+     * - value/valued - для поиска по значению
+     * 
+     * @example
+     * // Найти все экземпляры типа User
+     * deep.select({ type: User })
+     * 
+     * // Найти все экземпляры, связанные с объектом через отношение from
+     * deep.select({ from: someObject })
+     * 
+     * // Найти все экземпляры, у которых есть отношение как to, так и type
+     * deep.select({ to: someObject, type: SomeType })
+     * 
+     * @param {object} instance - Текущий экземпляр Deep
+     * @param {symbol} op - Операция (get|set|apply)
+     * @param {Array} args - Аргументы метода, первый аргумент - expression
+     * @returns {Deep} Новый экземпляр Deep, содержащий результат выборки
+     */
     select(instance, op/*get|set*/, args = []) {
       if (op == Deep.proxy.get) {
         return Deep.fields.select._apply || (Deep.fields.select._apply = function () { return Deep.fields.select(this, Deep.proxy.apply, arguments); });

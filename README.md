@@ -56,6 +56,173 @@ as.on(event => {
 const a2 = new A();
 ```
 
+## Модель событий Deep
+
+Deep использует шаблон Observer для управления событиями. Каждое событие генерируется через метод `emit` и обрабатывается через подписки, созданные методом `on`.
+
+### Структура событий
+
+Все события в Deep имеют общую структуру:
+
+```javascript
+{
+  event: Symbol,       // Тип события (например, Deep.changes.added)
+  this: any,           // Контекст, в котором произошло событие
+  prev: any,           // Предыдущее значение (если применимо)
+  next: any,           // Новое значение (если применимо)
+  args: Array,         // Аргументы вызванного метода (если применимо)
+  result: any,         // Результат вызванного метода (если применимо)
+  reason: any          // Причина события (если применимо)
+}
+```
+
+### Типы событий
+
+#### Событие инициализации
+- `Deep.new` - создание нового экземпляра Deep
+
+#### События изменения связей
+- `Deep.fields.type` - изменение типа сущности
+- `Deep.fields.from` - изменение источника связи
+- `Deep.fields.to` - изменение назначения связи
+- `Deep.fields.value` - изменение значения сущности
+
+#### События изменений в множествах
+- `Deep.changes.added` - добавление элемента в множество
+- `Deep.changes.updated` - обновление элемента в множестве
+- `Deep.changes.removed` - удаление элемента из множества
+
+#### События методов
+- `Deep.fields.get` - получение элемента
+- `Deep.fields.set` - установка значения
+- `Deep.fields.add` - добавление элемента
+- `Deep.fields.unset` - удаление значения
+- `Deep.fields.has` - проверка наличия элемента
+- `Deep.fields.size` - получение размера
+- `Deep.fields.map` - преобразование элементов
+- `Deep.fields.filter` - фильтрация элементов
+- `Deep.fields.find` - поиск элемента
+- `Deep.fields.each` - перебор элементов
+- `Deep.fields.sort` - сортировка элементов
+- `Deep.fields.reduce` - свертка элементов
+- `Deep.fields.first` - получение первого элемента
+- `Deep.fields.last` - получение последнего элемента
+- `Deep.fields.keys` - получение ключей
+- `Deep.fields.values` - получение значений
+- `Deep.fields.toString` - преобразование в строку
+- `Deep.fields.valueOf` - получение значения
+
+#### Специальные события
+- `Deep.fields.kill` - уничтожение сущности
+
+### Примеры использования событий
+
+#### Отслеживание изменений типа сущности
+
+```javascript
+const link = deep.new();
+link.on(event => {
+  if (event.event === Deep.fields.type) {
+    console.log(`Тип изменился с ${event.prev} на ${event.next}`);
+  }
+});
+link.type = SomeType; // генерирует событие Deep.fields.type
+```
+
+#### Отслеживание изменений в коллекции
+
+```javascript
+const collection = deep.select({ type: SomeType });
+collection.on(event => {
+  if (event.event === Deep.changes.added) {
+    console.log(`Добавлен новый элемент: ${event.value}`);
+  } else if (event.event === Deep.changes.removed) {
+    console.log(`Удален элемент: ${event.value}`);
+  }
+});
+```
+
+#### Отслеживание уничтожения сущности
+
+```javascript
+entity.on(event => {
+  if (event.event === Deep.fields.kill) {
+    console.log(`Сущность была уничтожена`);
+    // Очистка ресурсов, удаление подписок и т.д.
+  }
+});
+entity.kill(); // генерирует событие Deep.fields.kill
+```
+
+#### Мониторинг вызовов методов
+
+```javascript
+collection.on(event => {
+  if (event.event === Deep.fields.set) {
+    console.log(`Метод set вызван с аргументами:`, event.args);
+    console.log(`Результат:`, event.result);
+  }
+});
+collection.set('key', 'value'); // генерирует событие Deep.fields.set
+```
+
+### Реактивность в Deep
+
+Модель событий Deep позволяет создавать реактивные системы. Например, вы можете создать зависимый список, который автоматически обновляется при изменениях в исходном:
+
+```javascript
+// Пример реактивного фильтра
+const users = deep.new();
+
+// В текущей версии deep.select принимает только ссылочные релейшены 
+// (from/to/type/value/out/in/typed/valued) и поисковые релейшены (and/or/not)
+const User = deep.new();
+const usersOfType = deep.select({ type: User });
+
+usersOfType.on(event => {
+  if (event.event === Deep.changes.added) {
+    console.log(`Добавлен новый пользователь: ${event.value}`);
+  } else if (event.event === Deep.changes.removed) {
+    console.log(`Удален пользователь: ${event.value}`);
+  }
+});
+
+// Создание нового экземпляра типа User автоматически добавит его в выборку
+const someUser = deep.new();
+someUser.type = User;  // вызовет событие Deep.changes.added в usersOfType
+
+// Примечание: В будущих версиях будет реализована расширенная версия select,
+// поддерживающая сложные фильтры по произвольным свойствам, например:
+// const activeUsers = deep.select({ type: User, status: 'active' });
+```
+
+### Управление подписками
+
+Для работы с событиями в Deep есть два способа отписки от событий:
+
+```javascript
+// Способ 1: Использование возвращаемой функции отписки
+const off = entity.on(event => {
+  // Обработка события
+  console.log('Событие:', event);
+});
+
+// Отписка
+off();
+
+// Способ 2: Сохранение ссылки на обработчик
+const handler = event => {
+  // Обработка события
+  console.log('Событие:', event);
+};
+entity.on(handler);
+
+// Отписка через метод off
+entity.off(handler);
+```
+
+> **Важно:** При работе с событиями всегда используйте один из способов отписки, чтобы избежать утечек памяти. Рекомендуется использовать первый способ, так как он более удобен и менее подвержен ошибкам.
+
 ## API
 
 ### Класс Deep
@@ -75,7 +242,7 @@ const a2 = new A();
 - `from` - источник связи
 - `to` - назначение связи
 - `value` - значение сущности
-- `on(callback)` - подписка на события
+- `on(callback)` - подписка на события, возвращает функцию отписки
 - `emit(event)` - генерация события
 - `off(callback)` - отписка от событий
 - `kill()` - уничтожение сущности
