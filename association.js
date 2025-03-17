@@ -12,7 +12,7 @@ export class Association {
 
   /**
    * Создает экземпляр Association с опциональными начальными методами.
-   * 
+   *
    * @param {Object} [methods] - Начальные методы для проксирования
    */
   constructor(methods = {}) {
@@ -21,30 +21,60 @@ export class Association {
       this._proxy.set(key, value);
     }
 
+    // Улучшение отображения в отладчике - добавляем [Symbol.toStringTag]
+    Object.defineProperty(this, Symbol.toStringTag, {
+      value: 'Association',
+      writable: false,
+      enumerable: false,
+      configurable: true
+    });
+
+    // Для Node.js inspect
+    Object.defineProperty(this, 'inspect', {
+      value: function() {
+        const entries = Array.from(this._proxy.entries());
+        const props = Object.fromEntries(entries);
+        return { Association: props };
+      },
+      writable: false,
+      enumerable: false,
+      configurable: true
+    });
+
     // Создаем прокси для данного экземпляра
     return new Proxy(this, {
       // При получении свойства
       get: (target, key, receiver) => {
         if (key === '_proxy') return target._proxy;
-        
+        if (key === Symbol.toStringTag) return 'Association';
+
+        // Для интеграции с отладчиками и утилитами печати
+        if (key === 'inspect' || key === 'toString' || key === Symbol.for('nodejs.util.inspect.custom')) {
+          return function() {
+            const entries = Array.from(target._proxy.entries());
+            const props = Object.fromEntries(entries);
+            return { Association: props };
+          };
+        }
+
         const value = target._proxy.get(key);
-        
+
         // Если значение есть, но это не функция - возвращаем его как есть
         if (value !== undefined && typeof value !== 'function') {
           return value;
         }
-        
+
         // Если это функция - вызываем её в контексте target
         if (typeof value === 'function') {
           return function(...args) {
             return value.apply(target, args);
           };
         }
-        
+
         // Если значения нет - возвращаем undefined
         return undefined;
       },
-      
+
       // При установке свойства
       set: (target, key, value, receiver) => {
         // Если ключ не существует в прокси или он не является защищенным - устанавливаем его
@@ -53,17 +83,17 @@ export class Association {
         }
         return true;
       },
-      
+
       // Поддержка оператора in
       has: (target, key) => {
         return key === '_proxy' || target._proxy.has(key);
       },
-      
+
       // Поддержка Object.keys() и других итераций по ключам
       ownKeys: (target) => {
         return Array.from(target._proxy.keys());
       },
-      
+
       // Поддержка getOwnPropertyDescriptor
       getOwnPropertyDescriptor: (target, key) => {
         if (target._proxy.has(key)) {
