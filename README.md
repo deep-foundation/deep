@@ -3,6 +3,7 @@
 ## Документация
 
 - [События (Events)](./EVENTS.md) 
+- [Память (Memory)](./MEMORY.md)
 
 Проект Deep версии 7.2.0 на чистом JavaScript
 
@@ -19,7 +20,12 @@ cd deep
 ## Использование
 
 ```javascript
-import { deep } from 'deep';
+import { deep, Memory } from 'deep';
+
+// Пример использования Memory
+const memory = new Memory();
+memory.set('key', 'value');
+console.log(memory.one('key')); // value
 ```
 
 ## Тестирование

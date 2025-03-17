@@ -1,130 +1,106 @@
 # Задачи по проекту Deep
 
-## EventEmitter
+## Memory
 
 ### Основные задачи
-- [x] Создать базовый класс Events в events.js
-- [x] Реализовать базовые методы on/off/emit
-- [x] Тест: подписка и получение события
-- [x] Тест: отписка через возвращаемую функцию
-- [x] Тест: подписка нескольких обработчиков на одно событие
-- [x] Тест: отписка конкретного обработчика не влияет на другие
+- [x] Создать базовый класс Memory в memory.js
+- [x] Реализовать базовые методы one/many/set/delete
+- [x] Тест: сохранение и получение one-связи
+- [x] Тест: получение many-связей для значения
+- [x] Тест: удаление связи через delete
+- [x] Тест: обновление существующей связи
 
 ### Дополнительные задачи
-- [x] Реализовать метод once() для одноразовых подписок
-- [x] Тест: одноразовый обработчик вызывается только один раз
-- [x] Реализовать поддержку wildcard событий (например, "user.*")
-- [x] Тест: wildcard-обработчики получают все соответствующие события
-- [x] Реализовать методы очистки всех обработчиков (removeAllListeners)
-- [x] Тест: успешная очистка всех обработчиков для события и глобально
+- [x] Реализовать метод has() для проверки существования связи
+- [x] Тест: проверка существования связи
+- [x] Реализовать метод clear() для полной очистки структуры
+- [x] Тест: успешная очистка всех связей
+- [x] Реализовать метод size() для получения количества связей
+- [x] Тест: корректное отображение количества связей
 
 ### Производительность и оптимизация
-- [x] Реализовать управление контекстом выполнения (this)
-- [x] Тест: контекст правильно передается в обработчик
-- [x] Реализовать защиту от влияния ошибок одного обработчика на другие
-- [x] Тест: ошибка в обработчике не препятствует вызову других
-- [ ] Реализовать оптимизацию с использованием WeakRef для автоочистки
-- [ ] Тест: обработчики удаляются, когда объект-контекст собирается GC
-- [x] Создать бенчмарк для сравнения с Node.js EventEmitter
+- [x] Реализовать оптимизированное удаление обратных связей
+- [x] Тест: удаление обратных связей не влияет на другие связи
+- [x] Добавить защиту от некорректных значений ключей
+- [x] Тест: обработка некорректных входных данных
+- [x] Создать бенчмарк для сравнения с Map/Set
 
-# Задачи по бенчмаркингу
+# Задачи по бенчмаркингу Memory
 
 ## Подготовка бенчмарков
 
-- [x] Выбор инструмента для бенчмаркинга (node:perf_hooks vs mitata vs tinybench)
-- [x] Создание файла events.benchmark.js
-- [x] Подготовка общей функции для запуска бенчмарков с разными параметрами
-- [ ] Настройка среды для измерения памяти (--expose-gc)
+- [x] Создание файла memory.benchmark.js
+- [x] Адаптация общей функции для запуска бенчмарков с разными параметрами
+- [x] Настройка среды для измерения памяти (--expose-gc)
 
 ## Создание сценариев тестирования
 
-- [x] Сценарий 1: Подписка большого количества обработчиков (1000, 10000, 100000)
-- [x] Сценарий 2: Эмиссия событий с разным количеством подписчиков (100, 1000)
-- [x] Сценарий 3: Подписка/отписка обработчиков в цикле
-- [x] Сценарий 4: Wildcard подписки vs множественные подписки
-- [ ] Сценарий 5: Измерение использования памяти
+- [x] Сценарий 1: Создание большого количества one-связей (1000, 10000, 100000)
+- [x] Сценарий 2: Получение many-связей с разным количеством ассоциаций (10, 100, 1000)
+- [x] Сценарий 3: Создание/удаление связей в цикле
+- [x] Сценарий 4: Сравнение с нативными Map+Set для аналогичных операций
+- [x] Сценарий 5: Измерение использования памяти
 
 ## Визуализация результатов
 
 - [x] Генерация отчета в формате Markdown
-- [x] Добавление результатов в EVENTS.md
-- [ ] Создание графиков сравнения (опционально)
+- [x] Добавление результатов в MEMORY.md
+- [x] Обновление скрипта regenerate-benchmark-readme.js для поддержки Memory
 
 ## Черновики кода
 
-### Пример с node:perf_hooks:
-
-```javascript
-import { performance } from 'node:perf_hooks';
-import { Events } from './events.js';
-import { EventEmitter } from 'node:events';
-
-// Вспомогательная функция для бенчмаркинга
-function runBenchmark(name, fn, iterations = 1, warmupIterations = 0) {
-  // Прогрев (не учитывается в измерениях)
-  for (let i = 0; i < warmupIterations; i++) {
-    fn();
-  }
-  
-  // Измерение
-  const start = performance.now();
-  for (let i = 0; i < iterations; i++) {
-    fn();
-  }
-  const end = performance.now();
-  
-  const totalTime = end - start;
-  const avgTime = totalTime / iterations;
-  
-  console.log(`Бенчмарк: ${name}`);
-  console.log(`Общее время: ${totalTime.toFixed(2)}ms`);
-  console.log(`Среднее время: ${avgTime.toFixed(4)}ms`);
-  console.log('-'.repeat(40));
-  
-  return { name, totalTime, avgTime, iterations };
-}
-
-// Сценарий 1: Создание и подписка большого количества обработчиков
-function benchmarkSubscription(count) {
-  const eventsResult = runBenchmark(`Events: подписка ${count} обработчиков`, () => {
-    const events = new Events();
-    for (let i = 0; i < count; i++) {
-      events.on(`event-${i % 100}`, () => {});
-    }
-    return events;
-  });
-  
-  const emitterResult = runBenchmark(`EventEmitter: подписка ${count} обработчиков`, () => {
-    const emitter = new EventEmitter();
-    for (let i = 0; i < count; i++) {
-      emitter.on(`event-${i % 100}`, () => {});
-    }
-    return emitter;
-  });
-  
-  const ratio = emitterResult.avgTime / eventsResult.avgTime;
-  console.log(`События быстрее в ${ratio.toFixed(2)} раз\n`);
-}
-```
-
-### Пример с mitata:
+### Пример измерения производительности:
 
 ```javascript
 import { bench, run } from 'mitata';
-import { Events } from './events.js';
-import { EventEmitter } from 'node:events';
+import { Memory } from './memory.js';
 
-bench('Events: создание 1000 подписчиков', () => {
-  const events = new Events();
+// Бенчмарк для создания большого количества one-связей
+bench('Memory: создание 1000 связей', () => {
+  const memory = new Memory();
   for (let i = 0; i < 1000; i++) {
-    events.on(`event-${i}`, () => {});
+    memory.set(i, i % 100);
   }
 });
 
-bench('EventEmitter: создание 1000 подписчиков', () => {
-  const emitter = new EventEmitter();
+// Сравнение с нативной Map
+bench('Map: создание 1000 записей', () => {
+  const map = new Map();
   for (let i = 0; i < 1000; i++) {
-    emitter.on(`event-${i}`, () => {});
+    map.set(i, i % 100);
+  }
+});
+
+// Тест получения one-связей
+bench('Memory: получение 1000 one-связей', () => {
+  const memory = new Memory();
+  // Предварительно заполняем память
+  for (let i = 0; i < 1000; i++) {
+    memory.set(i, i % 100);
+  }
+  
+  // Бенчмарк получения
+  let temp;
+  for (let i = 0; i < 1000; i++) {
+    temp = memory.one(i);
+  }
+});
+
+// Тест получения many-связей
+bench('Memory: получение 10 many-связей с 100 элементами каждая', () => {
+  const memory = new Memory();
+  // Создаем структуру где каждое значение связано со 100 ключами
+  for (let v = 0; v < 10; v++) {
+    const value = v;
+    for (let k = 0; k < 100; k++) {
+      memory.set(v * 1000 + k, value);
+    }
+  }
+  
+  // Бенчмарк получения
+  let temp;
+  for (let v = 0; v < 10; v++) {
+    temp = memory.many(v);
   }
 });
 
@@ -160,40 +136,32 @@ function measureMemory(name, fn) {
   
   return result;
 }
-```
 
-### Пример сценария Wildcard vs Множественные подписки:
+// Пример использования:
+measureMemory('Memory: 100_000 связей', () => {
+  const memory = new Memory();
+  for (let i = 0; i < 100000; i++) {
+    memory.set(i, i % 1000);
+  }
+  return memory;
+});
 
-```javascript
-function benchmarkWildcard() {
-  const eventTypes = [];
-  for (let i = 0; i < 100; i++) {
-    eventTypes.push(`user.${i}`);
+measureMemory('Map+Set: 100_000 связей', () => {
+  const oneMap = new Map();
+  const manyMap = new Map();
+  
+  for (let i = 0; i < 100000; i++) {
+    const key = i;
+    const value = i % 1000;
+    
+    oneMap.set(key, value);
+    
+    if (!manyMap.has(value)) {
+      manyMap.set(value, new Set());
+    }
+    manyMap.get(value).add(key);
   }
   
-  // Events с wildcard
-  const events = new Events();
-  events.on('user.*', () => {});
-  
-  // EventEmitter с множественными подписками
-  const emitter = new EventEmitter();
-  for (const type of eventTypes) {
-    emitter.on(type, () => {});
-  }
-  
-  const eventsResult = runBenchmark('Events: wildcard подписка', () => {
-    for (const type of eventTypes) {
-      events.emit(type, { userId: 1 });
-    }
-  }, 100);
-  
-  const emitterResult = runBenchmark('EventEmitter: множественные подписки', () => {
-    for (const type of eventTypes) {
-      emitter.emit(type, { userId: 1 });
-    }
-  }, 100);
-  
-  const ratio = emitterResult.avgTime / eventsResult.avgTime;
-  console.log(`Wildcard в Events ${ratio > 1 ? 'быстрее' : 'медленнее'} в ${Math.abs(ratio).toFixed(2)} раз\n`);
-}
+  return { oneMap, manyMap };
+});
 ```

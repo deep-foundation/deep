@@ -9,6 +9,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
 
+// Соответствие между файлами бенчмарков и документацией
+const BENCHMARK_DOCS_MAP = {
+  'events.benchmark.js': 'EVENTS.md',
+  'memory.benchmark.js': 'MEMORY.md'
+};
+
 // Функция для запуска бенчмарка и получения результатов
 function runBenchmark(benchmarkPath) {
   console.log(`Запуск бенчмарка: ${benchmarkPath}`);
@@ -71,8 +77,9 @@ function createMarkdownTable(benchmarkOutput) {
         const avg = match[2];
         const unit = match[3];
         
-        // Пропускаем тесты с wildcard подписками
-        if (name.includes('wildcard') || name.includes('Wildcard')) {
+        // Пропускаем тесты с wildcard подписками для Events
+        if ((name.includes('Events:') || name.includes('EventEmitter:')) && 
+            (name.includes('wildcard') || name.includes('Wildcard'))) {
           continue;
         }
         
@@ -109,57 +116,71 @@ function createMarkdownTable(benchmarkOutput) {
     markdown += `| ${data.name} | ${data.avg} ${data.unit}/итер | ${opsPerSec.toLocaleString('ru-RU')} опер/сек |\n`;
   }
   
-  return { markdown, tableData };
+  return { markdown, tableData, systemInfo };
 }
 
-// Функция для добавления сравнительной информации
-function addComparisonInfo(tableData) {
-  let markdown = "\n**Сравнение производительности:**\n\n";
+// Функция для создания сравнительной таблицы для Memory
+function createMemoryComparisonTable(tableData, systemInfo) {
+  // Создаем таблицу сравнения для Memory
+  let markdown = "";
   
-  // Группируем тесты по сценариям
-  const scenarios = {};
+  // Определяем необходимые операции для сравнения
+  const operationsToCompare = [
+    { pattern: 'создание', name: 'Создание 1000 связей' },
+    { pattern: 'получение 1000 one', name: 'Получение 1000 one-связей' },
+    { pattern: 'получение 100 many|получение 10 many', name: 'Получение many-связей' },
+    { pattern: 'обновление', name: 'Обновление 1000 связей' },
+    { pattern: 'удаление', name: 'Удаление 1000 связей' }
+  ];
   
-  for (const data of tableData) {
-    // Извлекаем название сценария из имени теста
-    const nameParts = data.name.split(':');
-    if (nameParts.length > 1) {
-      const scenario = nameParts[1].trim();
-      if (!scenarios[scenario]) {
-        scenarios[scenario] = [];
+  // Создаем объект для хранения данных по каждой операции
+  const operationData = {};
+  
+  // Заполняем данными из тестов
+  for (const operation of operationsToCompare) {
+    operationData[operation.name] = {
+      memory: null,
+      map: null,
+      mapSet: null
+    };
+    
+    // Ищем соответствующие тесты для каждой операции
+    for (const data of tableData) {
+      const name = data.name.toLowerCase();
+      const pattern = new RegExp(operation.pattern, 'i');
+      
+      if (pattern.test(name)) {
+        if (name.startsWith('memory:')) {
+          operationData[operation.name].memory = `${data.avg} ${data.unit}`;
+        } else if (name.startsWith('map:')) {
+          operationData[operation.name].map = `${data.avg} ${data.unit}`;
+        } else if (name.startsWith('map+set:')) {
+          operationData[operation.name].mapSet = `${data.avg} ${data.unit}`;
+        }
       }
-      scenarios[scenario].push(data);
     }
   }
   
-  // Для каждого сценария сравниваем Events и EventEmitter
-  for (const [scenario, tests] of Object.entries(scenarios)) {
-    if (tests.length === 2) {
-      const eventsTest = tests.find(t => t.name.startsWith('Events'));
-      const emitterTest = tests.find(t => t.name.startsWith('EventEmitter'));
-      
-      if (eventsTest && emitterTest) {
-        const eventsAvg = parseFloat(eventsTest.avg);
-        const emitterAvg = parseFloat(emitterTest.avg);
-        
-        let ratio, faster;
-        if (eventsAvg < emitterAvg) {
-          ratio = emitterAvg / eventsAvg;
-          faster = 'Events';
-        } else {
-          ratio = eventsAvg / emitterAvg;
-          faster = 'EventEmitter';
-        }
-        
-        markdown += `- **${scenario}**: ${faster} быстрее в ${ratio.toFixed(2)} раз\n`;
-      }
-    }
+  // Добавляем информацию о системе
+  markdown += "**Информация о системе:**\n\n";
+  for (const info of systemInfo) {
+    markdown += `- ${info}\n`;
+  }
+  markdown += "\n";
+  
+  // Создаем таблицу сравнения
+  markdown += "| Операция | Memory | Map | Map+Set (для двунаправленных связей) |\n";
+  markdown += "|----------|--------|-----|--------------------------------------|\n";
+  
+  for (const [operation, data] of Object.entries(operationData)) {
+    markdown += `| ${operation} | ${data.memory || '-'} | ${data.map || '-'} | ${data.mapSet || '-'} |\n`;
   }
   
   return markdown;
 }
 
 // Функция для обновления раздела производительности в MD файле
-function updateMarkdownFile(mdFilePath, benchmarkOutput, moduleName) {
+function updateMarkdownFile(mdFilePath, benchmarkOutput, benchmarkName) {
   console.log(`Обновление файла документации: ${mdFilePath}`);
   try {
     if (!fs.existsSync(mdFilePath)) {
@@ -170,17 +191,25 @@ function updateMarkdownFile(mdFilePath, benchmarkOutput, moduleName) {
     // Читаем содержимое файла
     let content = fs.readFileSync(mdFilePath, 'utf8');
     
-    // Ищем раздел с производительностью
-    const perfSectionRegex = /(# Производительность[\s\S]*?)(?=\n#|$)/;
+    // Перед поиском раздела, убедимся что мы используем правильный уровень заголовка
+    // для разных документов
+    let perfHeadingLevel = '##';
+    if (mdFilePath.includes('EVENTS.md')) {
+      // В EVENTS.md используется уровень # для заголовка "Производительность"
+      perfHeadingLevel = '#';
+    }
+    
+    // Ищем раздел с производительностью с учетом уровня заголовка
+    const perfSectionRegex = new RegExp(`(${perfHeadingLevel} Производительность[\\s\\S]*?)(?=\\n${perfHeadingLevel[0]}|$)`, 'i');
     const perfSection = content.match(perfSectionRegex);
     
     if (!perfSection) {
-      console.error(`Раздел "Производительность" не найден в файле ${mdFilePath}`);
+      console.error(`Раздел "${perfHeadingLevel} Производительность" не найден в файле ${mdFilePath}`);
       return false;
     }
     
     // Создаем таблицу из результатов бенчмарка и получаем данные для анализа
-    const { markdown: markdownTable, tableData } = createMarkdownTable(benchmarkOutput);
+    const { markdown: markdownTable, tableData, systemInfo } = createMarkdownTable(benchmarkOutput);
     
     // Нормализуем все значения к микросекундам для корректного сравнения
     tableData.forEach(data => {
@@ -196,76 +225,24 @@ function updateMarkdownFile(mdFilePath, benchmarkOutput, moduleName) {
       data.avgInMicroseconds = avgInMicroseconds;
     });
     
-    // Создаем сравнительный анализ
-    let comparisonMarkdown = "\n### Сравнительный анализ\n\n";
-    
-    // Группируем тесты по сценариям для сравнения Events и EventEmitter
-    const scenarios = {};
-    
-    for (const data of tableData) {
-      // Определяем сценарий из имени теста
-      if (data.name.includes(':')) {
-        const scenario = data.name.split(':')[1].trim();
-        if (!scenarios[scenario]) {
-          scenarios[scenario] = [];
-        }
-        scenarios[scenario].push(data);
-      }
+    // Создаем содержимое раздела в зависимости от типа бенчмарка
+    let newContent = '';
+    if (benchmarkName === 'memory.benchmark.js') {
+      // Для Memory используем специальную таблицу сравнения
+      newContent = createMemoryComparisonTable(tableData, systemInfo);
+    } else {
+      // Для других бенчмарков используем обычную таблицу
+      newContent = markdownTable;
     }
     
-    // Анализируем каждый сценарий - сравниваем только пары тестов
-    for (const [scenario, tests] of Object.entries(scenarios)) {
-      if (tests.length === 2) {
-        const eventsTest = tests.find(t => t.name.startsWith('Events'));
-        const emitterTest = tests.find(t => t.name.startsWith('EventEmitter'));
-        
-        if (eventsTest && emitterTest) {
-          const eventsAvg = eventsTest.avgInMicroseconds;
-          const emitterAvg = emitterTest.avgInMicroseconds;
-          
-          let ratio, faster, comment = '';
-          if (eventsAvg < emitterAvg) {
-            ratio = emitterAvg / eventsAvg;
-            faster = '`Events`';
-            comment = scenario.includes('отписка') ? 
-              ' (Оптимизация удаления обработчиков даёт значительный прирост)' : 
-              '';
-          } else {
-            ratio = eventsAvg / emitterAvg;
-            faster = '`EventEmitter`';
-            comment = '';
-          }
-          
-          comparisonMarkdown += `- **${scenario}**: ${faster} ${ratio.toFixed(2)}x быстрее${comment}\n`;
-        }
-      }
-    }
+    // Формируем новое содержимое раздела с сохранением заголовка
+    const newPerfSection = `${perfHeadingLevel} Производительность\n\n${newContent}`;
     
-    // Добавляем комментарии по оптимизации
-    comparisonMarkdown += "\n### Возможные оптимизации\n\n";
-    comparisonMarkdown += "Анализ производительности показывает, что `Events` может быть оптимизирован в следующих направлениях:\n\n";
-    comparisonMarkdown += "1. **Оптимизация подписки**: События создания подписчиков могут быть ускорены примерно в 2 раза\n";
-    comparisonMarkdown += "2. **Оптимизация вызова обработчиков**: Эмиссия событий с большим количеством подписчиков требует улучшения\n";
+    // Заменяем старый раздел на новый
+    const updatedContent = content.replace(perfSectionRegex, newPerfSection);
     
-    // Убираем комментарий о wildcard, так как теперь мы его не тестируем
-    // comparisonMarkdown += "3. **Wildcard-подписки**: Хотя они добавляют гибкость, которой нет у стандартного EventEmitter, их производительность может быть улучшена\n\n";
-    
-    comparisonMarkdown += "\nОднако `Events` имеет значительное преимущество в операциях отписки, что важно для долгоживущих приложений, где подписки постоянно создаются и удаляются.\n";
-    
-    // Создаем новый раздел с результатами бенчмарков
-    let newPerfSection = '# Производительность\n\n';
-    newPerfSection += 'Сравнение производительности класса `Events` с нативным `EventEmitter` из Node.js.\n\n';
-    newPerfSection += markdownTable;
-    newPerfSection += comparisonMarkdown;
-    
-    // Добавляем пояснение
-    newPerfSection += '\n> 💡 **Примечание**: Эти результаты бенчмарков могут варьироваться в зависимости от аппаратного обеспечения и версии Node.js.\n';
-    
-    // Обновляем содержимое файла
-    content = content.replace(perfSectionRegex, newPerfSection);
-    
-    // Записываем обновленное содержимое
-    fs.writeFileSync(mdFilePath, content);
+    // Записываем обновленное содержимое в файл
+    fs.writeFileSync(mdFilePath, updatedContent, 'utf8');
     
     console.log(`Файл ${mdFilePath} успешно обновлен`);
     return true;
@@ -277,37 +254,34 @@ function updateMarkdownFile(mdFilePath, benchmarkOutput, moduleName) {
 
 // Основная функция
 async function main() {
-  // Находим все файлы *.benchmark.js в корне проекта
+  console.log('Запуск процесса обновления документации...');
+  
+  // Находим все файлы бенчмарков в корне проекта
   const files = fs.readdirSync('.');
   const benchmarkFiles = files.filter(file => file.endsWith('.benchmark.js'));
   
+  console.log(`Найдено ${benchmarkFiles.length} файлов бенчмарков`);
+  
+  // Обрабатываем каждый файл бенчмарка
   for (const benchmarkFile of benchmarkFiles) {
-    // Определяем название модуля по имени файла (например, events.benchmark.js -> events)
-    const moduleName = path.basename(benchmarkFile, '.benchmark.js');
+    // Определяем соответствующий файл документации
+    const mdFile = BENCHMARK_DOCS_MAP[benchmarkFile];
     
-    // Ищем соответствующий MD файл (events -> EVENTS.md)
-    const mdFileName = `${moduleName.toUpperCase()}.md`;
-    
-    if (!fs.existsSync(mdFileName)) {
-      console.warn(`Файл документации ${mdFileName} не найден для модуля ${moduleName}`);
+    if (!mdFile) {
+      console.log(`Для файла ${benchmarkFile} не найден соответствующий файл документации. Пропускаем.`);
       continue;
     }
     
-    try {
-      // Запускаем бенчмарк и получаем его вывод
-      const benchmarkOutput = runBenchmark(benchmarkFile);
-      
-      if (!benchmarkOutput) {
-        console.warn(`Не удалось получить вывод бенчмарка ${benchmarkFile}`);
-        continue;
-      }
-      
-      // Обновляем MD файл
-      updateMarkdownFile(mdFileName, benchmarkOutput, moduleName);
-    } catch (error) {
-      console.error(`Ошибка при обработке бенчмарка ${benchmarkFile}:`, error.message);
+    // Запускаем бенчмарк
+    const benchmarkOutput = runBenchmark(benchmarkFile);
+    
+    if (benchmarkOutput) {
+      // Обновляем файл документации
+      updateMarkdownFile(mdFile, benchmarkOutput, benchmarkFile);
     }
   }
+  
+  console.log('Процесс обновления документации завершен');
 }
 
 // Запускаем скрипт
