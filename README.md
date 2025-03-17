@@ -1,4 +1,8 @@
-# Deep 7.2.0
+# Deep.js
+
+## Документация
+
+- [События (Events)](./EVENTS.md) 
 
 Проект Deep версии 7.2.0 на чистом JavaScript
 
@@ -22,4 +26,4 @@ import { deep } from 'deep';
 
 ```bash
 npm test
-``` 
+```
