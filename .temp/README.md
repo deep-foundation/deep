@@ -1,0 +1,373 @@
+# Deep
+
+## Введение
+
+Deep - это универсальная ассоциативная сущность восприятия, представляющая собой ядро для работы с ассоциативными данными. Проект предоставляет мощный инструментарий для создания, управления и запроса сложных связей между объектами.
+
+Основная концепция Deep заключается в создании универсального механизма для работы с ассоциативными данными, где каждая сущность может быть связана с другими через различные типы отношений.
+
+## Установка
+
+```bash
+npm install deep7
+```
+
+## Использование
+
+### Основы
+
+```javascript
+import { Deep } from 'deep7';
+
+// Создание нового экземпляра Deep
+const deep = Deep.new();
+
+// Создание новых сущностей
+const A = new deep();
+const B = new deep();
+const C = new deep();
+
+// Создание экземпляров сущностей
+const a1 = new A();
+const b1 = new B();
+const c1 = new C();
+
+// Установка связей между сущностями
+a1.from = c1;
+b1.to = c1;
+
+// Выборка данных
+const result = deep.select({ type: A });
+console.log(result.size); // 1
+console.log(result.has(a1)); // true
+```
+
+### События
+
+Deep поддерживает механизм событий, который позволяет реагировать на изменения в данных:
+
+```javascript
+const as = deep.select({ type: A });
+as.on(event => {
+  console.log('Событие:', event);
+});
+
+// Создание нового экземпляра A вызовет событие
+const a2 = new A();
+```
+
+## Модель событий Deep
+
+Deep использует шаблон Observer для управления событиями. Каждое событие генерируется через метод `emit` и обрабатывается через подписки, созданные методом `on`.
+
+### Структура событий
+
+Все события в Deep имеют общую структуру:
+
+```javascript
+{
+  event: Symbol,       // Тип события (например, Deep.changes.added)
+  this: any,           // Контекст, в котором произошло событие
+  prev: any,           // Предыдущее значение (если применимо)
+  next: any,           // Новое значение (если применимо)
+  args: Array,         // Аргументы вызванного метода (если применимо)
+  result: any,         // Результат вызванного метода (если применимо)
+  reason: any          // Причина события (если применимо)
+}
+```
+
+### Типы событий
+
+#### Событие инициализации
+- `Deep.new` - создание нового экземпляра Deep
+
+#### События изменения связей
+- `Deep.fields.type` - изменение типа сущности
+- `Deep.fields.from` - изменение источника связи
+- `Deep.fields.to` - изменение назначения связи
+- `Deep.fields.value` - изменение значения сущности
+
+#### События изменений в множествах
+- `Deep.changes.added` - добавление элемента в множество
+- `Deep.changes.updated` - обновление элемента в множестве
+- `Deep.changes.removed` - удаление элемента из множества
+
+#### События методов
+- `Deep.fields.get` - получение элемента
+- `Deep.fields.set` - установка значения
+- `Deep.fields.add` - добавление элемента
+- `Deep.fields.unset` - удаление значения
+- `Deep.fields.has` - проверка наличия элемента
+- `Deep.fields.size` - получение размера
+- `Deep.fields.map` - преобразование элементов
+- `Deep.fields.filter` - фильтрация элементов
+- `Deep.fields.find` - поиск элемента
+- `Deep.fields.each` - перебор элементов
+- `Deep.fields.sort` - сортировка элементов
+- `Deep.fields.reduce` - свертка элементов
+- `Deep.fields.first` - получение первого элемента
+- `Deep.fields.last` - получение последнего элемента
+- `Deep.fields.keys` - получение ключей
+- `Deep.fields.values` - получение значений
+- `Deep.fields.toString` - преобразование в строку
+- `Deep.fields.valueOf` - получение значения
+
+#### Специальные события
+- `Deep.fields.kill` - уничтожение сущности
+
+### Примеры использования событий
+
+#### Отслеживание изменений типа сущности
+
+```javascript
+const link = deep.new();
+link.on(event => {
+  if (event.event === Deep.fields.type) {
+    console.log(`Тип изменился с ${event.prev} на ${event.next}`);
+  }
+});
+link.type = SomeType; // генерирует событие Deep.fields.type
+```
+
+#### Отслеживание изменений в коллекции
+
+```javascript
+const collection = deep.select({ type: SomeType });
+collection.on(event => {
+  if (event.event === Deep.changes.added) {
+    console.log(`Добавлен новый элемент: ${event.value}`);
+  } else if (event.event === Deep.changes.removed) {
+    console.log(`Удален элемент: ${event.value}`);
+  }
+});
+```
+
+#### Отслеживание уничтожения сущности
+
+```javascript
+entity.on(event => {
+  if (event.event === Deep.fields.kill) {
+    console.log(`Сущность была уничтожена`);
+    // Очистка ресурсов, удаление подписок и т.д.
+  }
+});
+entity.kill(); // генерирует событие Deep.fields.kill
+```
+
+#### Мониторинг вызовов методов
+
+```javascript
+collection.on(event => {
+  if (event.event === Deep.fields.set) {
+    console.log(`Метод set вызван с аргументами:`, event.args);
+    console.log(`Результат:`, event.result);
+  }
+});
+collection.set('key', 'value'); // генерирует событие Deep.fields.set
+```
+
+### Реактивность в Deep
+
+Модель событий Deep позволяет создавать реактивные системы. Например, вы можете создать зависимый список, который автоматически обновляется при изменениях в исходном:
+
+```javascript
+// Пример реактивного фильтра
+const users = deep.new();
+
+// В текущей версии deep.select принимает только ссылочные релейшены 
+// (from/to/type/value/out/in/typed/valued) и поисковые релейшены (and/or/not)
+const User = deep.new();
+const usersOfType = deep.select({ type: User });
+
+usersOfType.on(event => {
+  if (event.event === Deep.changes.added) {
+    console.log(`Добавлен новый пользователь: ${event.value}`);
+  } else if (event.event === Deep.changes.removed) {
+    console.log(`Удален пользователь: ${event.value}`);
+  }
+});
+
+// Создание нового экземпляра типа User автоматически добавит его в выборку
+const someUser = deep.new();
+someUser.type = User;  // вызовет событие Deep.changes.added в usersOfType
+
+// Примечание: В будущих версиях будет реализована расширенная версия select,
+// поддерживающая сложные фильтры по произвольным свойствам, например:
+// const activeUsers = deep.select({ type: User, status: 'active' });
+```
+
+### Управление подписками
+
+Для работы с событиями в Deep есть два способа отписки от событий:
+
+```javascript
+// Способ 1: Использование возвращаемой функции отписки
+const off = entity.on(event => {
+  // Обработка события
+  console.log('Событие:', event);
+});
+
+// Отписка
+off();
+
+// Способ 2: Сохранение ссылки на обработчик
+const handler = event => {
+  // Обработка события
+  console.log('Событие:', event);
+};
+entity.on(handler);
+
+// Отписка через метод off
+entity.off(handler);
+```
+
+> **Важно:** При работе с событиями всегда используйте один из способов отписки, чтобы избежать утечек памяти. Рекомендуется использовать первый способ, так как он более удобен и менее подвержен ошибкам.
+
+## API
+
+### Класс Deep
+
+Основной класс, представляющий ядро системы.
+
+#### Статические методы
+
+- `Deep.new(current?)` - создает новый экземпляр Deep
+- `Deep.this(it)` - универсальный способ получить this даже если это не Deep
+
+#### Поля и методы экземпляра
+
+- `this` - указывает на текущий контекст
+- `deep` - ссылка на экземпляр Deep
+- `type` - тип сущности
+- `from` - источник связи
+- `to` - назначение связи
+- `value` - значение сущности
+- `on(callback)` - подписка на события, возвращает функцию отписки
+- `emit(event)` - генерация события
+- `off(callback)` - отписка от событий
+- `kill()` - уничтожение сущности
+
+#### Методы выборки и манипуляции данными
+
+- `select(expression)` - выборка сущностей по выражению
+- `many()` - получение множества связанных сущностей
+- `has(item)` - проверка наличия элемента
+- `get(key)` - получение элемента по ключу
+- `size` - размер коллекции
+- `map(callback)` - преобразование элементов
+- `add(item)` - добавление элемента
+- `set(key, value)` - установка значения по ключу
+- `unset(key)` - удаление значения по ключу
+- `keys()` - получение ключей
+- `values()` - получение значений
+- `find(callback)` - поиск элемента
+- `filter(callback)` - фильтрация элементов
+- `each(callback)` - перебор элементов
+- `sort(comparator)` - сортировка элементов
+- `reduce(callback, initialValue)` - свертка элементов
+- `first()` - первый элемент
+- `last()` - последний элемент
+
+### Отношения
+
+- `type` - тип сущности
+- `from` - источник связи
+- `to` - назначение связи
+- `value` - значение сущности
+- `typed` - сущности определенного типа
+- `out` - исходящие связи
+- `in` - входящие связи
+- `valued` - сущности с определенным значением
+
+### Методы для работы с типами
+
+#### `typeof(type)`
+
+Проверяет, является ли экземпляр типом `type` или наследником этого типа. 
+
+```javascript
+const TypeA = new deep();
+const TypeB = new deep();
+Deep.type.set(TypeB.this, TypeA.this); // TypeB наследует TypeA
+
+const a1 = new TypeA();
+const b1 = new TypeB();
+
+a1.typeof(TypeA); // true, a1 - экземпляр TypeA
+a1.typeof(TypeB); // false, a1 не является экземпляром TypeB
+b1.typeof(TypeA); // true, b1 относится к TypeB, который наследует TypeA
+b1.typeof(TypeB); // true, b1 - экземпляр TypeB
+```
+
+#### `typeofs()`
+
+Возвращает массив всех типов экземпляра в иерархии наследования, начиная с непосредственного типа.
+
+```javascript
+const TypeA = new deep();
+const TypeB = new deep();
+const TypeC = new deep();
+Deep.type.set(TypeB.this, TypeA.this); // TypeB наследует TypeA
+Deep.type.set(TypeC.this, TypeB.this); // TypeC наследует TypeB
+
+const c1 = new TypeC();
+const types = c1.typeofs(); // [TypeC, TypeB, TypeA]
+```
+
+### Статические методы
+
+#### `Deep.isDeep(it)`
+
+Проверяет, является ли значение экземпляром Deep.
+
+```javascript
+const a1 = new deep();
+Deep.isDeep(a1); // true
+Deep.isDeep("string"); // false
+Deep.isDeep(null); // false
+```
+
+#### `Deep.isValue(it)`
+
+Проверяет, является ли значение "значением" (не экземпляром Deep и не undefined/null).
+
+```javascript
+Deep.isValue("string"); // true
+Deep.isValue(123); // true
+Deep.isValue(new deep()); // false
+Deep.isValue(undefined); // false
+Deep.isValue(null); // false
+```
+
+## Архитектура
+
+Deep построен на основе следующих ключевых компонентов:
+
+1. **Ядро (Deep)** - основной класс, предоставляющий API для работы с ассоциативными данными
+2. **Память (Memory)** - механизм хранения данных
+3. **События (On)** - система событий для реактивного программирования
+4. **Прокси (Proxy)** - механизм для перехвата операций с объектами
+
+Архитектура Deep позволяет создавать сложные ассоциативные структуры данных с возможностью реактивного обновления и запроса.
+
+## Тестирование
+
+Для запуска тестов используйте:
+
+```bash
+npm test
+```
+
+Для запуска бенчмарков:
+
+```bash
+npm run benchmark
+```
+
+## Вклад в проект
+
+Если вы хотите внести свой вклад в проект, пожалуйста, ознакомьтесь с [правилами контрибьюции](CONTRIBUTING.md).
+
+## Лицензия
+
+[UNLICENSED](LICENSE)

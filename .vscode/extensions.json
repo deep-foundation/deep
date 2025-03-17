@@ -1,8 +1,0 @@
-{
-    "recommendations": [
-        "ms-azuretools.vscode-docker",
-        "bobsparadox.seti-black",
-        "ms-vscode.live-server",
-        "github.vscode-github-actions"
-    ]
-}

@@ -1,2 +1,4 @@
-// Точка подключения как библиотеки
-export * from './deep.js';
+/**
+ * Deep project main export
+ */
+export const deep = Symbol('deep'); 
