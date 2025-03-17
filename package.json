@@ -6,9 +6,10 @@
   "type": "module",
   "scripts": {
     "test": "node --test",
-    "benchmark": "node events.benchmark.js",
+    "benchmark": "for file in *.benchmark.js; do echo \"\n\n=== BENCHMARKING: $file ===\"; echo \"=============================================\"; node \"$file\"; done",
     "benchmark:events": "node events.benchmark.js",
     "benchmark:memory": "node memory.benchmark.js",
+    "benchmark:association": "node association.benchmark.js",
     "benchmark:update": "node scripts/regenerate-benchmark-readme.js"
   },
   "keywords": [

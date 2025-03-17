@@ -33,3 +33,15 @@ console.log(memory.one('key')); // value
 ```bash
 npm test
 ```
+
+## Бенчмарки
+
+```bash
+# Запуск всех бенчмарков
+npm run benchmark
+
+# Запуск конкретных бенчмарков
+npm run benchmark:events
+npm run benchmark:memory
+npm run benchmark:association
+```
