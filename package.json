@@ -5,7 +5,10 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "benchmark": "node events.benchmark.js",
+    "benchmark:events": "node events.benchmark.js",
+    "benchmark:update": "node scripts/regenerate-benchmark-readme.js"
   },
   "keywords": [
     "deep"
@@ -14,5 +17,8 @@
   "license": "MIT",
   "engines": {
     "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "mitata": "^1.0.34"
   }
 }

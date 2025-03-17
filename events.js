@@ -11,13 +11,6 @@ export class Events {
   _handlers = new Map();
 
   /**
-   * Хранилище обработчиков wildcard-событий.
-   * @type {Map<string, Set<Function>>}
-   * @private
-   */
-  _wildcardHandlers = new Map();
-
-  /**
    * Хранилище контекстов для обработчиков.
    * @type {WeakMap<Function, object>}
    * @private
@@ -25,37 +18,9 @@ export class Events {
   _contexts = new WeakMap();
 
   /**
-   * Проверяет, является ли строка шаблоном с wildcard (*)
-   * @param {string} eventType - Тип события или шаблон
-   * @returns {boolean} - true, если содержит wildcard
-   * @private
-   */
-  _isWildcard(eventType) {
-    return eventType.includes('*');
-  }
-
-  /**
-   * Проверяет, соответствует ли событие заданному шаблону
-   * @param {string} pattern - Шаблон с wildcard
-   * @param {string} eventType - Проверяемый тип события
-   * @returns {boolean} - true, если событие соответствует шаблону
-   * @private
-   */
-  _matchWildcard(pattern, eventType) {
-    // Простая реализация с поддержкой * как любой последовательности символов
-    // Преобразуем шаблон в регулярное выражение
-    const regexPattern = pattern
-      .replace(/[.+?^${}()|[\]\\]/g, '\\$&') // экранируем спец. символы регулярных выражений
-      .replace(/\*/g, '.*'); // заменяем * на .* (любая последовательность символов)
-    
-    const regex = new RegExp(`^${regexPattern}$`);
-    return regex.test(eventType);
-  }
-
-  /**
    * Подписка на событие.
    * 
-   * @param {string} eventType - Тип события (может содержать * для подписки на группу событий)
+   * @param {string} eventType - Тип события
    * @param {Function} handler - Функция-обработчик
    * @param {object} [context] - Контекст (this) для вызова обработчика
    * @returns {Function} Функция для отписки от события
@@ -64,18 +29,6 @@ export class Events {
     // Если указан контекст, сохраняем его
     if (context !== undefined) {
       this._contexts.set(handler, context);
-    }
-    
-    // Для wildcard используем отдельное хранилище
-    if (this._isWildcard(eventType)) {
-      if (!this._wildcardHandlers.has(eventType)) {
-        this._wildcardHandlers.set(eventType, new Set());
-      }
-      
-      this._wildcardHandlers.get(eventType).add(handler);
-      
-      // Возвращаем функцию для отписки
-      return () => this.off(eventType, handler);
     }
     
     // Стандартная обработка для конкретных событий
@@ -92,7 +45,7 @@ export class Events {
   /**
    * Подписка на событие с автоматической отпиской после первого вызова.
    * 
-   * @param {string} eventType - Тип события (может содержать * для подписки на группу событий)
+   * @param {string} eventType - Тип события
    * @param {Function} handler - Функция-обработчик
    * @param {object} [context] - Контекст (this) для вызова обработчика
    * @returns {Function} Функция для отписки от события
@@ -134,42 +87,13 @@ export class Events {
    * @param {Function} handler - Функция-обработчик для удаления
    * @returns {boolean} Успешность операции
    */
-  off(eventType, handler) {
-    let result = false;
-    
-    // Проверяем, является ли тип события wildcard-шаблоном
-    if (this._isWildcard(eventType)) {
-      const wildcardHandlers = this._wildcardHandlers.get(eventType);
-      
-      if (wildcardHandlers) {
-        // Ищем обработчик или его обертку
-        result = wildcardHandlers.delete(handler);
-        
-        if (!result) {
-          // Ищем обертку с этим оригинальным обработчиком (для once)
-          for (const wrapper of wildcardHandlers) {
-            if (wrapper.originalHandler === handler) {
-              result = wildcardHandlers.delete(wrapper);
-              break;
-            }
-          }
-        }
-        
-        // Удаляем Set, если он пустой
-        if (wildcardHandlers.size === 0) {
-          this._wildcardHandlers.delete(eventType);
-        }
-      }
-      
-      return result;
-    }
-    
-    // Стандартная обработка для конкретных событий
+  off(eventType, handler) {    
+    // Обработка для конкретных событий
     const handlers = this._handlers.get(eventType);
     
     if (!handlers) return false;
     
-    result = handlers.delete(handler);
+    let result = handlers.delete(handler);
     
     // Если не удалось удалить напрямую, проверяем, есть ли обертки с этим обработчиком
     if (!result && handlers.size > 0) {
@@ -201,25 +125,16 @@ export class Events {
     // Если тип события не указан, очищаем все обработчики
     if (eventType === undefined) {
       this._handlers.clear();
-      this._wildcardHandlers.clear();
       return true;
     }
-    
-    let result = false;
     
     // Удаляем обработчики конкретного события
     if (this._handlers.has(eventType)) {
       this._handlers.delete(eventType);
-      result = true;
+      return true;
     }
     
-    // Если это wildcard, удаляем соответствующие wildcard-обработчики
-    if (this._isWildcard(eventType) && this._wildcardHandlers.has(eventType)) {
-      this._wildcardHandlers.delete(eventType);
-      result = true;
-    }
-    
-    return result;
+    return false;
   }
 
   /**
@@ -251,37 +166,45 @@ export class Events {
           } else {
             handler(eventType, ...args);
           }
-        } catch (err) {
-          console.error(`Error in event handler for "${eventType}":`, err);
+        } catch (error) {
+          // Предотвращаем прерывание цепочки вызовов при ошибке
+          // в одном из обработчиков
+          console.error(`Ошибка в обработчике события ${eventType}:`, error);
         }
       });
     }
     
-    // Вызываем обработчики wildcard-событий, если они соответствуют текущему событию
-    for (const [pattern, wildcardHandlers] of this._wildcardHandlers.entries()) {
-      if (this._matchWildcard(pattern, eventType) && wildcardHandlers.size > 0) {
-        hasHandlers = true;
-        
-        // Копируем набор обработчиков для безопасного перебора
-        [...wildcardHandlers].forEach(handler => {
-          try {
-            // Используем сохраненный контекст, если он есть
-            const context = this._contexts.has(handler) 
-              ? this._contexts.get(handler) 
-              : undefined;
-            
-            if (context !== undefined) {
-              handler.call(context, eventType, ...args);
-            } else {
-              handler(eventType, ...args);
-            }
-          } catch (err) {
-            console.error(`Error in wildcard handler "${pattern}" for event "${eventType}":`, err);
-          }
-        });
-      }
-    }
-    
     return hasHandlers;
+  }
+
+  /**
+   * Получает список всех типов событий, на которые есть подписчики
+   * 
+   * @returns {string[]} Массив типов событий
+   */
+  eventNames() {
+    return [...this._handlers.keys()];
+  }
+
+  /**
+   * Возвращает количество слушателей для конкретного события
+   * 
+   * @param {string} eventType - Тип события
+   * @returns {number} Количество обработчиков
+   */
+  listenerCount(eventType) {
+    const handlers = this._handlers.get(eventType);
+    return handlers ? handlers.size : 0;
+  }
+
+  /**
+   * Возвращает массив обработчиков для указанного события
+   * 
+   * @param {string} eventType - Тип события
+   * @returns {Function[]} Массив функций-обработчиков
+   */
+  listeners(eventType) {
+    const handlers = this._handlers.get(eventType);
+    return handlers ? [...handlers] : [];
   }
 } 
