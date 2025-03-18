@@ -1,5 +1,13 @@
 /**
  * Deep project main export
  */
-export const deep = Symbol('deep'); 
-export { Association } from './association.js'; 
+import { Association } from './association.js';
+import { all } from './is.js';
+export * from './is.js';
+export * from './gets.js';
+
+// Экспортируем deep как вызываемый экземпляр Association с методами из is.js и gets.js
+export const deep = new Association((...args) => new Association(...args));
+
+// Экспортируем саму Association для обратной совместимости
+export { Association, all };

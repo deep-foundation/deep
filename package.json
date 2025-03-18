@@ -1,5 +1,5 @@
 {
-  "name": "deep",
+  "name": "deep7",
   "version": "7.2.0",
   "description": "Deep project version 7.2.0",
   "main": "index.js",
@@ -20,7 +20,7 @@
   "engines": {
     "node": ">=20.0.0"
   },
-  "dependencies": {
+  "devDependencies": {
     "mitata": "^1.0.34"
   }
 }
