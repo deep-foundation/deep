@@ -10,7 +10,7 @@
     "benchmark:events": "node events.benchmark.js",
     "benchmark:memory": "node memory.benchmark.js",
     "benchmark:association": "node association.benchmark.js",
-    "benchmark:update": "node scripts/regenerate-benchmark-readme.js"
+    "benchmarkify": "node scripts/benchmarkify.js"
   },
   "keywords": [
     "deep"
