@@ -110,6 +110,19 @@ test('Базовые функции проверки типов', async (t) => {
     assert.strictEqual(deep('test').isEmpty, false);
     assert.strictEqual(deep([1, 2]).isEmpty, false);
     assert.strictEqual(deep({ a: 1 }).isEmpty, false);
+
+    // Проверка isMany
+    assert.strictEqual(deep([]).isMany, true, 'Массивы должны определяться как множественные');
+    assert.strictEqual(deep({}).isMany, true, 'Объекты должны определяться как множественные');
+    assert.strictEqual(deep(new Set()).isMany, true, 'Set должны определяться как множественные');
+    assert.strictEqual(deep(new Map()).isMany, true, 'Map должны определяться как множественные');
+    assert.strictEqual(deep('строка').isMany, false, 'Строки не должны определяться как множественные');
+    assert.strictEqual(deep(123).isMany, false, 'Числа не должны определяться как множественные');
+    assert.strictEqual(deep(true).isMany, false, 'Булевы значения не должны определяться как множественные');
+    assert.strictEqual(deep(null).isMany, false, 'null не должен определяться как множественный');
+    assert.strictEqual(deep(undefined).isMany, false, 'undefined не должен определяться как множественный');
+    assert.strictEqual(deep(new Date()).isMany, false, 'Date не должен определяться как множественный');
+    assert.strictEqual(deep(/test/).isMany, false, 'RegExp не должен определяться как множественный');
   });
 
 

@@ -17,7 +17,8 @@ const BENCHMARK_DOCS_MAP = {
   'lifecycle.benchmark.js': 'LIFECYCLE.md',
   'is.benchmark.js': 'IS.md',
   'gets.benchmark.js': 'GETS.md',
-  'sets.benchmark.js': 'SETS.md'
+  'sets.benchmark.js': 'SETS.md',
+  'many.benchmark.js': 'MANY.md'
 };
 
 // Функция для запуска бенчмарка и получения результатов

@@ -274,6 +274,29 @@ function isEmpty(ass) {
 }
 
 /**
+ * Проверяет, является ли значение множественным (Set, Map, Array, Object)
+ * @param {Association} ass - Экземпляр Association
+ * @returns {boolean} - true, если значение является множественным типом
+ */
+function isMany(ass) {
+  const value = ass.this;
+  if (value === null || value === undefined) return false;
+
+  // Проверяем очевидные множественные типы
+  if (Array.isArray(value)) return true;
+  if (value instanceof Set) return true;
+  if (value instanceof Map) return true;
+
+  // Объект тоже считаем множественным типом
+  if (typeof value === 'object' && !isPrimitive(ass) &&
+      !(value instanceof Date) && !(value instanceof RegExp)) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Словарь типов: имя типа -> функция проверки
  * Используется для регистрации методов проверки типов в Association
  * @type {Map<string, Function>}
@@ -303,7 +326,8 @@ const types = new Map([
   ['constructor', isConstructor],
   ['error', isError],
   ['json', isJSON],
-  ['empty', isEmpty]
+  ['empty', isEmpty],
+  ['many', isMany]
 ]);
 
 /**
@@ -375,6 +399,7 @@ export const all = {
   isError,
   isJSON,
   isEmpty,
+  isMany,
 };
 
 // Инициализация методов проверки типов для Association
@@ -415,4 +440,5 @@ export {
   isError,
   isJSON,
   isEmpty,
+  isMany,
 };

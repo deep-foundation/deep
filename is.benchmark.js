@@ -75,6 +75,13 @@ group('Обычные проверки типов через встроенны�
   bench('value instanceof Map', () => testMap instanceof Map);
   bench('value instanceof Promise', () => testPromise instanceof Promise);
   bench('value instanceof Error', () => testError instanceof Error);
+
+  // Добавляем проверку "множественности" типов
+  bench('Array.isArray(array) || value instanceof Set/Map || typeof object === "object"', () => {
+    return Array.isArray(testArray) || testArray instanceof Set || testArray instanceof Map ||
+           (typeof testArray === 'object' && testArray !== null &&
+            !(testArray instanceof Date) && !(testArray instanceof RegExp));
+  });
 });
 
 // Группа тестов для проверки типов через deep свойства
@@ -98,6 +105,14 @@ group('Проверка типов через deep свойства', () => {
   bench('deep(error).isError', () => deepError.isError);
   bench('deep(json).isJSON', () => deepJSON.isJSON);
   bench('deep(empty).isEmpty', () => deepEmpty.isEmpty);
+
+  // Добавляем тесты для isMany
+  bench('deep(array).isMany', () => deepArray.isMany);
+  bench('deep(object).isMany', () => deepObject.isMany);
+  bench('deep(set).isMany', () => deepSet.isMany);
+  bench('deep(map).isMany', () => deepMap.isMany);
+  bench('deep(string).isMany', () => deepString.isMany);
+  bench('deep(number).isMany', () => deepNumber.isMany);
 });
 
 // Группа тестов для проверки типов через deep функции (для сравнения)
@@ -119,6 +134,14 @@ group('Сравнение встроенных проверок и deep свой
 
   bench('Array.isArray(array)', () => Array.isArray(testArray));
   bench('deep(array).isArray', () => deepArray.isArray);
+
+  // Добавляем сравнение для isMany
+  bench('Array.isArray(array) || value instanceof Set/Map || typeof object === "object"', () => {
+    return Array.isArray(testArray) || testArray instanceof Set || testArray instanceof Map ||
+           (typeof testArray === 'object' && testArray !== null &&
+            !(testArray instanceof Date) && !(testArray instanceof RegExp));
+  });
+  bench('deep(array).isMany', () => deepArray.isMany);
 });
 
 // Запускаем бенчмарки
