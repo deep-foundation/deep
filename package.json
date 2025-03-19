@@ -10,6 +10,10 @@
     "benchmark:events": "node events.benchmark.js",
     "benchmark:memory": "node memory.benchmark.js",
     "benchmark:association": "node association.benchmark.js",
+    "benchmark:lifecycle": "node lifecycle.benchmark.js",
+    "benchmark:is": "node is.benchmark.js",
+    "benchmark:gets": "node gets.benchmark.js",
+    "benchmark:sets": "node sets.benchmark.js",
     "benchmarkify": "node scripts/benchmarkify.js"
   },
   "keywords": [
