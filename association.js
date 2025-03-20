@@ -82,9 +82,7 @@ export class Association extends Function {
 
         // Обработка функций
         if (typeof value === 'function') {
-          // Новый формат (ass, op, args)
-          // Если еще нет кеша в temp - создаем функцию-обертку
-          return value(receiver, 'get');
+          return value.call(receiver, receiver, 'get');
         }
 
         // Если значения нет - возвращаем undefined
@@ -95,35 +93,16 @@ export class Association extends Function {
       set: (target, key, value, receiver) => {
         // Если ключ не является защищенным - устанавливаем его
         if (key !== '_proxy' && key !== 'temp' && key !== 'this') {
-          // Если это функция и существует кеш в temp, очищаем его
-          if (typeof value === 'function' && key in target.temp) {
-            delete target.temp[key];
-          }
-
           // Если это существующая функция в _proxy и она поддерживает 'set' операцию
-          const existingValue = target._proxy.get(key);
+          const existingValue = target._proxy.get(key) || Association._proxy.get(key);
           if (typeof existingValue === 'function') {
-            // Определяем, использует ли функция формат (ass, op, args)
-            const isNewFormat = existingValue.toString().includes('op') &&
-                              (existingValue.toString().includes('apply') ||
-                                existingValue.toString().includes('get'));
-
-            if (isNewFormat) {
-              try {
-                existingValue(receiver, 'set', value);
-                return true;
-              } catch (e) {
-                // Если операция 'set' не поддерживается, просто продолжаем
-                if (!e.message.includes('unexpected op=set')) {
-                  throw e;
-                }
-              }
-            }
+            return existingValue.call(receiver, receiver, 'set', [value]);
+          } else {
+            target._proxy.set(key, value);
+            return true;
           }
-
-          target._proxy.set(key, value);
         }
-        return true;
+        return false;
       },
 
       // Поддержка оператора in
@@ -182,8 +161,22 @@ export class Association extends Function {
   constructor(self, methods = {}) {
     super();
 
-    // Устанавливаем оборачиваемый объект
-    this.this = self;
+    // Создаём символ с адресом файла и позицией в нём
+    const stack = new Error().stack;
+    const stackLine = stack.split('\n')[4] || '';
+
+    // Извлекаем только адрес файла и позицию из стека
+    const locationMatch = stackLine.match(/\((.+):(\d+):(\d+)\)/) ||
+                          stackLine.match(/at\s+(.+):(\d+):(\d+)/);
+
+    // Формируем строку с адресом файла и позицией
+    const location = locationMatch ? locationMatch[1] + ':' + locationMatch[2] + ':' + locationMatch[3] : 'unknown';
+
+    // Создаём символ только с адресом файла
+    this.temp.symbol = Symbol(location);
+
+    // Устанавливаем оборачиваемый объект или символ из temp
+    this.this = arguments.length > 0 ? self : this.temp.symbol;
 
     // Добавляем начальные методы в прокси
     for (const [key, value] of Object.entries(methods)) {

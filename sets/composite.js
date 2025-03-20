@@ -46,19 +46,15 @@ export function merge(ass, op, ...args) {
             for (let i = 0; i < source.length; i++) {
               target.push(source[i]);
 
-              // Генерируем событие set
-              if (ass.events && ass.events.emit) {
-                ass.events.emit('set', target.length - 1, source[i], undefined);
-              }
+              // Генерируем событие для каждого элемента
+              ass.emit('set', target.length - 1, source[i], undefined);
             }
           } else {
             // Если source не массив, добавляем его как элемент
             target.push(source);
 
-            // Генерируем событие set
-            if (ass.events && ass.events.emit) {
-              ass.events.emit('set', target.length - 1, source, undefined);
-            }
+            // Генерируем событие для всего массива
+            ass.emit('set', target.length - 1, source, undefined);
           }
           return target;
         }
@@ -79,10 +75,8 @@ export function merge(ass, op, ...args) {
                 target.set(key, value);
               }
 
-              // Генерируем событие mapSet
-              if (ass.events && ass.events.emit) {
-                ass.events.emit('mapSet', key, value, prevValue);
-              }
+              // Генерируем события для Map.set
+              ass.emit('mapSet', key, value, prevValue);
             });
           } else if (source && typeof source === 'object') {
             // Если source - обычный объект, добавляем его ключи в Map
@@ -92,10 +86,8 @@ export function merge(ass, op, ...args) {
 
               target.set(key, value);
 
-              // Генерируем событие mapSet
-              if (ass.events && ass.events.emit) {
-                ass.events.emit('mapSet', key, value, prevValue);
-              }
+              // Генерируем события для Map.set
+              ass.emit('mapSet', key, value, prevValue);
             });
           }
           return target;
@@ -111,10 +103,8 @@ export function merge(ass, op, ...args) {
               if (!hasValue) {
                 target.add(value);
 
-                // Генерируем событие setAdd
-                if (ass.events && ass.events.emit) {
-                  ass.events.emit('setAdd', value);
-                }
+                // Генерируем события для Set.add
+                ass.emit('setAdd', value);
               }
             });
           } else if (Array.isArray(source)) {
@@ -125,10 +115,8 @@ export function merge(ass, op, ...args) {
               if (!hasValue) {
                 target.add(value);
 
-                // Генерируем событие setAdd
-                if (ass.events && ass.events.emit) {
-                  ass.events.emit('setAdd', value);
-                }
+                // Генерируем события для Set.add
+                ass.emit('setAdd', value);
               }
             });
           } else if (source && typeof source === 'object') {
@@ -139,10 +127,8 @@ export function merge(ass, op, ...args) {
               if (!hasValue) {
                 target.add(value);
 
-                // Генерируем событие setAdd
-                if (ass.events && ass.events.emit) {
-                  ass.events.emit('setAdd', value);
-                }
+                // Генерируем события для Set.add
+                ass.emit('setAdd', value);
               }
             });
           } else {
@@ -152,10 +138,8 @@ export function merge(ass, op, ...args) {
             if (!hasValue) {
               target.add(source);
 
-              // Генерируем событие setAdd
-              if (ass.events && ass.events.emit) {
-                ass.events.emit('setAdd', source);
-              }
+              // Генерируем события для Set.add
+              ass.emit('setAdd', source);
             }
           }
           return target;
@@ -172,10 +156,8 @@ export function merge(ass, op, ...args) {
               const prevValue = target[key];
               target[key] = value;
 
-              // Генерируем событие set
-              if (ass.events && ass.events.emit) {
-                ass.events.emit('set', key, value, prevValue);
-              }
+              // Генерируем события
+              ass.emit('set', key, value, prevValue);
             }
           });
         }
@@ -186,16 +168,14 @@ export function merge(ass, op, ...args) {
       // Выполняем слияние
       mergeInto(target, source);
 
-      // Генерируем общее событие merge
-      if (ass.events && ass.events.emit) {
-        ass.events.emit('merge', source);
+      // Генерируем событие слияния
+      ass.emit('merge', source);
 
-        // Генерируем общее событие change
-        ass.events.emit('change', prevState, target, null, {
-          method: 'merge',
-          arguments: [source]
-        });
-      }
+      // Генерируем общее событие change
+      ass.emit('change', prevState, target, null, {
+        method: 'merge',
+        arguments: [source]
+      });
 
       return ass;
     };
@@ -260,16 +240,14 @@ export function replace(ass, op, ...args) {
         ass.this = newValue;
       }
 
-      // Генерируем события
-      if (ass.events && ass.events.emit) {
-        ass.events.emit('replace', ass.this, prevValue);
+      // Генерируем событие замены
+      ass.emit('replace', ass.this, prevValue);
 
-        // Генерируем общее событие change
-        ass.events.emit('change', prevValue, ass.this, null, {
-          method: 'replace',
-          arguments: [newValue]
-        });
-      }
+      // Генерируем общее событие change
+      ass.emit('change', prevValue, ass.this, null, {
+        method: 'replace',
+        arguments: [newValue]
+      });
 
       return ass;
     };
@@ -306,22 +284,20 @@ export function transform(ass, op, ...args) {
         ass.this = result;
       }
 
-      // Генерируем события
-      if (ass.events && ass.events.emit) {
-        ass.events.emit('transform', ass.this, prevValue);
+      // Генерируем событие трансформации
+      ass.emit('transform', ass.this, prevValue);
 
-        // Генерируем общее событие change
-        ass.events.emit('change', prevValue, ass.this, null, {
-          method: 'transform',
-          arguments: [transformFn]
-        });
-      }
+      // Генерируем общее событие change
+      ass.emit('change', prevValue, ass.this, null, {
+        method: 'transform',
+        arguments: [transformFn]
+      });
 
       return ass;
     };
   } else if (op === 'apply' && args.length >= 1) {
-    const [transformFn] = args;
-    return transform(ass, 'get')(transformFn);
+    const [transformer] = args;
+    return transform(ass, 'get')(transformer);
   }
 }
 

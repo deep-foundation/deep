@@ -634,15 +634,13 @@ export function set(ass, op, ...args) {
       target[key] = value;
 
       // Генерируем события
-      if (ass.events && ass.events.emit) {
-        ass.events.emit('set', key, value, prev);
+      ass.emit('set', key, value, prev);
 
-        // Генерируем общее событие change
-        ass.events.emit('change', { ...target, [key]: prev }, target, key, {
-          method: 'set',
-          arguments: [key, value]
-        });
-      }
+      // Генерируем общее событие change
+      ass.emit('change', { ...target, [key]: prev }, target, key, {
+        method: 'set',
+        arguments: [key, value]
+      });
 
       return ass;
     };
@@ -684,11 +682,11 @@ export function delete_(ass, op, ...args) {
       const result = delete target[key];
 
       // Генерируем события только если ключ существовал
-      if (hadKey && ass.events && ass.events.emit) {
-        ass.events.emit('delete', key, prev);
+      if (hadKey) {
+        ass.emit('delete', key, prev);
 
         // Генерируем общее событие change
-        ass.events.emit('change', prevState, target, key, {
+        ass.emit('change', prevState, target, key, {
           method: 'delete',
           arguments: [key]
         });

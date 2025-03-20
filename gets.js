@@ -15,7 +15,7 @@ import { Association } from "./association.js";
  * @param {Function} [callback] - функция обратного вызова (value, key, collection)
  * @returns {Association} - Исходный экземпляр Association
  */
-export function forEach(ass, op, callback) {
+export function forEach(ass, op) {
   if (op !== 'get' && op !== 'apply') return;
 
   return function(callback) {
@@ -57,7 +57,7 @@ export function forEach(ass, op, callback) {
  * @param {Function} [callback] - функция обратного вызова (value, key, collection)
  * @returns {Array} - Новый массив с преобразованными значениями
  */
-export function map(ass, op, callback) {
+export function map(ass, op) {
   if (op !== 'get' && op !== 'apply') return;
 
   return function(callback) {
@@ -104,7 +104,7 @@ export function map(ass, op, callback) {
  * @param {Function} [callback] - функция обратного вызова (value, key, collection)
  * @returns {Array} - Новый массив с отфильтрованными значениями
  */
-export function filter(ass, op, callback) {
+export function filter(ass, op) {
   if (op !== 'get' && op !== 'apply') return;
 
   return function(callback) {
@@ -241,7 +241,7 @@ export function reduce(ass, op, callback, initialValue) {
  * @param {Function} [callback] - функция обратного вызова (value, key, collection)
  * @returns {boolean} - true, если все элементы удовлетворяют условию
  */
-export function every(ass, op, callback) {
+export function every(ass, op) {
   if (op !== 'get' && op !== 'apply') return;
 
   return function(callback) {
@@ -297,7 +297,7 @@ export function every(ass, op, callback) {
  * @param {Function} [callback] - функция обратного вызова (value, key, collection)
  * @returns {boolean} - true, если хотя бы один элемент удовлетворяет условию
  */
-export function some(ass, op, callback) {
+export function some(ass, op) {
   if (op !== 'get' && op !== 'apply') return;
 
   return function(callback) {
@@ -353,7 +353,7 @@ export function some(ass, op, callback) {
  * @param {Function} [callback] - функция обратного вызова (value, key, collection)
  * @returns {*} - Найденный элемент или undefined
  */
-export function find(ass, op, callback) {
+export function find(ass, op) {
   if (op !== 'get' && op !== 'apply') return;
 
   return function(callback) {
@@ -409,7 +409,7 @@ export function find(ass, op, callback) {
  * @param {Function} [callback] - функция обратного вызова (value, key, collection)
  * @returns {string|number|symbol} - Найденный ключ или undefined
  */
-export function findKey(ass, op, callback) {
+export function findKey(ass, op) {
   if (op !== 'get' && op !== 'apply') return;
 
   return function(callback) {

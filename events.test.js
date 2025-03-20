@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
 import { Events } from './events.js';
+import { Association } from './association.js';
+import { deep } from './index.js';
 
 test('События: базовая подписка и генерация событий', async (t) => {
   const events = new Events();
@@ -51,7 +53,7 @@ test('События: отписка через возвращаемую фун�
 test('События: явный вызов метода off', async (t) => {
   const events = new Events();
   let callCount = 0;
-  
+
   const handler = () => {
     callCount++;
   };
@@ -74,7 +76,7 @@ test('События: явный вызов метода off', async (t) => {
 test('События: множественные обработчики', async (t) => {
   const events = new Events();
   let calls = [];
-  
+
   // Создаем три обработчика
   const handler1 = () => { calls.push(1); };
   const handler2 = () => { calls.push(2); };
@@ -105,12 +107,12 @@ test('События: множественные обработчики', async 
 test('События: обработка ошибок в обработчиках', async (t) => {
   const events = new Events();
   let handlerCalled = false;
-  
+
   // Первый обработчик выбрасывает ошибку
   events.on('testEvent', () => {
     throw new Error('Тестовая ошибка');
   });
-  
+
   // Второй обработчик должен выполниться несмотря на ошибку в первом
   events.on('testEvent', () => {
     handlerCalled = true;
@@ -119,62 +121,62 @@ test('События: обработка ошибок в обработчика�
   // Перехватываем console.error, чтобы не засорять вывод теста
   const originalConsoleError = console.error;
   console.error = () => {}; // Заглушка
-  
+
   // Генерация события
   events.emit('testEvent');
-  
+
   // Восстанавливаем console.error
   console.error = originalConsoleError;
-  
+
   assert.equal(handlerCalled, true, 'Второй обработчик должен быть вызван несмотря на ошибку в первом');
 });
 
 test('События: одноразовые обработчики (метод once)', async (t) => {
   const events = new Events();
   let callCount = 0;
-  
+
   // Подписка на событие через once
   events.once('testEvent', () => {
     callCount++;
   });
-  
+
   // Первая генерация события
   events.emit('testEvent');
   assert.equal(callCount, 1, 'Обработчик должен быть вызван один раз');
-  
+
   // Вторая генерация события
   events.emit('testEvent');
   assert.equal(callCount, 1, 'Обработчик не должен быть вызван повторно');
-  
+
   // Проверка с несколькими обработчиками
   let permanentCallCount = 0;
   let onceCallCount = 0;
   let anotherOnceCallCount = 0;
-  
+
   // Постоянный обработчик
   events.on('mixedEvent', () => {
     permanentCallCount++;
   });
-  
+
   // Первый одноразовый обработчик
   events.once('mixedEvent', () => {
     onceCallCount++;
   });
-  
+
   // Второй одноразовый обработчик
   events.once('mixedEvent', () => {
     anotherOnceCallCount++;
   });
-  
+
   // Генерация события
   events.emit('mixedEvent');
-  
+
   assert.equal(onceCallCount, 1, 'Первый одноразовый обработчик должен быть вызван один раз');
   assert.equal(anotherOnceCallCount, 1, 'Второй одноразовый обработчик должен быть вызван один раз');
-  
+
   // Повторная генерация события
   events.emit('mixedEvent');
-  
+
   assert.equal(onceCallCount, 1, 'Первый одноразовый обработчик не должен быть вызван повторно');
   assert.equal(anotherOnceCallCount, 1, 'Второй одноразовый обработчик не должен быть вызван повторно');
 });
@@ -182,28 +184,28 @@ test('События: одноразовые обработчики (метод 
 test('События: отписка от одноразового обработчика по оригинальному обработчику', async (t) => {
   const events = new Events();
   let callCount = 0;
-  
+
   // Создаем обработчик, который будем использовать с once
   const handler = () => {
     callCount++;
   };
-  
+
   // Подписываемся через once
   events.once('testEvent', handler);
-  
+
   // Отписываемся по оригинальному обработчику
   events.off('testEvent', handler);
-  
+
   // Генерация события
   events.emit('testEvent');
-  
+
   // Проверяем, что обработчик не был вызван
   assert.equal(callCount, 0, 'Обработчик не должен быть вызван после отписки по оригинальному обработчику');
 });
 
 test('События: контекст выполнения обработчика', async (t) => {
   const events = new Events();
-  
+
   // Объект для использования в качестве контекста
   const context = {
     value: 'test',
@@ -211,20 +213,141 @@ test('События: контекст выполнения обработчик
       return this.value;
     }
   };
-  
+
   let contextValue = null;
-  
+
   // Функция обработчика, использующая this
   function handler(eventType, data) {
     contextValue = this.getValue();
   }
-  
+
   // Подписка с контекстом
   events.on('testEvent', handler, context);
-  
+
   // Генерация события
   events.emit('testEvent');
-  
+
   // Проверка
   assert.equal(contextValue, 'test', 'Обработчик должен выполняться с правильным контекстом');
-}); 
+});
+
+test('События: получение списка имен событий', async (t) => {
+  const events = new Events();
+
+  // Подписка на разные события
+  events.on('event1', () => {});
+  events.on('event2', () => {});
+  events.on('event3', () => {});
+
+  // Получение списка имен событий
+  const eventNames = events.eventNames();
+
+  // Проверка
+  assert.equal(eventNames.length, 3, 'Должно быть три имени событий');
+  assert.ok(eventNames.includes('event1'), 'Список должен содержать event1');
+  assert.ok(eventNames.includes('event2'), 'Список должен содержать event2');
+  assert.ok(eventNames.includes('event3'), 'Список должен содержать event3');
+});
+
+test('Ассоциативные события: базовая подписка и генерация событий через Association', async (t) => {
+  const a = deep();
+  let callCount = 0;
+  const payload = { data: 'test data' };
+
+  // Подписка на событие
+  a.on('testEvent', (eventType, data) => {
+    callCount++;
+    assert.equal(eventType, 'testEvent');
+    assert.deepEqual(data, payload);
+  });
+
+  // Проверка создания экземпляра Events
+  assert.ok(a.temp._events instanceof Events, 'Должен быть создан экземпляр Events');
+
+  // Генерация события
+  a.emit('testEvent', payload);
+  assert.equal(callCount, 1, 'Обработчик должен быть вызван один раз');
+
+  // Повторная генерация события
+  a.emit('testEvent', payload);
+  assert.equal(callCount, 2, 'Обработчик должен быть вызван снова');
+});
+
+test('Ассоциативные события: отписка от события', async (t) => {
+  const a = deep();
+  let callCount = 0;
+
+  const handler = () => {
+    callCount++;
+  };
+
+  // Подписка на событие
+  a.on('testEvent', handler);
+
+  // Генерация события
+  a.emit('testEvent');
+  assert.equal(callCount, 1, 'Обработчик должен быть вызван');
+
+  // Отписка через метод off
+  a.off('testEvent', handler);
+
+  // Генерация события после отписки
+  a.emit('testEvent');
+  assert.equal(callCount, 1, 'Обработчик не должен быть вызван после отписки');
+});
+
+test('Ассоциативные события: ленивая инициализация Events', async (t) => {
+  const a = deep();
+
+  // Проверяем, что экземпляр Events еще не создан
+  assert.equal(a.temp._events, undefined, 'Экземпляр Events не должен быть создан до вызова on');
+
+  // Вызываем emit без предварительной подписки
+  const emitResult = a.emit('testEvent');
+  assert.equal(emitResult, false, 'Emit должен вернуть false если нет экземпляра Events');
+
+  // Проверяем, что экземпляр Events все еще не создан
+  assert.equal(a.temp._events, undefined, 'Экземпляр Events не должен быть создан после вызова emit без подписки');
+
+  // Вызываем off без предварительной подписки
+  const offResult = a.off('testEvent', () => {});
+  assert.equal(offResult, false, 'Off должен вернуть false если нет экземпляра Events');
+
+  // Проверяем, что экземпляр Events все еще не создан
+  assert.equal(a.temp._events, undefined, 'Экземпляр Events не должен быть создан после вызова off без подписки');
+
+  // Теперь делаем подписку на событие
+  a.on('testEvent', () => {});
+
+  // Проверяем, что экземпляр Events создан
+  assert.ok(a.temp._events instanceof Events, 'Экземпляр Events должен быть создан после вызова on');
+});
+
+test('Ассоциативные события: события жизненного цикла', async (t) => {
+  // Импортируем функцию kill из lifecycle.js
+  const { kill } = await import('./lifecycle.js');
+
+  const a = deep();
+  let killEventCalled = false;
+
+  // Подписываемся на событие kill
+  a.on('kill', () => {
+    killEventCalled = true;
+  });
+
+  // Проверяем, что экземпляр Events создан
+  assert.ok(a.temp._events instanceof Events, 'Экземпляр Events должен быть создан');
+
+  // Вызываем kill для удаления ассоциации
+  kill(a);
+
+  // Проверяем, что событие kill было вызвано
+  assert.ok(killEventCalled, 'Событие kill должно быть вызвано');
+
+  // Проверяем, что экземпляр Events был удален
+  assert.equal(a.temp._events, undefined, 'Экземпляр Events должен быть удален после kill');
+
+  // Пробуем вызвать emit после kill
+  const emitResult = a.emit('testEvent');
+  assert.equal(emitResult, false, 'Emit должен вернуть false после kill');
+});

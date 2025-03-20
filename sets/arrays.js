@@ -32,27 +32,21 @@ export function push(ass, op, ...args) {
       const result = target.push(...items);
 
       // Генерируем события
-      if (ass.events && ass.events.emit) {
-        // Генерируем событие push с новыми элементами и новой длиной
-        ass.events.emit('push', items, result);
+      ass.emit('push', items, result);
 
-        // Генерируем события set для каждого добавленного элемента
-        for (let i = 0; i < items.length; i++) {
-          const index = prevLength + i;
-          ass.events.emit('set', index, items[i], undefined);
-        }
-
-        // Генерируем событие изменения длины
-        if (prevLength !== result) {
-          ass.events.emit('set', 'length', result, prevLength);
-        }
-
-        // Генерируем общее событие change
-        ass.events.emit('change', prevState, target, null, {
-          method: 'push',
-          arguments: items
-        });
+      // Генерируем события для каждого добавленного элемента
+      for (let i = 0; i < items.length; i++) {
+        ass.emit('set', prevLength + i, items[i], undefined);
       }
+
+      // Генерируем событие для изменения длины
+      ass.emit('set', 'length', result, prevLength);
+
+      // Генерируем общее событие change
+      ass.emit('change', prevState, target, null, {
+        method: 'push',
+        arguments: items
+      });
 
       return result;
     };
@@ -94,22 +88,19 @@ export function pop(ass, op, ...args) {
       const result = target.pop();
 
       // Генерируем события
-      if (ass.events && ass.events.emit) {
-        // Генерируем событие pop с удаленным элементом и новой длиной
-        ass.events.emit('pop', result, target.length);
+      ass.emit('pop', result, target.length);
 
-        // Генерируем событие delete для удаленного элемента
-        ass.events.emit('delete', lastIndex, lastElement);
+      // Генерируем событие для удаленного элемента
+      ass.emit('delete', lastIndex, lastElement);
 
-        // Генерируем событие изменения длины
-        ass.events.emit('set', 'length', target.length, prevLength);
+      // Генерируем событие для изменения длины
+      ass.emit('set', 'length', target.length, prevLength);
 
-        // Генерируем общее событие change
-        ass.events.emit('change', prevState, target, lastIndex, {
-          method: 'pop',
-          arguments: []
-        });
-      }
+      // Генерируем общее событие change
+      ass.emit('change', prevState, target, lastIndex, {
+        method: 'pop',
+        arguments: []
+      });
 
       return result;
     };
@@ -150,27 +141,24 @@ export function shift(ass, op, ...args) {
       const result = target.shift();
 
       // Генерируем события
-      if (ass.events && ass.events.emit) {
-        // Генерируем событие shift с удаленным элементом и новой длиной
-        ass.events.emit('shift', result, target.length);
+      ass.emit('shift', result, target.length);
 
-        // Генерируем событие delete для удаленного элемента
-        ass.events.emit('delete', 0, firstElement);
+      // Генерируем событие для удаленного элемента
+      ass.emit('delete', 0, firstElement);
 
-        // Генерируем события set для каждого сдвинутого элемента
-        for (let i = 0; i < target.length; i++) {
-          ass.events.emit('set', i, target[i], prevState[i + 1]);
-        }
-
-        // Генерируем событие изменения длины
-        ass.events.emit('set', 'length', target.length, prevLength);
-
-        // Генерируем общее событие change
-        ass.events.emit('change', prevState, target, 0, {
-          method: 'shift',
-          arguments: []
-        });
+      // Генерируем события для сдвинутых элементов
+      for (let i = 0; i < target.length; i++) {
+        ass.emit('set', i, target[i], prevState[i + 1]);
       }
+
+      // Генерируем событие для изменения длины
+      ass.emit('set', 'length', target.length, prevLength);
+
+      // Генерируем общее событие change
+      ass.emit('change', prevState, target, 0, {
+        method: 'shift',
+        arguments: []
+      });
 
       return result;
     };
@@ -205,31 +193,27 @@ export function unshift(ass, op, ...args) {
       const result = target.unshift(...items);
 
       // Генерируем события
-      if (ass.events && ass.events.emit) {
-        // Генерируем событие unshift с новыми элементами и новой длиной
-        ass.events.emit('unshift', items, result);
+      ass.emit('unshift', items, result);
 
-        // Генерируем события set для каждого добавленного элемента
-        for (let i = 0; i < items.length; i++) {
-          ass.events.emit('set', i, items[i], i < prevLength ? prevState[i] : undefined);
-        }
-
-        // Генерируем события set для каждого сдвинутого элемента
-        for (let i = items.length; i < result; i++) {
-          ass.events.emit('set', i, target[i], i - items.length < prevLength ? prevState[i - items.length] : undefined);
-        }
-
-        // Генерируем событие изменения длины
-        if (prevLength !== result) {
-          ass.events.emit('set', 'length', result, prevLength);
-        }
-
-        // Генерируем общее событие change
-        ass.events.emit('change', prevState, target, null, {
-          method: 'unshift',
-          arguments: items
-        });
+      // Генерируем события для всех элементов
+      // Сначала для новых элементов
+      for (let i = 0; i < items.length; i++) {
+        ass.emit('set', i, items[i], i < prevLength ? prevState[i] : undefined);
       }
+
+      // Затем для сдвинутых элементов
+      for (let i = items.length; i < result; i++) {
+        ass.emit('set', i, target[i], i - items.length < prevLength ? prevState[i - items.length] : undefined);
+      }
+
+      // Генерируем событие для изменения длины
+      ass.emit('set', 'length', result, prevLength);
+
+      // Генерируем общее событие change
+      ass.emit('change', prevState, target, null, {
+        method: 'unshift',
+        arguments: items
+      });
 
       return result;
     };
@@ -271,46 +255,43 @@ export function splice(ass, op, ...args) {
       const deleted = target.splice(actualStart, actualDeleteCount, ...items);
 
       // Генерируем события
-      if (ass.events && ass.events.emit) {
-        // Генерируем событие splice
-        ass.events.emit('splice', actualStart, deleted, items);
+      ass.emit('splice', actualStart, deleted, items);
 
-        // Генерируем события delete для каждого удаленного элемента
-        for (let i = 0; i < deleted.length; i++) {
-          ass.events.emit('delete', actualStart + i, deleted[i]);
-        }
+      // Генерируем события delete для каждого удаленного элемента
+      for (let i = 0; i < deleted.length; i++) {
+        ass.emit('delete', actualStart + i, deleted[i]);
+      }
 
-        // Генерируем события set для каждого добавленного элемента
-        for (let i = 0; i < items.length; i++) {
-          ass.events.emit('set', actualStart + i, items[i],
-            actualStart + i < actualStart + actualDeleteCount ? prevState[actualStart + i] : undefined);
-        }
+      // Генерируем события set для каждого добавленного элемента
+      for (let i = 0; i < items.length; i++) {
+        ass.emit('set', actualStart + i, items[i],
+          actualStart + i < actualStart + actualDeleteCount ? prevState[actualStart + i] : undefined);
+      }
 
-        // Генерируем события set для каждого смещенного элемента
-        const deltaLength = items.length - actualDeleteCount;
-        if (deltaLength !== 0) {
-          const startOffset = actualStart + actualDeleteCount;
-          const endOffset = prevLength;
+      // Генерируем события set для каждого смещенного элемента
+      const deltaLength = items.length - actualDeleteCount;
+      if (deltaLength !== 0) {
+        const startOffset = actualStart + actualDeleteCount;
+        const endOffset = prevLength;
 
-          for (let i = startOffset; i < endOffset; i++) {
-            const newIndex = i + deltaLength;
-            if (newIndex < target.length) {
-              ass.events.emit('set', newIndex, target[newIndex], prevState[i]);
-            }
+        for (let i = startOffset; i < endOffset; i++) {
+          const newIndex = i + deltaLength;
+          if (newIndex < target.length) {
+            ass.emit('set', newIndex, target[newIndex], prevState[i]);
           }
         }
-
-        // Генерируем событие изменения длины, если длина изменилась
-        if (prevLength !== target.length) {
-          ass.events.emit('set', 'length', target.length, prevLength);
-        }
-
-        // Генерируем общее событие change
-        ass.events.emit('change', prevState, target, actualStart, {
-          method: 'splice',
-          arguments: [actualStart, actualDeleteCount, ...items]
-        });
       }
+
+      // Генерируем событие изменения длины, если длина изменилась
+      if (prevLength !== target.length) {
+        ass.emit('set', 'length', target.length, prevLength);
+      }
+
+      // Генерируем общее событие change
+      ass.emit('change', prevState, target, actualStart, {
+        method: 'splice',
+        arguments: [actualStart, actualDeleteCount, ...items]
+      });
 
       return deleted;
     };
@@ -343,20 +324,21 @@ export function reverse(ass, op, ...args) {
       // Выполняем операцию reverse
       target.reverse();
 
-      // Генерируем события
-      if (ass.events && ass.events.emit) {
-        // Генерируем событие reverse
-        ass.events.emit('reverse');
-
-        // Генерируем события set для каждого измененного элемента
-        for (let i = 0; i < target.length; i++) {
-          if (target[i] !== prevState[i]) {
-            ass.events.emit('set', i, target[i], prevState[i]);
-          }
+      // Проверяем, были ли изменения
+      let changed = false;
+      for (let i = 0; i < target.length; i++) {
+        if (target[i] !== prevState[i]) {
+          changed = true;
+          break;
         }
+      }
+
+      // Генерируем события только если были изменения
+      if (changed) {
+        ass.emit('reverse');
 
         // Генерируем общее событие change
-        ass.events.emit('change', prevState, target, null, {
+        ass.emit('change', prevState, target, null, {
           method: 'reverse',
           arguments: []
         });
@@ -403,19 +385,18 @@ export function sort(ass, op, ...args) {
       }
 
       // Генерируем события только если были изменения
-      if (changed && ass.events && ass.events.emit) {
-        // Генерируем событие sort
-        ass.events.emit('sort', compareFunction);
+      if (changed) {
+        ass.emit('sort', compareFunction);
 
         // Генерируем события set для каждого измененного элемента
         for (let i = 0; i < target.length; i++) {
           if (target[i] !== prevState[i]) {
-            ass.events.emit('set', i, target[i], prevState[i]);
+            ass.emit('set', i, target[i], prevState[i]);
           }
         }
 
         // Генерируем общее событие change
-        ass.events.emit('change', prevState, target, null, {
+        ass.emit('change', prevState, target, null, {
           method: 'sort',
           arguments: [compareFunction]
         });
@@ -458,23 +439,20 @@ export function fill(ass, op, ...args) {
       target.fill(value, actualStart, actualEnd);
 
       // Генерируем события
-      if (ass.events && ass.events.emit) {
-        // Генерируем событие fill
-        ass.events.emit('fill', value, actualStart, actualEnd);
+      ass.emit('fill', value, actualStart, actualEnd);
 
-        // Генерируем события set для каждого измененного элемента
-        for (let i = actualStart; i < actualEnd; i++) {
-          if (prevState[i] !== value) {
-            ass.events.emit('set', i, value, prevState[i]);
-          }
+      // Генерируем события set для каждого измененного элемента
+      for (let i = actualStart; i < actualEnd; i++) {
+        if (prevState[i] !== value) {
+          ass.emit('set', i, value, prevState[i]);
         }
-
-        // Генерируем общее событие change
-        ass.events.emit('change', prevState, target, null, {
-          method: 'fill',
-          arguments: [value, actualStart, actualEnd]
-        });
       }
+
+      // Генерируем общее событие change
+      ass.emit('change', prevState, target, null, {
+        method: 'fill',
+        arguments: [value, actualStart, actualEnd]
+      });
 
       return ass;
     };

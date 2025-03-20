@@ -131,7 +131,7 @@ test('Association - поддержка операции set в методе', ()
   let lastValue = null;
 
   // Метод с поддержкой операции 'set'
-  a.configurable = (ass, op, value) => {
+  a.configurable = (ass, op, [value] = []) => {
     if (op === 'get') {
       return ass.temp.configurable = ass.temp.configurable || ((...args) =>
         ass._proxy.get('configurable')(ass, 'apply', args)
@@ -156,4 +156,56 @@ test('Association - поддержка операции set в методе', ()
 
   // Проверяем, что метод возвращает установленное значение
   assert.equal(conf(), 'newValue');
+});
+
+test('Association - проверка символа в temp.symbol', () => {
+  // Создаем экземпляр Association
+  const a = deep();
+
+  // Проверяем, что temp.symbol существует и является символом
+  assert.equal(typeof a.temp.symbol, 'symbol', 'temp.symbol должен быть символом');
+
+  // Проверяем, что символ установлен в this, когда нет аргументов
+  assert.strictEqual(a.this, a.temp.symbol, 'this должен быть равен temp.symbol при создании без аргументов');
+
+  // Проверяем, что строковое представление символа содержит адрес файла и позицию
+  const symbolString = a.temp.symbol.toString();
+  console.log('Строковое представление символа:', symbolString);
+
+  // Проверяем формат символа - должен быть путь_к_файлу:строка:колонка
+  const filePathRegex = /Symbol\((?:file:\/\/)?\/[^:]+:\d+:\d+\)/;
+  assert.ok(filePathRegex.test(symbolString), 'Символ должен содержать только адрес файла и позицию в формате путь:строка:колонка');
+
+  // Проверяем, что символ содержит имя файла
+  assert.ok(
+    symbolString.includes('index.js') ||
+    symbolString.includes('association.test.js'),
+    'Символ должен содержать имя файла'
+  );
+});
+
+test('Association - this не равен символу при создании с аргументами', () => {
+  const obj = { test: 'value' };
+  const a = deep(obj);
+
+  // Проверяем, что temp.symbol существует
+  assert.equal(typeof a.temp.symbol, 'symbol', 'temp.symbol должен быть символом');
+
+  // Проверяем, что this установлен в переданный объект, а не в символ
+  assert.strictEqual(a.this, obj, 'this должен быть равен переданному объекту');
+  assert.notStrictEqual(a.this, a.temp.symbol, 'this не должен быть равен temp.symbol при создании с аргументами');
+});
+
+test('Association - символы разных экземпляров уникальны', () => {
+  // Создаем два экземпляра
+  const a1 = deep();
+  const a2 = deep();
+
+  // Проверяем, что символы разные
+  assert.notStrictEqual(a1.temp.symbol, a2.temp.symbol, 'Символы разных экземпляров должны быть разными');
+
+  // Проверяем формат символов
+  const filePathRegex = /Symbol\((?:file:\/\/)?\/[^:]+:\d+:\d+\)/;
+  assert.ok(filePathRegex.test(a1.temp.symbol.toString()), 'Первый символ должен содержать только адрес файла и позицию');
+  assert.ok(filePathRegex.test(a2.temp.symbol.toString()), 'Второй символ должен содержать только адрес файла и позицию');
 });

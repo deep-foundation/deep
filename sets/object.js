@@ -26,15 +26,13 @@ export function create(ass, op, ...args) {
       ass.this = newObj;
 
       // Генерируем события
-      if (ass.events && ass.events.emit) {
-        ass.events.emit('create', newObj);
+      ass.emit('create', newObj);
 
-        // Генерируем общее событие change
-        ass.events.emit('change', prev, newObj, null, {
-          method: 'create',
-          arguments: []
-        });
-      }
+      // Генерируем общее событие change
+      ass.emit('change', prev, newObj, null, {
+        method: 'create',
+        arguments: []
+      });
 
       return ass;
     };
@@ -115,15 +113,13 @@ export function clone(ass, op, ...args) {
       ass.this = cloned;
 
       // Генерируем события
-      if (ass.events && ass.events.emit) {
-        ass.events.emit('clone', cloned, prev);
+      ass.emit('clone', cloned, prev);
 
-        // Генерируем общее событие change
-        ass.events.emit('change', prev, cloned, null, {
-          method: 'clone',
-          arguments: []
-        });
-      }
+      // Генерируем общее событие change
+      ass.emit('change', prev, cloned, null, {
+        method: 'clone',
+        arguments: []
+      });
 
       return ass;
     };
@@ -294,15 +290,18 @@ export function assign(ass, op, ...args) {
       Object.assign(target, ...sources);
 
       // Генерируем события
-      if (ass.events && ass.events.emit) {
-        ass.events.emit('assign', sources);
+      ass.emit('assign', sources);
 
-        // Генерируем общее событие change
-        ass.events.emit('change', prevState, target, null, {
-          method: 'assign',
-          arguments: sources
-        });
+      // Генерируем события set для каждого измененного свойства
+      for (const key of Object.keys(sources)) {
+        ass.emit('set', key, target[key], prevState[key]);
       }
+
+      // Генерируем общее событие change
+      ass.emit('change', prevState, target, null, {
+        method: 'assign',
+        arguments: sources
+      });
 
       return ass;
     };
@@ -340,15 +339,13 @@ export function defineProperty(ass, op, ...args) {
       Object.defineProperty(target, key, descriptor);
 
       // Генерируем события
-      if (ass.events && ass.events.emit) {
-        ass.events.emit('defineProperty', key, descriptor, prevValue);
+      ass.emit('define', key, descriptor);
 
-        // Генерируем общее событие change
-        ass.events.emit('change', prevState, target, key, {
-          method: 'defineProperty',
-          arguments: [key, descriptor]
-        });
-      }
+      // Генерируем общее событие change
+      ass.emit('change', prevState, target, key, {
+        method: 'defineProperty',
+        arguments: [key, descriptor]
+      });
 
       return ass;
     };

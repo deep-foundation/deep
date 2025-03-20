@@ -113,55 +113,53 @@ export function upsert(ass, op, ...args) {
       }
 
       // Генерируем события
-      if (ass.events && ass.events.emit) {
-        ass.events.emit('upsert', key, result, prevValue, exists);
+      ass.emit('upsert', key, result, prevValue, exists);
 
-        // Генерируем соответствующее событие в зависимости от типа операции
-        if (exists) {
-          if (target instanceof Map) {
-            ass.events.emit('mapSet', key, result, prevValue);
-          } else if (target instanceof Set) {
-            // Для Set ничего не делаем, так как элемент уже существует
-          } else {
-            ass.events.emit('set', key, result, prevValue);
-          }
+      // Генерируем соответствующее событие в зависимости от типа операции
+      if (exists) {
+        if (target instanceof Map) {
+          ass.emit('mapSet', key, result, prevValue);
+        } else if (target instanceof Set) {
+          // Для Set ничего не делаем, так как элемент уже существует
         } else {
-          if (target instanceof Map) {
-            ass.events.emit('mapSet', key, result, undefined);
-          } else if (target instanceof Set) {
-            ass.events.emit('setAdd', result);
-          } else if (Array.isArray(target)) {
-            ass.events.emit('set', key, result, undefined);
-          } else {
-            ass.events.emit('set', key, result, undefined);
-          }
+          ass.emit('set', key, result, prevValue);
         }
-
-        // Создаем копию предыдущего состояния
-        let prevState;
-
-        if (target instanceof Map || target instanceof Set) {
-          prevState = new Map();
-          if (exists) {
-            prevState.set(key, prevValue);
-          }
-          if (!exists) {
-            prevState.delete(result);
-          }
+      } else {
+        if (target instanceof Map) {
+          ass.emit('mapSet', key, result, undefined);
+        } else if (target instanceof Set) {
+          ass.emit('setAdd', result);
+        } else if (Array.isArray(target)) {
+          ass.emit('set', key, result, undefined);
         } else {
-          prevState = { ...target };
-          if (exists) {
-            prevState[key] = prevValue;
-          } else {
-            delete prevState[key];
-          }
+          ass.emit('set', key, result, undefined);
         }
-
-        ass.events.emit('change', prevState, target, key, {
-          method: 'upsert',
-          arguments: [key, value, createFn]
-        });
       }
+
+      // Создаем копию предыдущего состояния
+      let prevState;
+
+      if (target instanceof Map || target instanceof Set) {
+        prevState = new Map();
+        if (exists) {
+          prevState.set(key, prevValue);
+        }
+        if (!exists) {
+          prevState.delete(result);
+        }
+      } else {
+        prevState = { ...target };
+        if (exists) {
+          prevState[key] = prevValue;
+        } else {
+          delete prevState[key];
+        }
+      }
+
+      ass.emit('change', prevState, target, key, {
+        method: 'upsert',
+        arguments: [key, value, createFn]
+      });
 
       // Возвращаем ass, чтобы тесты проходили
       return options.returnResults ? result : ass;
@@ -252,15 +250,13 @@ export function patch(ass, op, ...args) {
       }
 
       // Генерируем события
-      if (ass.events && ass.events.emit) {
-        ass.events.emit('patch', operations, results);
+      ass.emit('patch', operations, results);
 
-        // Генерируем общее событие change
-        ass.events.emit('change', prevState, target, null, {
-          method: 'patch',
-          arguments: [operations]
-        });
-      }
+      // Генерируем общее событие change
+      ass.emit('change', prevState, target, null, {
+        method: 'patch',
+        arguments: [operations]
+      });
 
       return options.returnResults ? results : ass;
     };
@@ -315,19 +311,24 @@ export function batch(ass, op, ...args) {
       // Результаты операций
       const results = [];
 
-      // Временно отключаем события, если не нужно генерировать индивидуальные события
-      const originalEmit = ass.events && ass.events.emit;
+      // Для хранения подавленных событий
       let suppressedEvents = [];
 
-      if (!settings.emitIndividual && originalEmit) {
-        // Временно заменяем функцию emit, чтобы собирать события,
-        // но не отправлять их сразу
-        ass.events.emit = function(...args) {
-          suppressedEvents.push(args);
-        };
-      }
+      // Временная функция для сбора событий вместо их отправки
+      const collectEvents = function(...args) {
+        suppressedEvents.push(args);
+      };
+
+      // Сохраняем оригинальную функцию emit если нужно подавить индивидуальные события
+      const originalEmit = settings.emitIndividual ? null : ass.emit;
 
       try {
+        // Если нужно подавить индивидуальные события, заменяем функцию emit
+        if (!settings.emitIndividual && originalEmit) {
+          // Временно заменяем функцию emit на коллектор
+          ass.emit = collectEvents;
+        }
+
         // Применяем операции
         for (let i = 0; i < operations.length; i++) {
           const operation = operations[i];
@@ -368,32 +369,30 @@ export function batch(ass, op, ...args) {
       } finally {
         // Восстанавливаем оригинальную функцию emit
         if (!settings.emitIndividual && originalEmit) {
-          ass.events.emit = originalEmit;
+          ass.emit = originalEmit;
         }
       }
 
       // Генерируем события
-      if (ass.events && ass.events.emit) {
-        // Если был включен режим подавления индивидуальных событий,
-        // но нужно сгенерировать batch событие
-        if (!settings.emitIndividual && settings.emitBatch) {
-          ass.events.emit('batch', operations, results);
+      // Если был включен режим подавления индивидуальных событий,
+      // но нужно сгенерировать batch событие
+      if (!settings.emitIndividual && settings.emitBatch) {
+        ass.emit('batch', operations, results);
 
-          // Генерируем общее событие change
-          ass.events.emit('change', prevState, target, null, {
-            method: 'batch',
-            arguments: [operations, options]
-          });
-        } else if (settings.emitBatch) {
-          // Генерируем batch событие после индивидуальных событий
-          ass.events.emit('batch', operations, results);
+        // Генерируем общее событие change
+        ass.emit('change', prevState, target, null, {
+          method: 'batch',
+          arguments: [operations, options]
+        });
+      } else if (settings.emitBatch) {
+        // Генерируем batch событие после индивидуальных событий
+        ass.emit('batch', operations, results);
 
-          // Генерируем общее событие change
-          ass.events.emit('change', prevState, target, null, {
-            method: 'batch',
-            arguments: [operations, options]
-          });
-        }
+        // Генерируем общее событие change
+        ass.emit('change', prevState, target, null, {
+          method: 'batch',
+          arguments: [operations, options]
+        });
       }
 
       return settings.returnResults ? results : ass;

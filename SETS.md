@@ -621,7 +621,7 @@ deep([1, 2, 3]).batch([
 const obj = { a: 1 };
 const a = deep(obj);
 
-a.events.on('change', (prev, curr, prop, meta) => {
+a.on('change', (prev, curr, prop, meta) => {
   console.log(`Объект изменен: ${JSON.stringify(prev)} -> ${JSON.stringify(curr)}`);
   console.log(`Метод: ${meta.method}, аргументы: ${JSON.stringify(meta.arguments)}`);
 });

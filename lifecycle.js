@@ -80,6 +80,18 @@ export function kill(a) {
     return false;
   }
 
+  // Если есть экземпляр Events, генерируем событие kill и очищаем память
+  if (a.temp && a.temp._events) {
+    // Генерируем событие kill
+    a.temp._events.emit('kill', a);
+
+    // Удаляем все слушатели событий
+    a.temp._events.removeAllListeners();
+
+    // Удаляем экземпляр Events
+    delete a.temp._events;
+  }
+
   // Вызываем обработчик onKill
   return a.onKill();
 }

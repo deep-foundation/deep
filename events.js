@@ -2,6 +2,8 @@
  * События - класс для управления подпиской на события и их вызовом.
  * Оптимизирован для работы с большим количеством разных типов событий.
  */
+import { Association } from './association.js';
+
 export class Events {
   /**
    * Хранилище обработчиков событий, структурированное по типам событий.
@@ -19,7 +21,7 @@ export class Events {
 
   /**
    * Подписка на событие.
-   * 
+   *
    * @param {string} eventType - Тип события
    * @param {Function} handler - Функция-обработчик
    * @param {object} [context] - Контекст (this) для вызова обработчика
@@ -30,21 +32,21 @@ export class Events {
     if (context !== undefined) {
       this._contexts.set(handler, context);
     }
-    
+
     // Стандартная обработка для конкретных событий
     if (!this._handlers.has(eventType)) {
       this._handlers.set(eventType, new Set());
     }
-    
+
     this._handlers.get(eventType).add(handler);
-    
+
     // Возвращаем функцию для отписки
     return () => this.off(eventType, handler);
   }
 
   /**
    * Подписка на событие с автоматической отпиской после первого вызова.
-   * 
+   *
    * @param {string} eventType - Тип события
    * @param {Function} handler - Функция-обработчик
    * @param {object} [context] - Контекст (this) для вызова обработчика
@@ -55,7 +57,7 @@ export class Events {
     const wrapper = (...args) => {
       // Сначала отписываемся
       this.off(eventType, wrapper);
-      
+
       // Затем вызываем оригинальный обработчик с правильным контекстом
       if (context !== undefined) {
         return handler.call(context, ...args);
@@ -63,11 +65,11 @@ export class Events {
         return handler(...args);
       }
     };
-    
+
     // Сохраняем ссылку на оригинальный обработчик для возможности
     // явной отписки по оригинальному обработчику
     wrapper.originalHandler = handler;
-    
+
     // Если был указан контекст, сохраняем его и для обертки
     if (context !== undefined) {
       this._contexts.set(wrapper, context);
@@ -75,26 +77,26 @@ export class Events {
       // Переносим контекст с оригинального обработчика, если он был
       this._contexts.set(wrapper, this._contexts.get(handler));
     }
-    
+
     // Подписываемся с оберткой
     return this.on(eventType, wrapper);
   }
 
   /**
    * Отписка от события.
-   * 
+   *
    * @param {string} eventType - Тип события
    * @param {Function} handler - Функция-обработчик для удаления
    * @returns {boolean} Успешность операции
    */
-  off(eventType, handler) {    
+  off(eventType, handler) {
     // Обработка для конкретных событий
     const handlers = this._handlers.get(eventType);
-    
+
     if (!handlers) return false;
-    
+
     let result = handlers.delete(handler);
-    
+
     // Если не удалось удалить напрямую, проверяем, есть ли обертки с этим обработчиком
     if (!result && handlers.size > 0) {
       // Ищем обертку с этим оригинальным обработчиком
@@ -105,19 +107,19 @@ export class Events {
         }
       }
     }
-    
+
     // Удаляем Set, если он пустой
     if (handlers.size === 0) {
       this._handlers.delete(eventType);
     }
-    
+
     return result;
   }
 
   /**
    * Удаляет все обработчики для указанного типа события.
    * Если тип события не указан, удаляет все обработчики всех событий.
-   * 
+   *
    * @param {string} [eventType] - Тип события (если не указан, удаляются все обработчики)
    * @returns {boolean} Успешность операции
    */
@@ -127,40 +129,40 @@ export class Events {
       this._handlers.clear();
       return true;
     }
-    
+
     // Удаляем обработчики конкретного события
     if (this._handlers.has(eventType)) {
       this._handlers.delete(eventType);
       return true;
     }
-    
+
     return false;
   }
 
   /**
    * Генерация события.
-   * 
+   *
    * @param {string} eventType - Тип события
    * @param {...any} args - Аргументы, передаваемые обработчикам
    * @returns {boolean} true, если были вызваны обработчики
    */
   emit(eventType, ...args) {
     let hasHandlers = false;
-    
+
     // Вызываем обработчики конкретного события
     const handlers = this._handlers.get(eventType);
-    
+
     if (handlers && handlers.size > 0) {
       hasHandlers = true;
-      
+
       // Копируем набор обработчиков для безопасного перебора
       [...handlers].forEach(handler => {
         try {
           // Используем сохраненный контекст, если он есть
-          const context = this._contexts.has(handler) 
-            ? this._contexts.get(handler) 
+          const context = this._contexts.has(handler)
+            ? this._contexts.get(handler)
             : undefined;
-          
+
           if (context !== undefined) {
             handler.call(context, eventType, ...args);
           } else {
@@ -173,13 +175,13 @@ export class Events {
         }
       });
     }
-    
+
     return hasHandlers;
   }
 
   /**
    * Получает список всех типов событий, на которые есть подписчики
-   * 
+   *
    * @returns {string[]} Массив типов событий
    */
   eventNames() {
@@ -188,7 +190,7 @@ export class Events {
 
   /**
    * Возвращает количество слушателей для конкретного события
-   * 
+   *
    * @param {string} eventType - Тип события
    * @returns {number} Количество обработчиков
    */
@@ -199,7 +201,7 @@ export class Events {
 
   /**
    * Возвращает массив обработчиков для указанного события
-   * 
+   *
    * @param {string} eventType - Тип события
    * @returns {Function[]} Массив функций-обработчиков
    */
@@ -207,4 +209,84 @@ export class Events {
     const handlers = this._handlers.get(eventType);
     return handlers ? [...handlers] : [];
   }
-} 
+}
+
+/**
+ * Глобальная функция для подписки на событие.
+ * Создает экземпляр Events в ass.temp._events, если он еще не существует.
+ *
+ * @param {Association} ass - Экземпляр Association
+ * @param {string} op - Операция ('get', 'apply')
+ * @returns {Function} Функция подписки на события
+ */
+export function on(ass, op) {
+  if (op !== 'get' && op !== 'apply') return;
+
+  return function(eventType, handler, context) {
+    // Если экземпляр Events еще не создан, создаем его
+    if (!ass.temp._events) {
+      ass.temp._events = new Events();
+    }
+
+    // Вызываем метод on у экземпляра Events
+    return ass.temp._events.on(eventType, handler, context);
+  };
+}
+
+/**
+ * Глобальная функция для отписки от события.
+ * Ничего не делает, если в ass.temp._events нет экземпляра Events.
+ *
+ * @param {Association} ass - Экземпляр Association
+ * @param {string} op - Операция ('get', 'apply')
+ * @returns {Function} Функция отписки от события
+ */
+export function off(ass, op) {
+  if (op !== 'get' && op !== 'apply') return;
+
+  return function(eventType, handler) {
+    // Если экземпляр Events не существует, ничего не делаем
+    if (!ass.temp._events) {
+      return false;
+    }
+
+    // Вызываем метод off у экземпляра Events
+    return ass.temp._events.off(eventType, handler);
+  };
+}
+
+/**
+ * Глобальная функция для генерации события.
+ * Ничего не делает, если в ass.temp._events нет экземпляра Events.
+ *
+ * @param {Association} ass - Экземпляр Association
+ * @param {string} op - Операция ('get', 'apply')
+ * @returns {Function} Функция генерации события
+ */
+export function emit(ass, op) {
+  if (op !== 'get' && op !== 'apply') return;
+
+  return function(eventType, ...args) {
+    // Если экземпляр Events не существует, ничего не делаем
+    if (!ass.temp._events) {
+      return false;
+    }
+
+    // Вызываем метод emit у экземпляра Events
+    return ass.temp._events.emit(eventType, ...args);
+  };
+}
+
+/**
+ * Группа методов для экспорта
+ */
+export const all = {
+  on,
+  off,
+  emit
+};
+
+// Добавляем методы в прокси
+for (const name in all) {
+  Association._proxy.set(name, all[name]);
+}

@@ -1,5 +1,102 @@
 # События (Events)
 
+## Ассоциативные события
+
+Association имеет встроенный механизм событий, который позволяет подписываться на изменения в ассоциированных объектах и генерировать пользовательские события.
+
+### API ассоциативных событий
+
+#### on(eventType, handler, context)
+
+Подписка на событие.
+
+**Параметры:**
+- `eventType` (string): Тип события
+- `handler` (Function): Функция-обработчик
+- `context` (object, опционально): Контекст (`this`) для вызова обработчика
+
+**Возвращает:** Функцию для отписки от события
+
+**Пример:**
+```javascript
+const obj = { a: 1 };
+const a = deep(obj);
+
+// Подписка на событие
+a.on('change', (eventType, prev, curr, prop, meta) => {
+  console.log(`Изменение объекта: ${JSON.stringify(prev)} -> ${JSON.stringify(curr)}`);
+});
+
+// Подписка с контекстом
+const logger = {
+  prefix: '[EVENT]',
+  log(eventType, data) {
+    console.log(`${this.prefix} ${eventType}: ${JSON.stringify(data)}`);
+  }
+};
+
+a.on('set', logger.log, logger);
+```
+
+#### off(eventType, handler)
+
+Отписка от события.
+
+**Параметры:**
+- `eventType` (string): Тип события
+- `handler` (Function): Функция-обработчик для удаления
+
+**Возвращает:** `true`, если отписка была успешной, иначе `false`
+
+**Пример:**
+```javascript
+const handler = (eventType, data) => console.log(data);
+a.on('change', handler);
+// Отписка
+a.off('change', handler);
+```
+
+#### emit(eventType, ...args)
+
+Генерация пользовательского события.
+
+**Параметры:**
+- `eventType` (string): Тип события
+- `...args` (любые): Аргументы, передаваемые обработчикам
+
+**Возвращает:** `true`, если были вызваны обработчики, иначе `false`
+
+**Пример:**
+```javascript
+const a = deep({});
+a.on('customEvent', (eventType, data) => {
+  console.log(`Пользовательское событие: ${data.message}`);
+});
+
+a.emit('customEvent', { message: 'Привет, мир!' });
+```
+
+### События генерируемые методами sets
+
+Методы модификации данных из модуля `sets` автоматически генерируют соответствующие события:
+
+```javascript
+const obj = { a: 1 };
+const a = deep(obj);
+
+a.on('change', (eventType, prev, curr, prop, meta) => {
+  console.log(`Объект изменен: ${JSON.stringify(prev)} -> ${JSON.stringify(curr)}`);
+  console.log(`Метод: ${meta.method}, аргументы: ${JSON.stringify(meta.arguments)}`);
+});
+
+a.set('b', 2);
+// Выведет:
+// Объект изменен: {"a":1} -> {"a":1,"b":2}
+// Метод: set, аргументы: ["b",2]
+```
+
+## Класс Events
+
 Класс `Events` предоставляет эффективный механизм для работы с событиями, оптимизированный для обработки большого количества различных типов событий.
 
 ## Производительность

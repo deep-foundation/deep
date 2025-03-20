@@ -36,16 +36,13 @@ export function weakSet(ass, op, ...args) {
       target.set(key, value);
 
       // Генерируем события
-      if (ass.events && ass.events.emit) {
-        ass.events.emit('weakSet', key, value);
+      ass.emit('weakSet', key, value);
 
-        // Для WeakMap нельзя создать полную копию предыдущего состояния,
-        // поэтому для события change передаем только измененное значение
-        ass.events.emit('change', { [String(key)]: 'unknown' }, target, key, {
-          method: 'weakSet',
-          arguments: [key, value]
-        });
-      }
+      // Генерируем общее событие change
+      ass.emit('change', { [String(key)]: 'unknown' }, target, key, {
+        method: 'weakSet',
+        arguments: [key, value]
+      });
 
       return ass;
     };
@@ -87,13 +84,12 @@ export function weakDelete(ass, op, ...args) {
       // Удаляем значение
       const result = target.delete(key);
 
-      // Генерируем события
-      if (result && ass.events && ass.events.emit) {
-        ass.events.emit('weakDelete', key);
+      // Генерируем события только если удаление было успешным
+      if (result) {
+        ass.emit('weakDelete', key);
 
-        // Для WeakMap/WeakSet нельзя создать полную копию предыдущего состояния,
-        // поэтому для события change передаем только измененное значение
-        ass.events.emit('change', { [String(key)]: 'removed' }, target, key, {
+        // Генерируем общее событие change
+        ass.emit('change', { [String(key)]: 'removed' }, target, key, {
           method: 'weakDelete',
           arguments: [key]
         });
@@ -140,16 +136,13 @@ export function weakAdd(ass, op, ...args) {
       target.add(value);
 
       // Генерируем события
-      if (ass.events && ass.events.emit) {
-        ass.events.emit('weakAdd', value);
+      ass.emit('weakAdd', value);
 
-        // Для WeakSet нельзя создать полную копию предыдущего состояния,
-        // поэтому для события change передаем только измененное значение
-        ass.events.emit('change', { [String(value)]: 'added' }, target, value, {
-          method: 'weakAdd',
-          arguments: [value]
-        });
-      }
+      // Генерируем общее событие change
+      ass.emit('change', { [String(value)]: 'added' }, target, value, {
+        method: 'weakAdd',
+        arguments: [value]
+      });
 
       return ass;
     };

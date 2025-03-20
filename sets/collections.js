@@ -35,15 +35,13 @@ export function mapSet(ass, op, ...args) {
       target.set(key, value);
 
       // Генерируем события
-      if (ass.events && ass.events.emit) {
-        ass.events.emit('mapSet', key, value, prevValue);
+      ass.emit('mapSet', key, value, prevValue);
 
-        // Генерируем общее событие change
-        ass.events.emit('change', prevState, target, key, {
-          method: 'mapSet',
-          arguments: [key, value]
-        });
-      }
+      // Генерируем общее событие change
+      ass.emit('change', prevState, target, key, {
+        method: 'mapSet',
+        arguments: [key, value]
+      });
 
       return ass;
     };
@@ -85,12 +83,12 @@ export function mapDelete(ass, op, ...args) {
       // Удаляем значение
       const result = target.delete(key);
 
-      // Генерируем события
-      if (result && ass.events && ass.events.emit) {
-        ass.events.emit('mapDelete', key, prevValue);
+      // Генерируем события только если удаление было успешным
+      if (result) {
+        ass.emit('mapDelete', key, prevValue);
 
         // Генерируем общее событие change
-        ass.events.emit('change', prevState, target, key, {
+        ass.emit('change', prevState, target, key, {
           method: 'mapDelete',
           arguments: [key]
         });
@@ -134,15 +132,13 @@ export function mapClear(ass, op, ...args) {
       target.clear();
 
       // Генерируем события
-      if (ass.events && ass.events.emit) {
-        ass.events.emit('mapClear');
+      ass.emit('mapClear');
 
-        // Генерируем общее событие change
-        ass.events.emit('change', prevState, target, null, {
-          method: 'mapClear',
-          arguments: []
-        });
-      }
+      // Генерируем общее событие change
+      ass.emit('change', prevState, target, null, {
+        method: 'mapClear',
+        arguments: []
+      });
 
       return ass;
     };
@@ -182,15 +178,13 @@ export function setAdd(ass, op, ...args) {
       target.add(value);
 
       // Генерируем события
-      if (ass.events && ass.events.emit) {
-        ass.events.emit('setAdd', value);
+      ass.emit('setAdd', value);
 
-        // Генерируем общее событие change
-        ass.events.emit('change', prevState, target, value, {
-          method: 'setAdd',
-          arguments: [value]
-        });
-      }
+      // Генерируем общее событие change
+      ass.emit('change', prevState, target, value, {
+        method: 'setAdd',
+        arguments: [value]
+      });
 
       return ass;
     };
@@ -230,12 +224,12 @@ export function setDelete(ass, op, ...args) {
       // Удаляем значение
       const result = target.delete(value);
 
-      // Генерируем события
-      if (result && ass.events && ass.events.emit) {
-        ass.events.emit('setDelete', value);
+      // Генерируем события только если удаление было успешным
+      if (result) {
+        ass.emit('setDelete', value);
 
         // Генерируем общее событие change
-        ass.events.emit('change', prevState, target, value, {
+        ass.emit('change', prevState, target, value, {
           method: 'setDelete',
           arguments: [value]
         });
@@ -279,15 +273,13 @@ export function setClear(ass, op, ...args) {
       target.clear();
 
       // Генерируем события
-      if (ass.events && ass.events.emit) {
-        ass.events.emit('setClear');
+      ass.emit('setClear');
 
-        // Генерируем общее событие change
-        ass.events.emit('change', prevState, target, null, {
-          method: 'setClear',
-          arguments: []
-        });
-      }
+      // Генерируем общее событие change
+      ass.emit('change', prevState, target, null, {
+        method: 'setClear',
+        arguments: []
+      });
 
       return ass;
     };
