@@ -21,8 +21,19 @@ export function set(ass, op, args) {
         ass.this.set(key, value);
         break;
 
+      case 'weakmap':
+        if (typeof key !== 'object' || key === null) {
+          throw new Error('WeakMap keys must be objects');
+        }
+        ass.this.set(key, value);
+        break;
+
       case 'set':
         ass.this.add(value); // Для Set ключ игнорируется
+        break;
+
+      case 'weakset':
+        throw new Error('Use add() method for WeakSet instead of set()');
         break;
 
       case 'object':

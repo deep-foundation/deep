@@ -4,11 +4,13 @@
 import { Association } from './association.js';
 import { set } from './sets/set.js';
 import { add } from './sets/add.js';
+import { deleteMethod } from './sets/delete.js';
 
 // Создаем объект с методами для sets
 const sets = {
   set,
-  add
+  add,
+  delete: deleteMethod
 };
 
 // Добавляем методы в прокси Association
