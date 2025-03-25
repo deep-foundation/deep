@@ -5,12 +5,14 @@ import { Association } from './association.js';
 import { set } from './sets/set.js';
 import { add } from './sets/add.js';
 import { deleteMethod } from './sets/delete.js';
+import { remove } from './sets/remove.js';
 
 // Создаем объект с методами для sets
 const sets = {
   set,
   add,
-  delete: deleteMethod
+  delete: deleteMethod,
+  remove
 };
 
 // Добавляем методы в прокси Association

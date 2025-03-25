@@ -45,6 +45,7 @@ describe('Association typed', () => {
 
     // Проверяем размер множества
     strictEqual(A.typed.this.size, 2);
+    strictEqual(B.typed.this.size, 1);
 
     // Изменяем тип одного объекта
     a1.type = B;
@@ -56,6 +57,6 @@ describe('Association typed', () => {
 
     // Проверяем, что объект появился в множестве нового типа
     ok(B.typed.this.has(a1.this));
-    strictEqual(B.typed.this.size, 1);
+    strictEqual(B.typed.this.size, 2);
   });
 });

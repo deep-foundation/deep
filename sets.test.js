@@ -406,3 +406,127 @@ test('delete method', async (t) => {
     });
   });
 });
+
+test('remove method', async (t) => {
+  await t.test('array', () => {
+    const arr = deep([1, 2, 3]);
+    arr.remove(2);
+    assert.deepStrictEqual(arr.this, [1, 3]);
+  });
+
+  await t.test('map', () => {
+    const map = deep(new Map([['a', 1], ['b', 2]]));
+    map.remove(1);
+    assert.deepStrictEqual(Array.from(map.this.entries()), [['b', 2]]);
+  });
+
+  await t.test('set', () => {
+    const set = deep(new Set([1, 2, 3]));
+    set.remove(2);
+    assert.deepStrictEqual(Array.from(set.this), [1, 3]);
+  });
+
+  await t.test('object', () => {
+    const obj = deep({ a: 1, b: 2 });
+    obj.remove(1);
+    assert.deepStrictEqual(obj.this, { b: 2 });
+  });
+
+  await t.test('weakset', () => {
+    const weakset = deep(new WeakSet());
+    const obj1 = { id: 1 };
+    const obj2 = { id: 2 };
+
+    // Подготовка данных
+    weakset.this.add(obj1);
+    weakset.this.add(obj2);
+
+    // Проверка успешного удаления
+    weakset.remove(obj1);
+    assert.strictEqual(weakset.this.has(obj1), false);
+    assert.strictEqual(weakset.this.has(obj2), true);
+
+    // Проверка выброса ошибки при некорректном типе значения
+    assert.throws(
+      () => weakset.remove('invalid'),
+      { message: 'WeakSet values must be objects' }
+    );
+
+    // Проверка выброса ошибки при отсутствующем значении
+    const missingObj = { id: 3 };
+    assert.throws(
+      () => weakset.remove(missingObj),
+      { message: 'Value not found in weakset' }
+    );
+  });
+
+  await t.test('unsupported types', () => {
+    const types = [
+      'abc', // string
+      123, // number
+      true, // boolean
+      null, // null
+      undefined, // undefined
+      Symbol(), // symbol
+      BigInt(1), // bigint
+      () => {}, // function
+      new WeakMap() // weakmap
+    ];
+
+    for (const value of types) {
+      const ass = deep(value);
+      assert.throws(
+        () => ass.remove('test'),
+        { message: `unexpected type ${ass.detect}` }
+      );
+    }
+  });
+
+  await t.test('value not found', () => {
+    const arr = deep([1, 2, 3]);
+    assert.throws(
+      () => arr.remove(4),
+      { message: 'Value not found in array' }
+    );
+
+    const map = deep(new Map([['a', 1]]));
+    assert.throws(
+      () => map.remove(2),
+      { message: 'Value not found in map' }
+    );
+
+    const set = deep(new Set([1, 2]));
+    assert.throws(
+      () => set.remove(3),
+      { message: 'Value not found in set' }
+    );
+
+    const obj = deep({ a: 1 });
+    assert.throws(
+      () => obj.remove(2),
+      { message: 'Value not found in object' }
+    );
+  });
+
+  await t.test('events', () => {
+    const arr = deep([1, 2, 3]);
+    let removeEvent = null;
+    let changeEvent = null;
+
+    arr.on('remove', (event, data) => {
+      removeEvent = data;
+    });
+
+    arr.on('change', (event, data, method) => {
+      changeEvent = { data, method };
+    });
+
+    arr.remove(2);
+
+    assert.deepStrictEqual(removeEvent, { value: 2, key: 1 });
+    assert.deepStrictEqual(changeEvent, {
+      data: { prev: [1, 3], next: [1, 3] },
+      method: { method: 'remove', arguments: [2] }
+    });
+  });
+});
