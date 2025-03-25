@@ -725,117 +725,341 @@
 - [ ] Реализовать методы доступа через `tos` Memory (обратная связь)
 - [ ] Возвращать ассоциативное множество, генерирующее события при изменениях
 
-## 7. Реализация отслеживания изменений данных (track.js)
+## 7. Реализация отслеживания связей между ассоциациями (track.js)
 
 ### 7.1. Введение и концепция
 
-Методы модификации и создания новых данных в Deep выполняют действие однократно. Однако во многих сценариях необходимо отслеживать изменения исходных данных и автоматически применять трансформации к целевым данным. Модуль `track.js` решает эту задачу, предоставляя механизм для создания и обслуживания связей между источником данных и его трансформированной версией.
+В проекте Deep необходим механизм для автоматического отслеживания взаимосвязей между ассоциациями, особенно при создании новых ассоциаций на основе существующих. Этот механизм позволит методам из gets.js возвращать не просто примитивы, а полноценные ассоциации, которые "помнят" свое происхождение и могут реагировать на изменения в родительских ассоциациях.
 
 Принцип работы:
-1. Создается ассоциация типа `Track`, которая связывает исходные данные (from) с результирующими (to)
-2. Указывается функция-трекер, которая определяет, как именно изменения в исходных данных отражаются на результирующих
-3. При изменении исходных данных трекер автоматически вносит соответствующие изменения в результирующие данные
-4. Трекер умно применяет изменения только к затронутым элементам, а не перестраивает всю структуру данных заново
+1. Когда одна ассоциация (дочерняя) создается на основе другой (родительской), дочерняя получает ссылку на родительскую в своем объекте `temp` под ключом `origin`
+2. В дочерней ассоциации регистрируется прокси-геттер и сеттер с именем `origin`, который обеспечивает доступ к родительской ассоциации
+3. Все методы из gets.js (map, filter, reduce и т.д.) модифицируются, чтобы возвращать не примитивы, а ассоциации с установленными связями с исходными данными
+4. Дополнительно регистрируется геттер `track`, который возвращает экземпляр ассоциации `Track`, отслеживающий отношения между исходными и производными данными
 
-Важно, что трекер не просто копирует изменения, а преобразует их согласно указанной функции-трекеру. Например, при использовании трекера `mapTracker`, изменение в конкретном элементе исходного массива приведет к пересчету только соответствующего элемента в результирующем массиве.
-
-Пример использования:
+Пример работы с обновленной системой:
 ```javascript
-// Создаем исходный и результирующий массивы
-const sourceAss = new Association([1, 2, 3, 4]);
-const resultAss = new Association([2, 4, 6, 8]); // результат map * 2
+// Создаем исходную ассоциацию
+const source = deep([1, 2, 3, 4]);
 
-// Создаем трекер, который будет отслеживать изменения
-const track = new Track(mapTracker((x) => x * 2));
-track.from = sourceAss;
-track.to = resultAss;
+// Применяем метод map, создающий новую ассоциацию
+const result = source.map(x => x * 2); // result.this == [2, 4, 6, 8]
 
-// Теперь при изменении sourceAss, resultAss будет автоматически обновляться
-sourceAss.push(5); // resultAss автоматически получит 10 в конце
-sourceAss.set(0, 10); // resultAss[0] автоматически станет 20
+// result автоматически имеет доступ к исходной ассоциации через геттер origin
+console.log(result.origin === source); // true
+console.log(result.origin.this); // [1, 2, 3, 4]
+
+// Доступ к объекту трекера для отслеживания изменений
+const tracker = result.track;
+console.log(tracker.method); // "map"
+console.log(typeof tracker.transformer); // "function"
+
+// При изменении source, изменения автоматически отражаются в result
+source.push(5);
+console.log(result.this); // [2, 4, 6, 8, 10]
+
+// При уничтожении родительской ассоциации, связь разрывается корректно
+source.kill();
 ```
 
-### 7.2. Анализ методов создания и модификации данных
+Эта система отношений обеспечит следующие преимущества:
+1. Автоматическое поддержание согласованности между связанными данными
+2. Возможность определить происхождение данных и их взаимосвязи
+3. Оптимизация обновления данных — изменяются только затронутые элементы
+4. Корректная обработка жизненного цикла ассоциаций (отписка от событий при уничтожении)
 
-#### 7.2.1. Методы создания новых данных (gets.js)
-- [ ] `map(callback)` - Сигнатура: `(callback(value, key, collection)) => Array`
-  - Не генерирует события
+### 7.2. Реализация класса Track и механизма отслеживания
 
-- [ ] `filter(callback)` - Сигнатура: `(callback(value, key, collection)) => Array`
-  - Не генерирует события
+#### 7.2.1. Создание файла track.js
+- [ ] Определить класс `Track`, наследующий от `Association`
+- [ ] Реализовать конструктор, принимающий родительскую ассоциацию, дочернюю ассоциацию и функцию-трансформер
+- [ ] Добавить методы для работы с событиями родительской ассоциации
 
-- [ ] `reduce(callback, initialValue)` - Сигнатура: `(callback(accumulator, value, key, collection), initialValue) => any`
-  - Не генерирует события
+#### 7.2.2. Реализация механизма регистрации origin и track
+- [ ] Модифицировать методы в gets.js, чтобы они возвращали ассоциации вместо примитивов
+- [ ] Добавить регистрацию свойства `origin` в `temp` объекте дочерней ассоциации
+- [ ] Реализовать прокси-геттер для `origin` с использованием модели (ass, op, args)
+  ```javascript
+  // Пример реализации геттера origin
+  origin: (ass, op, args) => {
+    if (op === 'get') {
+      // Возвращаем кешированное значение из temp
+      return ass.temp.origin || null;
+    } else if (op === 'set') {
+      // Обработка установки нового origin
+      if (args && args instanceof Association) {
+        ass.temp.origin = args;
+        // Возможно, обновить трекер
+      }
+      return true;
+    }
+  }
+  ```
+- [ ] Реализовать прокси-геттер для `track` с использованием модели (ass, op, args)
+  ```javascript
+  // Пример реализации геттера track
+  track: (ass, op, args) => {
+    if (op === 'get') {
+      // Создаем трекер при первом обращении
+      if (!ass.temp.track) {
+        const origin = ass.temp.origin;
+        if (origin) {
+          ass.temp.track = new Track(origin, ass, ass.temp.transformer);
+        }
+      }
+      return ass.temp.track || null;
+    }
+  }
+  ```
 
-- [ ] `keys()` - Сигнатура: `() => Array`
-  - Не генерирует события
+#### 7.2.3. Модификация методов gets.js для поддержки origin и track
+- [ ] Изменить все методы в gets.js (map, filter, reduce и т.д.), чтобы они:
+  - Создавали новую ассоциацию вместо возврата примитива
+  - Устанавливали `origin` на исходную ассоциацию
+  - Сохраняли функцию-трансформер в `temp.transformer`
+  - Пример модификации метода map:
+  ```javascript
+  map: (ass, op, args) => {
+    if (op === 'get') {
+      return function(callback) {
+        const result = ass.this.map(callback);
+        const resultAss = new Association(result);
 
-- [ ] `values()` - Сигнатура: `() => Array`
-  - Не генерирует события
+        // Устанавливаем origin и сохраняем трансформер
+        resultAss.temp.origin = ass;
+        resultAss.temp.transformer = callback;
+        resultAss.temp.method = 'map';
 
-- [ ] `entries()` - Сигнатура: `() => Array`
-  - Не генерирует события
+        return resultAss;
+      };
+    }
+  }
+  ```
 
-#### 7.2.2. Методы модификации данных (sets.js и подмодули)
-- [ ] `set(key, value)` - Сигнатура: `(key, value) => Association`
-  - Генерирует событие `set`
-  - Генерирует событие `change`
+#### 7.2.4. Реализация механизма отслеживания изменений
+- [ ] Создать систему подписки на события родительской ассоциации
+- [ ] Реализовать обработчики для различных событий (set, delete, add, remove и т.д.)
+- [ ] Разработать логику интеллектуального обновления только затронутых элементов
+- [ ] Обеспечить корректное поведение при уничтожении (kill) родительской или дочерней ассоциации
 
-- [ ] `delete(key)` - Сигнатура: `(key) => Association`
-  - Генерирует событие `delete`
-  - Генерирует событие `change`
+### 7.3. Интеграция в существующую систему
 
-- [ ] `clear()` - Сигнатура: `() => Association`
-  - Генерирует событие `clear`
-  - Генерирует событие `change`
+#### 7.3.1. Добавление глобальных прокси-геттеров
+- [ ] Добавить в `Association._proxy` стандартные реализации геттеров `origin` и `track`:
+  ```javascript
+  // В index.js или специальном модуле инициализации
+  Association._proxy.set('origin', (ass, op, args) => {
+    if (op === 'get') {
+      return ass.temp.origin || null;
+    } else if (op === 'set') {
+      if (args && args instanceof Association) {
+        const oldOrigin = ass.temp.origin;
+        ass.temp.origin = args;
 
-- [ ] `add(key, value)` - Сигнатура: `(key, value) => Association`
-  - Генерирует событие `add`
-  - Генерирует событие `change`
+        // Если трекер уже инициализирован, нужно обновить связи
+        if (ass.temp.track) {
+          ass.temp.track.updateOrigin(args);
+        }
 
-- [ ] `remove(key)` - Сигнатура: `(key) => Association`
-  - Генерирует событие `remove`
-  - Генерирует событие `change`
+        // Генерируем событие изменения origin
+        ass.emit('origin', { prev: oldOrigin, next: args });
+      }
+      return true;
+    }
+  });
 
-- [ ] `push(...items)` - Сигнатура: `(...items) => Association`
-  - Генерирует событие `push`
-  - Генерирует событие `change`
-  - Генерирует серию событий `set`
-  - Генерирует событие `length`
+  Association._proxy.set('track', (ass, op, args) => {
+    if (op === 'get') {
+      // Ленивая инициализация трекера при первом обращении
+      if (!ass.temp.track && ass.temp.origin) {
+        const Track = require('./track.js').Track;
+        ass.temp.track = new Track(ass.temp.origin, ass, ass.temp.transformer, ass.temp.method);
 
-- [ ] `pop()` - Сигнатура: `() => Association`
-  - Генерирует событие `pop`
-  - Генерирует событие `change`
-  - Генерирует событие `delete`
-  - Генерирует событие `length`
+        // Подписываемся на событие kill обоих ассоциаций
+        ass.on('kill', () => {
+          if (ass.temp.track) {
+            ass.temp.track.detach();
+            ass.temp.track = null;
+          }
+        });
 
-- [ ] `shift()` - Сигнатура: `() => Association`
-  - Генерирует событие `shift`
-  - Генерирует событие `change`
-  - Генерирует серию событий `set`
-  - Генерирует событие `length`
+        ass.temp.origin.on('kill', () => {
+          if (ass.temp.track) {
+            ass.temp.track.detach();
+            ass.temp.track = null;
+          }
+        });
+      }
+      return ass.temp.track || null;
+    }
+  });
+  ```
 
-- [ ] `unshift(...items)` - Сигнатура: `(...items) => Association`
-  - Генерирует событие `unshift`
-  - Генерирует событие `change`
-  - Генерирует серию событий `set`
-  - Генерирует событие `length`
+#### 7.3.2. Расширение методов gets.js
+- [ ] Модифицировать возвращаемые значения всех методов gets.js:
+  ```javascript
+  // Пример для forEach
+  forEach: (ass, op, args) => {
+    if (op === 'get') {
+      return function(callback) {
+        // Выполняем оригинальную операцию
+        /* существующий код метода */
 
-- [ ] `splice(start, deleteCount, ...items)` - Сигнатура: `(start, deleteCount, ...items) => Association`
-  - Генерирует событие `splice`
-  - Генерирует событие `change`
-  - Генерирует серию событий `set`
-  - Генерирует серию событий `delete`
-  - Генерирует событие `length`
+        // Устанавливаем информацию для отслеживания
+        ass.temp.lastOperation = {
+          method: 'forEach',
+          args: Array.from(arguments),
+          timestamp: Date.now()
+        };
 
-- [ ] `reverse()` - Сигнатура: `() => Association`
-  - Генерирует событие `reverse`
-  - Генерирует событие `change`
-  - Генерирует серию событий `set`
+        // Возвращаем ассоциацию, сохраняя цепочку вызовов
+        return ass;
+      };
+    }
+  }
 
-- [ ] `sort(compareFn)` - Сигнатура: `(compareFn) => Association`
-  - Генерирует событие `sort`
-  - Генерирует событие `change`
-  - Генерирует серию событий `set`
-  - Генерирует серию событий `delete`
-  - Генерирует событие `length`
+  // Пример для map
+  map: (ass, op, args) => {
+    if (op === 'get') {
+      return function(callback) {
+        // Создаем новую ассоциацию с результатом трансформации
+        const result = new Association(ass.this.map(callback));
+
+        // Устанавливаем метаданные для трекинга
+        result.temp.origin = ass;
+        result.temp.transformer = callback;
+        result.temp.method = 'map';
+
+        return result;
+      };
+    }
+  }
+  ```
+
+#### 7.3.3. Добавление системы предотвращения циклов
+- [ ] Реализовать механизм проверки на циклические зависимости:
+  ```javascript
+  // В реализации track
+  isValidOrigin(newOrigin) {
+    // Проверяем, не создаст ли установка нового origin цикл
+    let current = newOrigin;
+    while (current && current.temp.origin) {
+      if (current.temp.origin === this.this) {
+        return false; // Обнаружен цикл
+      }
+      current = current.temp.origin;
+    }
+    return true;
+  }
+  ```
+
+#### 7.3.4. Обработка событий и обновление данных
+- [ ] Реализовать обработчики для всех типов событий с учетом специфики методов трансформации:
+  ```javascript
+  // Для метода map
+  handleMapUpdate(event, data) {
+    const { key, value } = data;
+    if (typeof key === 'number') {
+      // Обновляем соответствующий элемент в target
+      const transformedValue = this.transformer(value, key, this.origin.this);
+      this.target.set(key, transformedValue);
+    }
+  }
+
+  // Для метода filter
+  handleFilterUpdate(event, data) {
+    // Для filter нужно полностью переоценить коллекцию
+    const filtered = this.origin.this.filter(this.transformer);
+    this.target.this = filtered;
+  }
+  ```
+
+#### 7.3.5. Оптимизация производительности
+- [ ] Реализовать механизм кеширования результатов трансформации
+- [ ] Добавить флаги для отключения автоматического обновления
+- [ ] Создать методы для принудительного обновления:
+  ```javascript
+  // В классе Track
+  refresh() {
+    // Полное обновление target на основе current origin и transformer
+    const method = this.temp.method;
+    if (method === 'map') {
+      this.target.this = this.origin.this.map(this.transformer);
+    } else if (method === 'filter') {
+      this.target.this = this.origin.this.filter(this.transformer);
+    }
+    // ... другие методы
+  }
+
+  pauseTracking() {
+    this.temp.paused = true;
+    // Отключаем все слушатели событий
+  }
+
+  resumeTracking() {
+    this.temp.paused = false;
+    // Восстанавливаем слушатели и делаем refresh
+    this.refresh();
+  }
+  ```
+
+#### 7.3.6. Разработка API для работы с track
+- [ ] Создать методы для управления трекингом:
+  ```javascript
+  // В классе Track
+  attach() {
+    // Подключить трекер к origin
+    this.setupEventListeners();
+    return this;
+  }
+
+  detach() {
+    // Отключить трекер от origin
+    this.removeEventListeners();
+    return this;
+  }
+
+  clone() {
+    // Создать копию трекера для другой target
+    return new Track(this.origin, new Association(this.target.this), this.transformer, this.method);
+  }
+  ```
+
+#### 7.3.7. Тестирование и документация
+- [ ] Написать `track.test.js` для проверки всех аспектов трекинга
+- [ ] Создать `track.benchmark.js` для оценки производительности
+- [ ] Разработать документацию `TRACK.md` с примерами использования
+- [ ] Обновить README.md, добавив ссылку на документацию трекинга
+- [ ] Обновить `benchmarkify.js` для поддержки `track.benchmark.js`
+
+### 7.4. Разделение обязанностей между модулями
+
+#### 7.4.1. Роль track.js
+- Определение класса Track, наследующего от Association
+- Реализация логики подписки на события и обновления данных
+- Предоставление API для управления отслеживанием (attach, detach, refresh и т.д.)
+- Обработка специфических событий от origin и target
+
+#### 7.4.2. Роль gets.js
+- Возвращение ассоциаций вместо примитивов
+- Установка origin, transformer и method в объекте temp дочерних ассоциаций
+- Поддержка цепочек вызовов методов (chaining)
+- Обеспечение совместимости с существующим кодом
+
+#### 7.4.3. Роль association.js
+- Предоставление базовой инфраструктуры для работы с прокси
+- Обеспечение механизма кеширования функций и свойств в объекте temp
+- Поддержка обработки различных операций (get, set, apply)
+- Обеспечение корректной работы с жизненным циклом ассоциаций
+
+#### 7.4.4. Роль index.js
+- Регистрация глобальных геттеров origin и track в Association._proxy
+- Инициализация необходимых модулей и объектов
+- Обеспечение корректного экспорта всех необходимых компонентов
+- Интеграция с существующими механизмами events.js и memory.js
+
+#### 7.4.5. Координация между модулями
+- **track.js ↔ association.js**: Track использует механизмы Association для работы с прокси
+- **track.js ↔ gets.js**: gets.js создает объекты, которые будут использовать Track
+- **track.js ↔ events.js**: Track подписывается на события origin для обновления target
+- **gets.js ↔ association.js**: gets.js создает экземпляры Association и настраивает их
