@@ -94,13 +94,6 @@ export class Association extends Function {
         if (key === 'this') {
           const prev = target.this;
           target.this = value;
-          receiver.emit('change', {
-            prev,
-            next: value,
-          }, {
-            method: 'this',
-            arguments: [value]
-          });
           return true;
         }
         // Если ключ не является защищенным - устанавливаем его

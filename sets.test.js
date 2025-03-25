@@ -94,3 +94,72 @@ test('set method', async (t) => {
     );
   });
 });
+
+test('add method', async (t) => {
+  await t.test('array', () => {
+    const arr = deep([1, 2, 3]);
+    arr.add(4);
+    assert.deepStrictEqual(arr.this, [1, 2, 3, 4]);
+  });
+
+  await t.test('map', () => {
+    const map = deep(new Map([['a', 1]]));
+    map.add('b');
+    assert.deepStrictEqual(Array.from(map.this.entries()), [['a', 1], ['b', 'b']]);
+  });
+
+  await t.test('set', () => {
+    const set = deep(new Set([1, 2]));
+    set.add(3);
+    assert.deepStrictEqual(Array.from(set.this), [1, 2, 3]);
+  });
+
+  await t.test('object', () => {
+    const obj = deep({ a: 1 });
+    obj.add(2);
+    assert.deepStrictEqual(obj.this, { a: 1, '1': 2 });
+  });
+
+  await t.test('unsupported types', () => {
+    const types = [
+      'abc', // string
+      123, // number
+      true, // boolean
+      null, // null
+      undefined, // undefined
+      Symbol(), // symbol
+      BigInt(1), // bigint
+      () => {} // function
+    ];
+
+    for (const value of types) {
+      const ass = deep(value);
+      assert.throws(
+        () => ass.add('test'),
+        { message: `unexpected type ${ass.detect}` }
+      );
+    }
+  });
+
+  await t.test('events', () => {
+    const arr = deep([1, 2, 3]);
+    let addEvent = null;
+    let changeEvent = null;
+
+    arr.on('add', (event, data) => {
+      addEvent = data;
+    });
+
+    arr.on('change', (event, data, method) => {
+      changeEvent = { data, method };
+    });
+
+    arr.add(4);
+
+    assert.deepStrictEqual(addEvent, { value: 4 });
+    assert.deepStrictEqual(changeEvent, {
+      data: { prev: [1, 2, 3, 4], next: [1, 2, 3, 4] },
+      method: { method: 'add', arguments: [4] }
+    });
+  });
+});

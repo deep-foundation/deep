@@ -3,10 +3,12 @@
  */
 import { Association } from './association.js';
 import { set } from './sets/set.js';
+import { add } from './sets/add.js';
 
 // Создаем объект с методами для sets
 const sets = {
-  set
+  set,
+  add
 };
 
 // Добавляем методы в прокси Association

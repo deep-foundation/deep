@@ -55,7 +55,7 @@ export const type = function(ass, op, args) {
 
     // Событие 'change' с деталями изменения
     ass.emit('change', {
-      prev,
+      prev: prevType,
       next: newType instanceof Association ? newType.this : newType
     }, {
       method: 'type',
