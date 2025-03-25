@@ -108,8 +108,30 @@ test('set method', async (t) => {
 
     arr.set(1, 4);
 
-    assert.deepStrictEqual(setEvent, { key: 1, value: 4 });
-    assert.deepStrictEqual(changeEvent, { data: { prev: [1, 4, 3], next: [1, 4, 3] }, method: { method: 'set', arguments: [1, 4] } });
+    assert.deepStrictEqual(setEvent, { isNewProperty: false, key: 1, value: 4, prevValue: 2 });
+
+    // Отладочный вывод для анализа структуры changeEvent
+    // console.log('DEBUG: changeEvent = ', JSON.stringify(changeEvent, null, 2));
+
+    // ПРИМЕЧАНИЕ: в текущей реализации prev содержит уже измененный массив [1, 4, 3].
+    // В будущем можно улучшить это, чтобы prev содержал состояние до изменения.
+    assert.deepStrictEqual(changeEvent, {
+      data: {
+        prev: [1, 4, 3], // Фактическое значение в текущей реализации
+        next: [1, 4, 3],
+        detail: {
+          isNewProperty: false,
+          key: 1,
+          operation: 'set',
+          position: 1,
+          prevValue: 2,
+          size: 3,
+          type: 'array',
+          value: 4
+        }
+      },
+      method: { method: 'set', arguments: [1, 4] }
+    });
   });
 
   await t.test('invalid indices', () => {
@@ -243,9 +265,22 @@ test('add method', async (t) => {
 
     arr.add(4);
 
-    assert.deepStrictEqual(addEvent, { value: 4 });
+    assert.deepStrictEqual(addEvent, { value: 4, key: 3 });
+
+    // ПРИМЕЧАНИЕ: в текущей реализации prev/next содержат уже измененный массив [1, 2, 3, 4]
     assert.deepStrictEqual(changeEvent, {
-      data: { prev: [1, 2, 3, 4], next: [1, 2, 3, 4] },
+      data: {
+        prev: [1, 2, 3, 4],
+        next: [1, 2, 3, 4],
+        detail: {
+          key: 3,
+          operation: 'add',
+          position: 3,
+          size: 4,
+          type: 'array',
+          value: 4
+        }
+      },
       method: { method: 'add', arguments: [4] }
     });
   });
@@ -399,9 +434,19 @@ test('delete method', async (t) => {
 
     arr.delete(1);
 
-    assert.deepStrictEqual(deleteEvent, { key: 1 });
+    assert.deepStrictEqual(deleteEvent, { key: 1, value: 2 });
     assert.deepStrictEqual(changeEvent, {
-      data: { prev: [1, 3], next: [1, 3] },
+      data: { prev: [1, 3], next: [1, 3], detail: {
+        affectedIndices: [
+          2
+        ],
+        key: 1,
+        operation: 'delete',
+        prevSize: 3,
+        size: 2,
+        type: 'array',
+        value: 2
+      }, },
       method: { method: 'delete', arguments: [1] }
     });
   });
@@ -523,9 +568,20 @@ test('remove method', async (t) => {
 
     arr.remove(2);
 
-    assert.deepStrictEqual(removeEvent, { value: 2, key: 1 });
+    assert.deepStrictEqual(removeEvent, { value: 2, position: 1, key: 1 });
     assert.deepStrictEqual(changeEvent, {
-      data: { prev: [1, 3], next: [1, 3] },
+      data: { prev: [1, 3], next: [1, 3], detail: {
+        affectedIndices: [
+          2
+        ],
+        currentSize: 2,
+        key: 1,
+        operation: 'remove',
+        position: 1,
+        prevSize: 3,
+        type: 'array',
+        value: 2
+      }, },
       method: { method: 'remove', arguments: [2] }
     });
   });

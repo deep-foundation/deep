@@ -936,95 +936,6 @@ source.kill();
   }
   ```
 
-#### 7.3.3. Добавление системы предотвращения циклов
-- [ ] Реализовать механизм проверки на циклические зависимости:
-  ```javascript
-  // В реализации track
-  isValidOrigin(newOrigin) {
-    // Проверяем, не создаст ли установка нового origin цикл
-    let current = newOrigin;
-    while (current && current.temp.origin) {
-      if (current.temp.origin === this.this) {
-        return false; // Обнаружен цикл
-      }
-      current = current.temp.origin;
-    }
-    return true;
-  }
-  ```
-
-#### 7.3.4. Обработка событий и обновление данных
-- [ ] Реализовать обработчики для всех типов событий с учетом специфики методов трансформации:
-  ```javascript
-  // Для метода map
-  handleMapUpdate(event, data) {
-    const { key, value } = data;
-    if (typeof key === 'number') {
-      // Обновляем соответствующий элемент в target
-      const transformedValue = this.transformer(value, key, this.origin.this);
-      this.target.set(key, transformedValue);
-    }
-  }
-
-  // Для метода filter
-  handleFilterUpdate(event, data) {
-    // Для filter нужно полностью переоценить коллекцию
-    const filtered = this.origin.this.filter(this.transformer);
-    this.target.this = filtered;
-  }
-  ```
-
-#### 7.3.5. Оптимизация производительности
-- [ ] Реализовать механизм кеширования результатов трансформации
-- [ ] Добавить флаги для отключения автоматического обновления
-- [ ] Создать методы для принудительного обновления:
-  ```javascript
-  // В классе Track
-  refresh() {
-    // Полное обновление target на основе current origin и transformer
-    const method = this.temp.method;
-    if (method === 'map') {
-      this.target.this = this.origin.this.map(this.transformer);
-    } else if (method === 'filter') {
-      this.target.this = this.origin.this.filter(this.transformer);
-    }
-    // ... другие методы
-  }
-
-  pauseTracking() {
-    this.temp.paused = true;
-    // Отключаем все слушатели событий
-  }
-
-  resumeTracking() {
-    this.temp.paused = false;
-    // Восстанавливаем слушатели и делаем refresh
-    this.refresh();
-  }
-  ```
-
-#### 7.3.6. Разработка API для работы с track
-- [ ] Создать методы для управления трекингом:
-  ```javascript
-  // В классе Track
-  attach() {
-    // Подключить трекер к origin
-    this.setupEventListeners();
-    return this;
-  }
-
-  detach() {
-    // Отключить трекер от origin
-    this.removeEventListeners();
-    return this;
-  }
-
-  clone() {
-    // Создать копию трекера для другой target
-    return new Track(this.origin, new Association(this.target.this), this.transformer, this.method);
-  }
-  ```
-
 #### 7.3.7. Тестирование и документация
 - [ ] Написать `track.test.js` для проверки всех аспектов трекинга
 - [ ] Создать `track.benchmark.js` для оценки производительности
@@ -1035,9 +946,8 @@ source.kill();
 ### 7.4. Разделение обязанностей между модулями
 
 #### 7.4.1. Роль track.js
-- Определение класса Track, наследующего от Association
+- Определение ассоциации Track, наследующийся от Association
 - Реализация логики подписки на события и обновления данных
-- Предоставление API для управления отслеживанием (attach, detach, refresh и т.д.)
 - Обработка специфических событий от origin и target
 
 #### 7.4.2. Роль gets.js

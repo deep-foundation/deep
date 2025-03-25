@@ -39,76 +39,19 @@ export function origin(ass, op, args) {
 }
 
 /**
- * Функция создания трекера для отслеживания связей между ассоциациями
+ * Конструктор ассоциация для создания трекера
+ * Не должен использоваться вручную, он автоматически создается используя ass.track;
  *
  * @param {Association} origin - Исходная ассоциация
  * @param {Association} result - Результирующая ассоциация
  * @returns {Association} - Трекер отношений
  */
-export function createTracker(origin, result) {
-  // Создаем новый трекер
-  const track = new Association({
-    origin,
-    result,
-    method: result.temp.method,
-    transformer: result.temp.transformer,
-    timestamp: Date.now()
-  });
-
-  // Если у origin есть метод подписки на события
-  if (origin.on) {
-    // Подписываемся на изменения в origin
-    track.temp.changeHandler = () => {
-      if (track.this.method === 'map' && track.this.transformer && result) {
-        // Обновляем результат, применяя трансформер к измененному origin
-        result.this = origin.this.map(track.this.transformer);
-      }
-    };
-
-    origin.on('change', track.temp.changeHandler);
-
-    // Отписываемся при уничтожении трекера или исходной ассоциации
-    if (track.on) {
-      track.on('kill', () => {
-        if (origin.off && track.temp.changeHandler) {
-          origin.off('change', track.temp.changeHandler);
-        }
-      });
-    }
-
-    if (origin.on) {
-      origin.on('kill', () => {
-        if (track.kill) {
-          track.kill();
-        }
-      });
-    }
-
-    if (result && result.on) {
-      result.on('kill', () => {
-        if (track.kill) {
-          track.kill();
-        }
-      });
-    }
-  }
-
-  // Регистрируем трекер в result.temp
-  if (result) {
-    result.temp.track = track;
-  }
-
+export const Track = new Association((origin, result) => {
+  const track = new Track();
+  track.temp.origin = origin;
+  track.temp.result = result;
   return track;
-}
-
-// Объект Track заполним позже, после инициализации deep
-export let Track;
-
-// Функция для инициализации Track с помощью deep
-export function initTrack(deepInstance) {
-  Track = new deepInstance(createTracker);
-  return Track;
-}
+});
 
 /**
  * Геттер для свойства track
@@ -127,14 +70,8 @@ export function track(ass, op) {
     // Если есть origin, создаем трекер
     if (ass.temp.origin) {
       // Track будет инициализирован позже в index.js
-      if (Track) {
-        ass.temp.track = ass.temp.track || Track(ass.temp.origin, ass);
-        return ass.temp.track;
-      } else {
-        // Если Track еще не инициализирован, используем функцию напрямую
-        ass.temp.track = ass.temp.track || createTracker(ass.temp.origin, ass);
-        return ass.temp.track;
-      }
+      ass.temp.track = ass.temp.track || Track(ass.temp.origin, ass);
+      return ass.temp.track;
     }
 
     // Если нет origin, возвращаем null

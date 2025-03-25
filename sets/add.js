@@ -12,12 +12,18 @@ export function add(ass, op, args) {
     const type = ass.detect;
     const prev = ass.this;
 
+    // Информация о добавленном элементе
+    let addedKey;
+
     switch (type) {
       case 'array':
+        // Сохраняем индекс, куда будет добавлен элемент
+        addedKey = ass.this.length;
         ass.this.push(value);
         break;
 
       case 'map':
+        addedKey = value;
         ass.this.set(value, value);
         break;
 
@@ -25,10 +31,13 @@ export function add(ass, op, args) {
         if (typeof value !== 'object' || value === null) {
           throw new Error('WeakMap keys must be objects');
         }
+        addedKey = value;
         ass.this.set(value, value);
         break;
 
       case 'set':
+        // Для множества ключом является само значение
+        addedKey = value;
         ass.this.add(value);
         break;
 
@@ -36,12 +45,13 @@ export function add(ass, op, args) {
         if (typeof value !== 'object' || value === null) {
           throw new Error('WeakSet values must be objects');
         }
+        addedKey = value;
         ass.this.add(value);
         break;
 
       case 'object':
-        const key = Object.keys(ass.this).length;
-        ass.this[key] = value;
+        addedKey = Object.keys(ass.this).length;
+        ass.this[addedKey] = value;
         break;
 
       default:
@@ -49,10 +59,24 @@ export function add(ass, op, args) {
     }
 
     // Генерируем события
-    ass.emit('add', { value });
+    ass.emit('add', { value, key: addedKey });
     ass.emit('change', {
       prev: prev,
-      next: ass.this
+      next: ass.this,
+      // Добавляем расширенную информацию
+      detail: {
+        type: type,
+        operation: 'add',
+        key: addedKey,
+        value: value,
+        // Позиция в коллекции для массивов и объектов
+        position: type === 'array' || type === 'object' ? addedKey : undefined,
+        // Размер коллекции после изменения
+        size: type === 'array' ? ass.this.length :
+              type === 'set' ? ass.this.size :
+              type === 'map' ? ass.this.size :
+              type === 'object' ? Object.keys(ass.this).length : undefined
+      }
     }, {
       method: 'add',
       arguments: [value]

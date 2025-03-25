@@ -103,6 +103,233 @@ export function map(ass, op) {
     resultAssociation.temp.transformer = callback;
     resultAssociation.temp.method = 'map';
 
+    // Создаем локальный обработчик track
+    resultAssociation._proxy.set('track', (ass, op) => {
+      if (op !== 'get') return;
+
+      // Получаем трекер через глобальный геттер
+      const track = Association._proxy.get('track').call(ass, ass, 'get');
+
+      // Если есть система событий и у нас есть доступ к origin
+      if (ass.temp.origin && ass.temp.origin.on && ass.temp.origin.emit) {
+        const origin = ass.temp.origin;
+        const method = ass.temp.method;
+        const transformer = ass.temp.transformer;
+
+        // Создаем обработчик событий change для автоматического обновления
+        // Подписываемся на событие change у origin
+        const offChange = origin.on('change', (event, meta) => {
+          // Проверяем наличие детальной информации и метаданных
+          const detail = event?.detail;
+          const eventMethod = meta?.method;
+
+          // Если есть детальная информация, используем ее для оптимального обновления
+          if (detail) {
+            const operation = detail.operation;
+
+            switch (operation) {
+              case 'add':
+                // Точечное добавление нового элемента
+                if (detail.value !== undefined) {
+                  const newValue = transformer(detail.value, detail.key, origin.this);
+                  ass.this.push(newValue);
+                } else {
+                  performFullRecalculation();
+                }
+                break;
+
+              case 'delete':
+                // Точечное удаление по позиции/ключу
+                if (detail.position !== undefined) {
+                  // Для массивов и строк удаляем по позиции
+                  ass.this.splice(detail.position, 1);
+
+                  // Для массивов нужно обновить все сдвинутые элементы
+                  if (detail.affectedIndices && detail.affectedIndices.length > 0) {
+                    // Получаем исходный массив
+                    const originArray = origin.this;
+
+                    // Обновляем все затронутые элементы, их индексы уменьшились на 1
+                    detail.affectedIndices.forEach(oldIndex => {
+                      const newIndex = oldIndex - 1;
+                      const value = originArray[newIndex];
+                      ass.this[newIndex] = transformer(value, newIndex, originArray);
+                    });
+                  }
+                } else if (detail.key !== undefined) {
+                  // Для множеств и объектов ищем по значению
+                  const index = ass.this.findIndex((item, i) => {
+                    // Для set/map ключ = значение, для объектов это имя свойства
+                    if (detail.type === 'set' || detail.type === 'map') {
+                      return item === transformer(detail.key, detail.key, origin.this);
+                    } else {
+                      // Пробуем найти по совпадению с трансформированным значением
+                      return i === detail.position;
+                    }
+                  });
+
+                  if (index !== -1) {
+                    ass.this.splice(index, 1);
+                  } else {
+                    performFullRecalculation();
+                  }
+                } else {
+                  performFullRecalculation();
+                }
+                break;
+
+              case 'set':
+                // Точечное обновление по ключу/индексу
+                if (detail.key !== undefined && detail.position !== undefined) {
+                  // Для массивов, строк и чисел обновляем по индексу
+                  if (detail.position < ass.this.length) {
+                    ass.this[detail.position] = transformer(detail.value, detail.key, origin.this);
+                  } else if (detail.isNewProperty) {
+                    // Если это новое свойство, добавляем его
+                    ass.this.push(transformer(detail.value, detail.key, origin.this));
+                  } else {
+                    performFullRecalculation();
+                  }
+                } else if (detail.key !== undefined) {
+                  // Для объектов и карт ищем позицию
+                  const position = detail.type === 'object'
+                    ? Object.keys(origin.this).indexOf(detail.key)
+                    : undefined;
+
+                  if (position !== undefined && position < ass.this.length) {
+                    ass.this[position] = transformer(detail.value, detail.key, origin.this);
+                  } else if (detail.isNewProperty) {
+                    // Если это новое свойство, добавляем его
+                    ass.this.push(transformer(detail.value, detail.key, origin.this));
+                  } else {
+                    performFullRecalculation();
+                  }
+                } else {
+                  performFullRecalculation();
+                }
+                break;
+
+              case 'remove':
+                // Точечное удаление по значению
+                if (detail.position !== undefined) {
+                  // Если известна позиция удаленного элемента
+                  ass.this.splice(detail.position, 1);
+
+                  // Для массивов нужно обновить все сдвинутые элементы
+                  if (detail.affectedIndices && detail.affectedIndices.length > 0) {
+                    // Получаем исходный массив
+                    const originArray = origin.this;
+
+                    // Обновляем все затронутые элементы, их индексы уменьшились на 1
+                    detail.affectedIndices.forEach(oldIndex => {
+                      const newIndex = oldIndex - 1;
+                      if (newIndex < originArray.length) {
+                        const value = originArray[newIndex];
+                        ass.this[newIndex] = transformer(value, newIndex, originArray);
+                      }
+                    });
+                  }
+                } else {
+                  // Для других типов ищем элемент по значению
+                  const index = ass.this.findIndex((item, idx) => {
+                    // Пытаемся найти исходное значение
+                    if (detail.type === 'set') {
+                      return origin.this.has(detail.value) &&
+                             item === transformer(detail.value, idx, origin.this);
+                    } else {
+                      return item === transformer(detail.value, idx, origin.this);
+                    }
+                  });
+
+                  if (index !== -1) {
+                    ass.this.splice(index, 1);
+                  } else {
+                    performFullRecalculation();
+                  }
+                }
+                break;
+
+              default:
+                // Для неизвестных операций делаем полное перевычисление
+                performFullRecalculation();
+            }
+          } else {
+            // Если нет детальной информации, делаем полное перевычисление
+            performFullRecalculation();
+          }
+
+          // Функция для полного перевычисления результата
+          function performFullRecalculation() {
+            const type = origin.detect;
+
+            if (type === 'array') {
+              ass.this = origin.this.map(transformer);
+            } else if (type === 'object') {
+              const newResult = [];
+              Object.keys(origin.this).forEach(key => {
+                newResult.push(transformer(origin.this[key], key, origin.this));
+              });
+              ass.this = newResult;
+            } else if (type === 'map') {
+              const newResult = [];
+              origin.this.forEach((val, key) => {
+                newResult.push(transformer(val, key, origin.this));
+              });
+              ass.this = newResult;
+            } else if (type === 'set') {
+              const newResult = [];
+              let index = 0;
+              origin.this.forEach(val => {
+                newResult.push(transformer(val, index++, origin.this));
+              });
+              ass.this = newResult;
+            } else if (type === 'string') {
+              const newResult = [];
+              for (let i = 0; i < origin.this.length; i++) {
+                newResult.push(transformer(origin.this[i], i, origin.this));
+              }
+              ass.this = newResult;
+            }
+          }
+
+          // Генерируем событие изменения
+          if (ass.emit) {
+            ass.emit('change', {
+              origin: origin,
+              reason: 'track',
+              prev: event?.prev,
+              next: event?.next,
+              detail: event?.detail,
+              method: eventMethod || detail?.operation || 'update'
+            });
+          }
+        });
+
+        // Обработка lifecycle событий
+
+        // Отписка при уничтожении origin
+        if (origin.on && !track.temp.offOriginKill) {
+          track.temp.offOriginKill = origin.on('kill', () => {
+            // Отписываемся от событий
+            offChange();
+          });
+        }
+
+        // Отписка при уничтожении текущей ассоциации (результата)
+        if (ass.on && !track.temp.offKill) {
+          track.temp.offKill = ass.on('kill', () => {
+            // Отписываемся от событий
+            offChange();
+          });
+        }
+      }
+
+      return track;
+    });
+
+    // Создаем трекер для проверки корректной работы механизма трекинга
+    const track = resultAssociation.track;
+
     return resultAssociation;
   };
 }
