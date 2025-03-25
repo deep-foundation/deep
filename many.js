@@ -6,7 +6,6 @@
  */
 
 import { Association } from './association.js';
-import { has } from './sets/basic.js';
 
 /**
  * Создает ассоциацию из значения, если оно еще не является ассоциацией
@@ -712,5 +711,5 @@ for (const name in all) {
 export {
   difference,
   intersection,
-  symmetricDifference,
+  symmetricDifference
 };

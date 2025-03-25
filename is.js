@@ -442,3 +442,44 @@ export {
   isEmpty,
   isMany,
 };
+
+/**
+ * Модуль для определения типов данных
+ */
+
+/**
+ * Определяет тип данных
+ * @param {any} ass - Ассоциация для проверки
+ * @returns {string} - Тип данных
+ * @example
+ * const ass = deep('hello');
+ * console.log(ass.detect); // 'string'
+ */
+export function detect(ass) {
+  const value = ass.this;
+  if (value === null) return 'null';
+  if (value === undefined) return 'undefined';
+  if (Array.isArray(value)) return 'array';
+  if (value instanceof Set) return 'set';
+  if (value instanceof Map) return 'map';
+  if (value instanceof WeakMap) return 'weakmap';
+  if (value instanceof WeakSet) return 'weakset';
+  if (value instanceof Date) return 'date';
+  if (typeof value === 'object') return 'object';
+  return typeof value;
+}
+
+Association._proxy.set(
+  'detect', detect,
+);
+
+// Методы проверки типов
+export const is = {
+  array: (value) => Array.isArray(value),
+  set: (value) => value instanceof Set,
+  map: (value) => value instanceof Map,
+  weakmap: (value) => value instanceof WeakMap,
+  weakset: (value) => value instanceof WeakSet,
+  object: (value) => value !== null && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Set) && !(value instanceof Map) && !(value instanceof WeakMap) && !(value instanceof WeakSet),
+  primitive: (value) => value === null || value === undefined || typeof value !== 'object',
+};

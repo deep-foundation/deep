@@ -9,7 +9,7 @@ import { Events } from './events.js';
 // Создаем экземпляр Memory для хранения типов ассоциаций
 export const types = new Memory({
   name: 'Association.types',
-  childSetFactory: () => new Set()
+  childSetFactory: () => new Association(new Set())
 });
 
 /**
@@ -55,8 +55,8 @@ export const type = function(ass, op, args) {
 
     // Событие 'change' с деталями изменения
     ass.emit('change', {
-      prevType,
-      newType: newType instanceof Association ? newType.this : newType
+      prev,
+      next: newType instanceof Association ? newType.this : newType
     }, {
       method: 'type',
       arguments: [newType]
@@ -70,7 +70,26 @@ export const type = function(ass, op, args) {
   }
 };
 
+/**
+ * Функция для получения множества ассоциаций определенного типа.
+ * @param {string} op - Операция ('get')
+ * @returns {Association} - Ассоциация содержащая Set с ассоциациями указанного типа
+ */
+export const typed = function(ass, op) {
+  // Операция 'get': возвращаем множество ассоциаций для типа
+  if (op === 'get') {
+    // Получаем множество из типов, создаем его, если оно не существует
+    return types.many(ass.this);
+  }
+  else {
+    throw new Error(`unexpected op=${op}`);
+  }
+};
+
 // Добавляем метод type в статические методы Association
 Association._proxy.set('type', type);
+
+// Добавляем метод typed в статические методы Association
+Association._proxy.set('typed', typed);
 
 

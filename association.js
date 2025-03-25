@@ -91,8 +91,20 @@ export class Association extends Function {
 
       // При установке свойства
       set: (target, key, value, receiver) => {
+        if (key === 'this') {
+          const prev = target.this;
+          target.this = value;
+          receiver.emit('change', {
+            prev,
+            next: value,
+          }, {
+            method: 'this',
+            arguments: [value]
+          });
+          return true;
+        }
         // Если ключ не является защищенным - устанавливаем его
-        if (key !== '_proxy' && key !== 'temp' && key !== 'this') {
+        else if (key !== '_proxy' && key !== 'temp') {
           // Если это существующая функция в _proxy и она поддерживает 'set' операцию
           const existingValue = target._proxy.get(key) || Association._proxy.get(key);
           if (typeof existingValue === 'function') {
