@@ -55,7 +55,7 @@ export function forEach(ass, op) {
  * @param {Association} ass - Экземпляр Association
  * @param {string} op - Операция ('get', 'apply')
  * @param {Function} [callback] - функция обратного вызова (value, key, collection)
- * @returns {Array} - Новый массив с преобразованными значениями
+ * @returns {Association} - Новая ассоциация с преобразованными значениями
  */
 export function map(ass, op) {
   if (op !== 'get' && op !== 'apply') return;
@@ -65,7 +65,7 @@ export function map(ass, op) {
     const result = [];
 
     if (value === null || value === undefined) {
-      return result;
+      return new Association(result);
     }
 
     if (Array.isArray(value)) {
@@ -93,7 +93,17 @@ export function map(ass, op) {
       }
     }
 
-    return result;
+    // Создаем новую ассоциацию для результата
+    const resultAssociation = new Association(result);
+
+    // Устанавливаем исходную ассоциацию как origin
+    resultAssociation.temp.origin = ass;
+
+    // Сохраняем функцию преобразования и имя метода для отслеживания
+    resultAssociation.temp.transformer = callback;
+    resultAssociation.temp.method = 'map';
+
+    return resultAssociation;
   };
 }
 

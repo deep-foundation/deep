@@ -92,31 +92,31 @@ test('map для разных типов данных', async (t) => {
   await t.test('Для массива', () => {
     const array = [1, 2, 3];
     const result = deep(array).map(x => x * 2);
-    assert.deepStrictEqual(result, [2, 4, 6]);
+    assert.deepStrictEqual(result.this, [2, 4, 6]);
   });
 
   await t.test('Для объекта', () => {
     const obj = { a: 1, b: 2, c: 3 };
     const result = deep(obj).map(x => x * 2);
-    assert.deepStrictEqual(result, [2, 4, 6]);
+    assert.deepStrictEqual(result.this, [2, 4, 6]);
   });
 
   await t.test('Для строки', () => {
     const str = 'abc';
     const result = deep(str).map(x => x.toUpperCase());
-    assert.deepStrictEqual(result, ['A', 'B', 'C']);
+    assert.deepStrictEqual(result.this, ['A', 'B', 'C']);
   });
 
   await t.test('Для Map', () => {
     const map = new Map([['a', 1], ['b', 2], ['c', 3]]);
     const result = deep(map).map(x => x * 2);
-    assert.deepStrictEqual(result, [2, 4, 6]);
+    assert.deepStrictEqual(result.this, [2, 4, 6]);
   });
 
   await t.test('Для Set', () => {
     const set = new Set([1, 2, 3]);
     const result = deep(set).map(x => x * 2);
-    assert.deepStrictEqual(result, [2, 4, 6]);
+    assert.deepStrictEqual(result.this, [2, 4, 6]);
   });
 });
 
