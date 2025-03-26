@@ -18,7 +18,8 @@ const BENCHMARK_DOCS_MAP = {
   'is.benchmark.js': 'IS.md',
   'gets.benchmark.js': 'GETS.md',
   'sets.benchmark.js': 'SETS.md',
-  'many.benchmark.js': 'MANY.md'
+  'many.benchmark.js': 'MANY.md',
+  'track.benchmark.js': 'TRACK.md'
 };
 
 // Функция для запуска бенчмарка и получения результатов
