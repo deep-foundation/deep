@@ -902,4 +902,130 @@ test('Track на разных типах данных и операциях', as
       assert.strictEqual(result.this, true, 'После set(1, "e") result должен вернуться к true');
     });
   });
+
+  await t.test('Track с операциями массивов', (t) => {
+    // Проверяем наличие системы событий
+    if (!Association._proxy.has('on') || !Association._proxy.has('emit')) {
+      t.skip('Тест пропущен, так как не реализована система событий');
+      return;
+    }
+
+    // Объединяем все тесты в один для избежания проблем с асинхронностью
+    t.test('Track с операциями массивов - комбинированный тест', (t) => {
+      // *** ТЕСТ 1: Push и Pop ***
+      // Создаем исходную ассоциацию массива
+      const source1 = deep([1, 2, 3]);
+
+      // Применяем метод map
+      const result1 = source1.map(x => x * 2);
+
+      // Проверяем начальное состояние
+      assert.deepEqual(result1.this, [2, 4, 6], 'Начальное состояние result1 должно быть корректным');
+
+      // Тестируем операцию push
+      source1.push(4);
+      assert.deepEqual(result1.this, [2, 4, 6, 8], 'После push(4) result1 должен обновиться');
+
+      // Добавляем несколько элементов сразу
+      source1.push(5, 6);
+      assert.deepEqual(result1.this, [2, 4, 6, 8, 10, 12], 'После push(5, 6) result1 должен обновиться');
+
+      // Тестируем операцию pop
+      source1.pop();
+      assert.deepEqual(result1.this, [2, 4, 6, 8, 10], 'После pop() result1 должен обновиться');
+
+      // *** ТЕСТ 2: Shift и Unshift ***
+      // Создаем исходную ассоциацию массива
+      const source2 = deep([2, 3, 4]);
+
+      // Применяем метод map
+      const result2 = source2.map(x => x * 2);
+
+      // Проверяем начальное состояние
+      assert.deepEqual(result2.this, [4, 6, 8], 'Начальное состояние result2 должно быть корректным');
+
+      // Тестируем операцию unshift
+      source2.unshift(1);
+      assert.deepEqual(result2.this, [2, 4, 6, 8], 'После unshift(1) result2 должен обновиться');
+
+      // Добавляем несколько элементов сразу
+      source2.unshift(-1, 0);
+      assert.deepEqual(result2.this, [-2, 0, 2, 4, 6, 8], 'После unshift(-1, 0) result2 должен обновиться');
+
+      // Тестируем операцию shift
+      source2.shift();
+      assert.deepEqual(result2.this, [0, 2, 4, 6, 8], 'После shift() result2 должен обновиться');
+
+      // *** ТЕСТ 3: Цепочка методов ***
+      console.log('\n=== ТЕСТ 3: Цепочка методов ===');
+
+      // Создаем исходную ассоциацию массива
+      const source3 = deep([1, 2, 3, 4]);
+      console.log('source3.this:', source3.this);
+
+      // Применяем цепочку методов map -> filter
+      const result3a = source3.map(x => x * 2);
+      console.log('result3a.this:', result3a.this);
+
+      const result3b = result3a.filter(x => x > 4);
+      console.log('result3b.this:', result3b.this);
+
+      // Проверяем начальное состояние
+      assert.deepEqual(result3a.this, [2, 4, 6, 8], 'result3a должен содержать все трансформированные элементы');
+      assert.deepEqual(result3b.this, [6, 8], 'result3b должен содержать только элементы > 4');
+
+      // Явно вызываем трекеры для обеспечения правильной подписки на события
+      result3a.track;
+      result3b.track;
+
+      // Объявляем обработчики для проверки
+      let result3aChanged = false;
+      let result3bChanged = false;
+
+      // Добавляем слушатели событий
+      result3a.on('change', (event) => {
+        result3aChanged = true;
+        console.log('EVENT result3a change:', JSON.stringify(event?.detail?.operation));
+      });
+
+      result3b.on('change', (event) => {
+        result3bChanged = true;
+        console.log('EVENT result3b change:', JSON.stringify(event?.detail?.operation));
+      });
+
+      // Обновляем источник данных
+      console.log('\nДобавляем source3.push(5)');
+      source3.push(5);
+      console.log('source3.this после push:', source3.this);
+      console.log('result3a.this после push:', result3a.this);
+      console.log('result3b.this после push:', result3b.this);
+      console.log('result3aChanged:', result3aChanged);
+      console.log('result3bChanged:', result3bChanged);
+
+      // Проверяем данные
+      assert.deepEqual(result3a.this, [2, 4, 6, 8, 10], 'После push result3a должен обновиться');
+      assert.deepEqual(result3b.this, [6, 8, 10], 'После push result3b должен обновиться');
+      assert.ok(result3aChanged, 'result3a должен получить событие change');
+
+      // Проверяем, что filter правильно обрабатывает новый добавленный элемент
+      const lastElement = result3b.this[result3b.this.length - 1];
+      assert.strictEqual(lastElement, 10, 'Последний элемент в result3b должен быть 10 (преобразованное 5 из source3)');
+
+      // Обновляем result1 напрямую
+      console.log('\nУстанавливаем result3a.set(0, 20)');
+      // Сбрасываем флаги
+      result3aChanged = false;
+      result3bChanged = false;
+
+      result3a.set(0, 20);
+      console.log('source3.this после set:', source3.this);
+      console.log('result3a.this после set:', result3a.this);
+      console.log('result3b.this после set:', result3b.this);
+      console.log('result3aChanged:', result3aChanged);
+      console.log('result3bChanged:', result3bChanged);
+
+      assert.deepEqual(result3a.this, [20, 4, 6, 8, 10], 'После set result3a должен обновиться');
+      assert.deepEqual(result3b.this, [20, 6, 8, 10], 'После set result3b должен обновиться с новым элементом 20');
+    });
+  });
 });

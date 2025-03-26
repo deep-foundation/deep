@@ -249,6 +249,61 @@ export function map(ass, op) {
                 }
                 break;
 
+              case 'push':
+                // Обработка события push
+                if (detail.items && Array.isArray(detail.items)) {
+                  // Получаем исходный массив и его длину до операции push
+                  const prevLength = detail.prevLength;
+
+                  // Преобразуем и добавляем каждый новый элемент в результат
+                  detail.items.forEach((value, idx) => {
+                    const originalIndex = prevLength + idx;
+                    const transformedValue = transformer(value, originalIndex, origin.this);
+                    ass.this.push(transformedValue);
+                  });
+                } else {
+                  performFullRecalculation();
+                }
+                break;
+
+              case 'pop':
+                // Обработка события pop - удаление последнего элемента
+                if (ass.this.length > 0) {
+                  ass.this.pop();
+                } else {
+                  performFullRecalculation();
+                }
+                break;
+
+              case 'shift':
+                // Обработка события shift - удаление первого элемента и сдвиг остальных
+                if (ass.this.length > 0) {
+                  // Удаляем первый элемент
+                  ass.this.shift();
+
+                  // Обновляем индексы оставшихся элементов, если нужно
+                  if (detail.affectedIndices && detail.affectedIndices.length > 0) {
+                    const originArray = origin.this;
+                    // Перерасчитываем все элементы, так как их индексы изменились
+                    for (let i = 0; i < ass.this.length; i++) {
+                      ass.this[i] = transformer(originArray[i], i, originArray);
+                    }
+                  }
+                } else {
+                  performFullRecalculation();
+                }
+                break;
+
+              case 'unshift':
+                // Обработка события unshift - добавление элементов в начало и сдвиг существующих
+                if (detail.items && Array.isArray(detail.items)) {
+                  // Для простоты делаем полное перевычисление, так как все индексы меняются
+                  performFullRecalculation();
+                } else {
+                  performFullRecalculation();
+                }
+                break;
+
               default:
                 // Для неизвестных операций делаем полное перевычисление
                 performFullRecalculation();
@@ -411,9 +466,99 @@ export function filter(ass, op) {
         // Создаем обработчик событий change для автоматического обновления
         // Подписываемся на событие change у origin
         const offChange = origin.on('change', (event, meta) => {
+          console.log(`Filter(${ass.temp.method}) получил событие от ${origin.temp?.method || 'unknown'}, operation: ${event?.detail?.operation || 'unknown'}`);
+
           // Проверяем наличие детальной информации и метаданных
           const detail = event?.detail;
           const eventMethod = meta?.method;
+          const operation = detail?.operation;
+
+          // Оптимизация для методов массивов
+          if (operation) {
+            switch (operation) {
+              case 'push':
+                // Для push обрабатываем только новые элементы, фильтруя их
+                if (detail.items && Array.isArray(detail.items) && origin.detect === 'array') {
+                  const prevLength = detail.prevLength;
+                  const originValue = origin.this;
+                  let hasChanges = false;
+                  const newFilteredValues = [];
+
+                  // Проверяем новые элементы через функцию фильтрации
+                  for (let i = 0; i < detail.items.length; i++) {
+                    const newIndex = prevLength + i;
+                    const newValue = originValue[newIndex];
+
+                    // Если элемент проходит фильтр, добавляем его
+                    if (filterFn(newValue, newIndex, originValue)) {
+                      newFilteredValues.push(newValue);
+                      hasChanges = true;
+                    }
+                  }
+
+                  // Сохраняем текущий массив для события change
+                  const previousResult = [...ass.this];
+
+                  // Добавляем новые элементы, прошедшие фильтр, если они есть
+                  if (hasChanges) {
+                    // Добавляем новые элементы, прошедшие фильтр
+                    for (const value of newFilteredValues) {
+                      ass.this.push(value);
+                    }
+                  }
+
+                  // Всегда вызываем событие change независимо от наличия новых элементов
+                  // чтобы цепочка дальше получила обновление
+                  if (ass.emit) {
+                    console.log(`Вызываем emit в ${method} ${operation || 'update'} для ${JSON.stringify(ass.this)}`);
+
+                    ass.emit('change', {
+                      origin: origin,
+                      reason: 'track',
+                      prev: { this: previousResult },
+                      next: { this: ass.this },
+                      detail: {
+                        operation: 'push',
+                        prevLength: previousResult.length,
+                        currentLength: ass.this.length,
+                        items: newFilteredValues
+                      },
+                      method: 'push'
+                    });
+                  }
+
+                  return; // Избегаем полного перерасчета
+                }
+                break;
+
+              case 'pop':
+                // Для pop, если последний элемент в результате такой же как pop-нутый, удаляем его
+                if (origin.detect === 'array' && detail.value !== undefined) {
+                  // Если последний элемент нашего результата совпадает с удаляемым
+                  if (ass.this.length > 0 && ass.this[ass.this.length - 1] === detail.value) {
+                    ass.this.pop();
+                    return; // Избегаем полного перерасчета
+                  }
+                }
+                break;
+
+              case 'shift':
+                // Для shift, если первый элемент в результате такой же как shift-нутый, удаляем его
+                if (origin.detect === 'array' && detail.value !== undefined) {
+                  // Если первый элемент нашего результата совпадает с удаляемым
+                  if (ass.this.length > 0 && ass.this[0] === detail.value) {
+                    ass.this.shift();
+                  }
+
+                  // В любом случае нужно сделать полный перерасчет, так как индексы меняются
+                }
+                break;
+
+              case 'unshift':
+                // Для unshift всегда делаем полный перерасчет, так как все индексы меняются
+                break;
+            }
+          }
 
           // Для фильтра оптимальнее всего делать полное перевычисление при любом изменении
           // поскольку нам нужно заново проверить все элементы через функцию фильтрации
@@ -424,6 +569,9 @@ export function filter(ass, op) {
             const type = origin.detect;
             const originValue = origin.this;
             const filteredResult = [];
+            const previousResult = [...ass.this]; // Сохраняем текущий результат
+
+            console.log(`performFullRecalculation для ${method}, origin: ${JSON.stringify(originValue)}, current: ${JSON.stringify(previousResult)}`);
 
             if (type === 'array') {
               for (let i = 0; i < originValue.length; i++) {
@@ -460,19 +608,31 @@ export function filter(ass, op) {
               }
             }
 
-            ass.this = filteredResult;
-          }
+            // Проверяем, изменился ли результат
+            const prevJSON = JSON.stringify(previousResult);
+            const newJSON = JSON.stringify(filteredResult);
 
-          // Генерируем событие изменения
-          if (ass.emit) {
-            ass.emit('change', {
-              origin: origin,
-              reason: 'track',
-              prev: event?.prev,
-              next: event?.next,
-              detail: event?.detail,
-              method: meta?.method || event?.detail?.operation || 'update'
-            });
+            if (prevJSON !== newJSON) {
+              // Обновляем значение только если результат изменился
+              ass.this = filteredResult;
+
+              // Генерируем событие изменения при изменении результата
+              if (ass.emit) {
+                console.log(`Вызываем emit в ${method} ${operation || 'update'} для ${JSON.stringify(ass.this)}`);
+
+                ass.emit('change', {
+                  origin: origin,
+                  reason: 'track',
+                  prev: { this: previousResult },
+                  next: { this: filteredResult },
+                  detail: event?.detail,
+                  method: meta?.method || event?.detail?.operation || 'update'
+                });
+
+                // Отладочный вывод
+                console.log('Filter generated change event', event?.detail?.operation);
+              }
+            }
           }
         });
 

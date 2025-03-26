@@ -692,3 +692,309 @@ test('remove method', async (t) => {
     });
   });
 });
+
+test('push method', async (t) => {
+  await t.test('array', () => {
+    const arr = deep([1, 2, 3]);
+
+    // Проверка добавления одного элемента
+    arr.push(4);
+    assert.deepStrictEqual(arr.this, [1, 2, 3, 4]);
+
+    // Проверка добавления нескольких элементов
+    arr.push(5, 6);
+    assert.deepStrictEqual(arr.this, [1, 2, 3, 4, 5, 6]);
+  });
+
+  await t.test('unsupported types', () => {
+    const types = [
+      new Map(), // map
+      new Set(), // set
+      {}, // object
+      'abc', // string
+      123, // number
+      true, // boolean
+      null, // null
+      undefined, // undefined
+      Symbol(), // symbol
+      BigInt(1), // bigint
+      () => {} // function
+    ];
+
+    for (const value of types) {
+      const ass = deep(value);
+      assert.throws(
+        () => ass.push(1),
+        { message: `push method is not applicable to ${ass.detect} type` }
+      );
+    }
+  });
+
+  await t.test('events', () => {
+    const arr = deep([1, 2, 3]);
+    let pushEvent = null;
+    let changeEvent = null;
+    let lengthEvent = null;
+
+    arr.on('push', (event, data) => {
+      pushEvent = data;
+    });
+
+    arr.on('change', (event, data, method) => {
+      changeEvent = { data, method };
+    });
+
+    arr.on('length', (event, data) => {
+      lengthEvent = data;
+    });
+
+    arr.push(4, 5);
+
+    assert.ok(pushEvent, 'Событие push должно быть сгенерировано');
+    assert.deepStrictEqual(pushEvent.items, [4, 5], 'Событие push должно содержать добавленные элементы');
+    assert.deepStrictEqual(lengthEvent, { prev: 3, next: 5 });
+    assert.strictEqual(changeEvent.method.method, 'push');
+    assert.deepStrictEqual(changeEvent.method.arguments, [4, 5]);
+    assert.deepStrictEqual(changeEvent.data.detail.operation, 'push');
+    assert.deepStrictEqual(changeEvent.data.detail.prevLength, 3);
+    assert.deepStrictEqual(changeEvent.data.detail.currentLength, 5);
+  });
+});
+
+test('pop method', async (t) => {
+  await t.test('array', () => {
+    const arr = deep([1, 2, 3]);
+
+    // Проверка удаления элемента
+    const popped = arr.pop();
+    assert.strictEqual(popped, 3);
+    assert.deepStrictEqual(arr.this, [1, 2]);
+
+    // Проверка удаления из массива с одним элементом
+    arr.pop();
+    assert.deepStrictEqual(arr.this, [1]);
+
+    // Проверка удаления из пустого массива
+    arr.pop();
+    assert.deepStrictEqual(arr.this, []);
+
+    // Проверка возврата undefined при пустом массиве
+    const emptyResult = arr.pop();
+    assert.strictEqual(emptyResult, undefined);
+    assert.deepStrictEqual(arr.this, []);
+  });
+
+  await t.test('unsupported types', () => {
+    const types = [
+      new Map(), // map
+      new Set(), // set
+      {}, // object
+      'abc', // string
+      123, // number
+      true, // boolean
+      null, // null
+      undefined, // undefined
+      Symbol(), // symbol
+      BigInt(1), // bigint
+      () => {} // function
+    ];
+
+    for (const value of types) {
+      const ass = deep(value);
+      assert.throws(
+        () => ass.pop(),
+        { message: `pop method is not applicable to ${ass.detect} type` }
+      );
+    }
+  });
+
+  await t.test('events', () => {
+    const arr = deep([1, 2, 3]);
+    let popEvent = null;
+    let deleteEvent = null;
+    let changeEvent = null;
+    let lengthEvent = null;
+
+    arr.on('pop', (event, data) => {
+      popEvent = data;
+    });
+
+    arr.on('delete', (event, data) => {
+      deleteEvent = data;
+    });
+
+    arr.on('change', (event, data, method) => {
+      changeEvent = { data, method };
+    });
+
+    arr.on('length', (event, data) => {
+      lengthEvent = data;
+    });
+
+    arr.pop();
+
+    assert.ok(popEvent, 'Событие pop должно быть сгенерировано');
+    assert.strictEqual(popEvent.value, 3, 'Событие pop должно содержать удаленное значение');
+    assert.deepStrictEqual(deleteEvent, { key: 2, value: 3 });
+    assert.deepStrictEqual(lengthEvent, { prev: 3, next: 2 });
+    assert.strictEqual(changeEvent.method.method, 'pop');
+    assert.deepStrictEqual(changeEvent.method.arguments, []);
+    assert.deepStrictEqual(changeEvent.data.detail.operation, 'pop');
+  });
+});
+
+test('shift method', async (t) => {
+  await t.test('array', () => {
+    const arr = deep([1, 2, 3]);
+
+    // Проверка удаления первого элемента
+    const shifted = arr.shift();
+    assert.strictEqual(shifted, 1);
+    assert.deepStrictEqual(arr.this, [2, 3]);
+
+    // Проверка удаления из массива с одним элементом
+    arr.shift();
+    assert.deepStrictEqual(arr.this, [3]);
+
+    // Проверка удаления из пустого массива
+    arr.shift();
+    assert.deepStrictEqual(arr.this, []);
+
+    // Проверка возврата undefined при пустом массиве
+    const emptyResult = arr.shift();
+    assert.strictEqual(emptyResult, undefined);
+    assert.deepStrictEqual(arr.this, []);
+  });
+
+  await t.test('unsupported types', () => {
+    const types = [
+      new Map(), // map
+      new Set(), // set
+      {}, // object
+      'abc', // string
+      123, // number
+      true, // boolean
+      null, // null
+      undefined, // undefined
+      Symbol(), // symbol
+      BigInt(1), // bigint
+      () => {} // function
+    ];
+
+    for (const value of types) {
+      const ass = deep(value);
+      assert.throws(
+        () => ass.shift(),
+        { message: `shift method is not applicable to ${ass.detect} type` }
+      );
+    }
+  });
+
+  await t.test('events', () => {
+    const arr = deep([1, 2, 3]);
+    let shiftEvent = null;
+    let deleteEvent = null;
+    let changeEvent = null;
+    let lengthEvent = null;
+
+    arr.on('shift', (event, data) => {
+      shiftEvent = data;
+    });
+
+    arr.on('delete', (event, data) => {
+      deleteEvent = data;
+    });
+
+    arr.on('change', (event, data, method) => {
+      changeEvent = { data, method };
+    });
+
+    arr.on('length', (event, data) => {
+      lengthEvent = data;
+    });
+
+    arr.shift();
+
+    assert.ok(shiftEvent, 'Событие shift должно быть сгенерировано');
+    assert.strictEqual(shiftEvent.value, 1, 'Событие shift должно содержать удаленное значение');
+    assert.deepStrictEqual(deleteEvent, { key: 0, value: 1 });
+    assert.deepStrictEqual(lengthEvent, { prev: 3, next: 2 });
+    assert.strictEqual(changeEvent.method.method, 'shift');
+    assert.deepStrictEqual(changeEvent.method.arguments, []);
+    assert.deepStrictEqual(changeEvent.data.detail.operation, 'shift');
+    assert.deepStrictEqual(changeEvent.data.detail.affectedIndices, [1, 2]);
+  });
+});
+
+test('unshift method', async (t) => {
+  await t.test('array', () => {
+    const arr = deep([3, 4]);
+
+    // Проверка добавления одного элемента
+    arr.unshift(2);
+    assert.deepStrictEqual(arr.this, [2, 3, 4]);
+
+    // Проверка добавления нескольких элементов
+    arr.unshift(0, 1);
+    assert.deepStrictEqual(arr.this, [0, 1, 2, 3, 4]);
+
+    // Проверка добавления в пустой массив
+    const emptyArr = deep([]);
+    emptyArr.unshift(1);
+    assert.deepStrictEqual(emptyArr.this, [1]);
+  });
+
+  await t.test('unsupported types', () => {
+    const types = [
+      new Map(), // map
+      new Set(), // set
+      {}, // object
+      'abc', // string
+      123, // number
+      true, // boolean
+      null, // null
+      undefined, // undefined
+      Symbol(), // symbol
+      BigInt(1), // bigint
+      () => {} // function
+    ];
+
+    for (const value of types) {
+      const ass = deep(value);
+      assert.throws(
+        () => ass.unshift(1),
+        { message: `unshift method is not applicable to ${ass.detect} type` }
+      );
+    }
+  });
+
+  await t.test('events', () => {
+    const arr = deep([3, 4]);
+    let unshiftEvent = null;
+    let changeEvent = null;
+    let lengthEvent = null;
+
+    arr.on('unshift', (event, data) => {
+      unshiftEvent = data;
+    });
+
+    arr.on('change', (event, data, method) => {
+      changeEvent = { data, method };
+    });
+
+    arr.on('length', (event, data) => {
+      lengthEvent = data;
+    });
+
+    arr.unshift(1, 2);
+
+    assert.ok(unshiftEvent, 'Событие unshift должно быть сгенерировано');
+    assert.deepStrictEqual(unshiftEvent.items, [1, 2], 'Событие unshift должно содержать добавленные элементы');
+    assert.deepStrictEqual(lengthEvent, { prev: 2, next: 4 });
+    assert.strictEqual(changeEvent.method.method, 'unshift');
+    assert.deepStrictEqual(changeEvent.method.arguments, [1, 2]);
+    assert.deepStrictEqual(changeEvent.data.detail.operation, 'unshift');
+    assert.deepStrictEqual(changeEvent.data.detail.addedIndices, [0, 1]);
+    assert.deepStrictEqual(changeEvent.data.detail.affectedIndices, [0, 1]);
+  });
+});
