@@ -26,5 +26,8 @@
   },
   "devDependencies": {
     "mitata": "^1.0.34"
+  },
+  "dependencies": {
+    "benchmarkify": "^4.0.0"
   }
 }

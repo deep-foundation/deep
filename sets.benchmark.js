@@ -2,350 +2,235 @@
  * Бенчмарк для методов модификации (sets.js)
  */
 import Benchmarkify from 'benchmarkify';
-import { deep } from './index.js';
+import deep from './index.js';
 
-// Инициализация бенчмарка
-const benchmark = new Benchmarkify('Deep Sets Methods', { minSamples: 200 });
+const benchmark = new Benchmarkify("Deep Methods Benchmark - Sets").printHeader();
 
-// Печать информации о системе
-benchmark.printHeader();
+// Создание бенчмарка
+const bench = benchmark.createSuite("Методы работы с наборами (sets.js)");
 
-// Настройка тестов
+// Начальные данные для тестов
+const arraySize = 1000;
+const testArray = Array.from({ length: arraySize }, (_, i) => i);
+const testObject = Object.fromEntries(testArray.map((val, i) => [`key${i}`, val]));
+const testMap = new Map(testArray.map((val, i) => [`key${i}`, val]));
+const testSet = new Set(testArray);
 
-// 1. Тест set
-const setBenchmark = benchmark.createSuite('set(key, value)');
+// Оборачиваем в deep
+const deepArray = deep(testArray.slice());
+const deepObject = deep({ ...testObject });
+const deepMap = deep(new Map(testMap));
+const deepSet = deep(new Set(testSet));
 
-// Подготовка данных для set
-const setArray = [1, 2, 3, 4, 5];
-const setObject = { a: 1, b: 2, c: 3, d: 4, e: 5 };
-const setMap = new Map([['a', 1], ['b', 2], ['c', 3], ['d', 4], ['e', 5]]);
-const setSet = new Set([1, 2, 3, 4, 5]);
-const setString = 'abcde';
-
-// Тесты нативных методов для set
-setBenchmark.add('Array[index] (нативный)', () => {
-  const arr = [...setArray];
-  arr[2] = 10;
-  return arr;
+// Бенчмарк метода add
+bench.add("add в массив", () => {
+  const arr = deep(testArray.slice());
+  arr.add(arraySize);
+  return arr.this.length === arraySize + 1;
 });
 
-setBenchmark.add('Object[key] (нативный)', () => {
-  const obj = { ...setObject };
-  obj.c = 10;
-  return obj;
+bench.add("push в обычный массив (нативный)", () => {
+  const arr = testArray.slice();
+  arr.push(arraySize);
+  return arr.length === arraySize + 1;
 });
 
-setBenchmark.add('Map.set (нативный)', () => {
-  const map = new Map(setMap);
-  map.set('c', 10);
-  return map;
+bench.add("add в объект", () => {
+  const obj = deep({ ...testObject });
+  obj.add(`newKey`, arraySize);
+  return obj.this.newKey === arraySize;
 });
 
-setBenchmark.add('String replace (нативный)', () => {
-  return setString.substring(0, 2) + 'X' + setString.substring(3);
+bench.add("add в Map", () => {
+  const map = deep(new Map(testMap));
+  map.add(`newKey`, arraySize);
+  return map.this.get('newKey') === arraySize;
 });
 
-// Тесты deep методов для set
-setBenchmark.add('deep(Array).set', () => {
-  const arr = deep([...setArray]);
-  arr.set(2, 10);
-  return arr.this;
+bench.add("add в Set", () => {
+  const set = deep(new Set(testSet));
+  set.add(arraySize);
+  return set.this.has(arraySize);
 });
 
-setBenchmark.add('deep(Object).set', () => {
-  const obj = deep({ ...setObject });
-  obj.set('c', 10);
-  return obj.this;
+// Бенчмарк метода remove
+bench.add("remove из массива", () => {
+  const arr = deep(testArray.slice());
+  arr.remove(50);
+  return arr.this.length === arraySize - 1;
 });
 
-setBenchmark.add('deep(Map).set', () => {
-  const map = deep(new Map(setMap));
-  map.set('c', 10);
-  return map.this;
-});
-
-setBenchmark.add('deep(Set).set', () => {
-  const set = deep(new Set(setSet));
-  set.set(10);
-  return set.this;
-});
-
-setBenchmark.add('deep(String).set', () => {
-  const str = deep(setString);
-  str.set(2, 'X');
-  return str.this;
-});
-
-// 2. Тест delete
-const deleteBenchmark = benchmark.createSuite('delete(key)');
-
-// Подготовка данных для delete
-const deleteArray = [1, 2, 3, 4, 5];
-const deleteObject = { a: 1, b: 2, c: 3, d: 4, e: 5 };
-const deleteMap = new Map([['a', 1], ['b', 2], ['c', 3], ['d', 4], ['e', 5]]);
-const deleteSet = new Set([1, 2, 3, 4, 5]);
-const deleteString = 'abcde';
-
-// Тесты нативных методов для delete
-deleteBenchmark.add('Array.splice (нативный)', () => {
-  const arr = [...deleteArray];
-  arr.splice(2, 1);
-  return arr;
-});
-
-deleteBenchmark.add('Object delete (нативный)', () => {
-  const obj = { ...deleteObject };
-  delete obj.c;
-  return obj;
-});
-
-deleteBenchmark.add('Map.delete (нативный)', () => {
-  const map = new Map(deleteMap);
-  map.delete('c');
-  return map;
-});
-
-deleteBenchmark.add('Set.delete (нативный)', () => {
-  const set = new Set(deleteSet);
-  set.delete(3);
-  return set;
-});
-
-deleteBenchmark.add('String slice (нативный)', () => {
-  return deleteString.slice(0, 2) + deleteString.slice(3);
-});
-
-// Тесты deep методов для delete
-deleteBenchmark.add('deep(Array).delete', () => {
-  const arr = deep([...deleteArray]);
-  arr.delete(2);
-  return arr.this;
-});
-
-deleteBenchmark.add('deep(Object).delete', () => {
-  const obj = deep({ ...deleteObject });
-  obj.delete('c');
-  return obj.this;
-});
-
-deleteBenchmark.add('deep(Map).delete', () => {
-  const map = deep(new Map(deleteMap));
-  map.delete('c');
-  return map.this;
-});
-
-deleteBenchmark.add('deep(Set).delete', () => {
-  const set = deep(new Set(deleteSet));
-  set.delete(3);
-  return set.this;
-});
-
-deleteBenchmark.add('deep(String).delete', () => {
-  const str = deep(deleteString);
-  str.delete(2);
-  return str.this;
-});
-
-// 3. Тест add
-const addBenchmark = benchmark.createSuite('add(value)');
-
-// Подготовка данных для add
-const addArray = [1, 2, 3, 4, 5];
-const addObject = { a: 1, b: 2, c: 3, d: 4, e: 5 };
-const addMap = new Map([['a', 1], ['b', 2], ['c', 3], ['d', 4], ['e', 5]]);
-const addSet = new Set([1, 2, 3, 4, 5]);
-const addString = 'abcde';
-
-// Тесты нативных методов для add
-addBenchmark.add('Array.push (нативный)', () => {
-  const arr = [...addArray];
-  arr.push(6);
-  return arr;
-});
-
-addBenchmark.add('Object assign (нативный)', () => {
-  const obj = { ...addObject };
-  obj.f = 6;
-  return obj;
-});
-
-addBenchmark.add('Map.set (нативный для add)', () => {
-  const map = new Map(addMap);
-  map.set('f', 6);
-  return map;
-});
-
-addBenchmark.add('Set.add (нативный)', () => {
-  const set = new Set(addSet);
-  set.add(6);
-  return set;
-});
-
-addBenchmark.add('String concat (нативный)', () => {
-  return addString + 'f';
-});
-
-// Тесты deep методов для add
-addBenchmark.add('deep(Array).add', () => {
-  const arr = deep([...addArray]);
-  arr.add(6);
-  return arr.this;
-});
-
-addBenchmark.add('deep(Object).add', () => {
-  const obj = deep({ ...addObject });
-  obj.add(6, 'f');
-  return obj.this;
-});
-
-addBenchmark.add('deep(Map).add', () => {
-  const map = deep(new Map(addMap));
-  map.add(6, 'f');
-  return map.this;
-});
-
-addBenchmark.add('deep(Set).add', () => {
-  const set = deep(new Set(addSet));
-  set.add(6);
-  return set.this;
-});
-
-addBenchmark.add('deep(String).add', () => {
-  const str = deep(addString);
-  str.add('f');
-  return str.this;
-});
-
-// 4. Тест remove
-const removeBenchmark = benchmark.createSuite('remove(value)');
-
-// Подготовка данных для remove
-const removeArray = [1, 2, 3, 4, 5, 3];
-const removeObject = { a: 1, b: 2, c: 3, d: 4, e: 3 };
-const removeMap = new Map([['a', 1], ['b', 2], ['c', 3], ['d', 4], ['e', 3]]);
-const removeSet = new Set([1, 2, 3, 4, 5]);
-
-// Тесты нативных методов для remove
-removeBenchmark.add('Array.indexOf + splice (нативный)', () => {
-  const arr = [...removeArray];
-  const index = arr.indexOf(3);
-  if (index !== -1) {
+bench.add("splice из обычного массива (нативный)", () => {
+  const arr = testArray.slice();
+  const index = arr.indexOf(50);
+  if (index > -1) {
     arr.splice(index, 1);
   }
-  return arr;
+  return arr.length === arraySize - 1;
 });
 
-removeBenchmark.add('Object.entries + delete (нативный)', () => {
-  const obj = { ...removeObject };
-  const entries = Object.entries(obj);
-  const entry = entries.find(([key, value]) => value === 3);
-  if (entry) {
-    delete obj[entry[0]];
-  }
-  return obj;
+bench.add("remove из объекта", () => {
+  const obj = deep({ ...testObject });
+  obj.remove('key50');
+  return obj.this.key50 === undefined;
 });
 
-removeBenchmark.add('Map entries + delete (нативный)', () => {
-  const map = new Map(removeMap);
-  for (const [key, value] of map.entries()) {
-    if (value === 3) {
-      map.delete(key);
-      break;
-    }
-  }
-  return map;
+bench.add("remove из Map", () => {
+  const map = deep(new Map(testMap));
+  map.remove('key50');
+  return !map.this.has('key50');
 });
 
-removeBenchmark.add('Set.delete (нативный для remove)', () => {
-  const set = new Set(removeSet);
-  set.delete(3);
-  return set;
+bench.add("remove из Set", () => {
+  const set = deep(new Set(testSet));
+  set.remove(50);
+  return !set.this.has(50);
 });
 
-// Тесты deep методов для remove
-removeBenchmark.add('deep(Array).remove', () => {
-  const arr = deep([...removeArray]);
-  arr.remove(3);
-  return arr.this;
+// Бенчмарк метода clear
+bench.add("clear для массива", () => {
+  const arr = deep(testArray.slice());
+  arr.clear();
+  return arr.this.length === 0;
 });
 
-removeBenchmark.add('deep(Object).remove', () => {
-  const obj = deep({ ...removeObject });
-  obj.remove(3);
-  return obj.this;
+bench.add("length = 0 для обычного массива (нативный)", () => {
+  const arr = testArray.slice();
+  arr.length = 0;
+  return arr.length === 0;
 });
 
-removeBenchmark.add('deep(Map).remove', () => {
-  const map = deep(new Map(removeMap));
-  map.remove(3);
-  return map.this;
+bench.add("clear для объекта", () => {
+  const obj = deep({ ...testObject });
+  obj.clear();
+  return Object.keys(obj.this).length === 0;
 });
 
-removeBenchmark.add('deep(Set).remove', () => {
-  const set = deep(new Set(removeSet));
-  set.remove(3);
-  return set.this;
+bench.add("clear для Map", () => {
+  const map = deep(new Map(testMap));
+  map.clear();
+  return map.this.size === 0;
 });
 
-// 5. Тесты методов массива
-const arrayMethodsBenchmark = benchmark.createSuite('Методы массива');
-
-// Подготовка данных для методов массива
-const arrayBase = [1, 2, 3, 4, 5];
-
-// Тесты нативных методов массива
-arrayMethodsBenchmark.add('Array.push (нативный)', () => {
-  const arr = [...arrayBase];
-  arr.push(6, 7);
-  return arr;
+bench.add("clear для Set", () => {
+  const set = deep(new Set(testSet));
+  set.clear();
+  return set.this.size === 0;
 });
 
-arrayMethodsBenchmark.add('Array.pop (нативный)', () => {
-  const arr = [...arrayBase];
-  arr.pop();
-  return arr;
+// Бенчмарк метода has
+bench.add("has для массива", () => {
+  return deepArray.has(50);
 });
 
-arrayMethodsBenchmark.add('Array.shift (нативный)', () => {
-  const arr = [...arrayBase];
-  arr.shift();
-  return arr;
+bench.add("includes для обычного массива (нативный)", () => {
+  return testArray.includes(50);
 });
 
-arrayMethodsBenchmark.add('Array.unshift (нативный)', () => {
-  const arr = [...arrayBase];
-  arr.unshift(0, -1);
-  return arr;
+bench.add("has для объекта", () => {
+  return deepObject.has('key50');
 });
 
-// Тесты deep методов массива
-arrayMethodsBenchmark.add('deep(Array).push', () => {
-  const arr = deep([...arrayBase]);
-  arr.push(6, 7);
-  return arr.this;
+bench.add("hasOwnProperty для обычного объекта (нативный)", () => {
+  return testObject.hasOwnProperty('key50');
 });
 
-arrayMethodsBenchmark.add('deep(Array).pop', () => {
-  const arr = deep([...arrayBase]);
-  arr.pop();
-  return arr.this;
+bench.add("has для Map", () => {
+  return deepMap.has('key50');
 });
 
-arrayMethodsBenchmark.add('deep(Array).shift', () => {
-  const arr = deep([...arrayBase]);
-  arr.shift();
-  return arr.this;
+bench.add("has для Set", () => {
+  return deepSet.has(50);
 });
 
-arrayMethodsBenchmark.add('deep(Array).unshift', () => {
-  const arr = deep([...arrayBase]);
-  arr.unshift(0, -1);
-  return arr.this;
+// Бенчмарк метода get
+bench.add("get для массива", () => {
+  return deepArray.get(50).this === 50;
 });
 
-// Запуск всех тестов
-setBenchmark.run();
-deleteBenchmark.run();
-addBenchmark.run();
-removeBenchmark.run();
-arrayMethodsBenchmark.run();
+bench.add("индексный доступ для обычного массива (нативный)", () => {
+  return testArray[50] === 50;
+});
+
+bench.add("get для объекта", () => {
+  return deepObject.get('key50').this === 50;
+});
+
+bench.add("прямой доступ для обычного объекта (нативный)", () => {
+  return testObject.key50 === 50;
+});
+
+bench.add("get для Map", () => {
+  return deepMap.get('key50').this === 50;
+});
+
+bench.add("get для Set", () => {
+  return deepSet.get(50).this === 50;
+});
+
+// Бенчмарк метода set
+bench.add("set для массива", () => {
+  const arr = deep(testArray.slice());
+  arr.set(50, 999);
+  return arr.this[50] === 999;
+});
+
+bench.add("индексное присваивание для обычного массива (нативный)", () => {
+  const arr = testArray.slice();
+  arr[50] = 999;
+  return arr[50] === 999;
+});
+
+bench.add("set для объекта", () => {
+  const obj = deep({ ...testObject });
+  obj.set('key50', 999);
+  return obj.this.key50 === 999;
+});
+
+bench.add("прямое присваивание для обычного объекта (нативный)", () => {
+  const obj = { ...testObject };
+  obj.key50 = 999;
+  return obj.key50 === 999;
+});
+
+bench.add("set для Map", () => {
+  const map = deep(new Map(testMap));
+  map.set('key50', 999);
+  return map.this.get('key50') === 999;
+});
+
+bench.add("set для Set", () => {
+  // Для Set нет прямого эквивалента, поэтому тестируем удаление и добавление
+  const set = deep(new Set(testSet));
+  set.remove(50);
+  set.add(999);
+  return !set.this.has(50) && set.this.has(999);
+});
+
+// Бенчмарк метода size
+bench.add("size для массива", () => {
+  return deepArray.size() === arraySize;
+});
+
+bench.add("length для обычного массива (нативный)", () => {
+  return testArray.length === arraySize;
+});
+
+bench.add("size для объекта", () => {
+  return deepObject.size() === arraySize;
+});
+
+bench.add("Object.keys().length для обычного объекта (нативный)", () => {
+  return Object.keys(testObject).length === arraySize;
+});
+
+bench.add("size для Map", () => {
+  return deepMap.size() === arraySize;
+});
+
+bench.add("size для Set", () => {
+  return deepSet.size() === arraySize;
+});
+
+// Запуск бенчмарка
+benchmark.run();

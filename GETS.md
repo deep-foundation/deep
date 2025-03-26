@@ -1,70 +1,67 @@
 # Методы доступа к данным
 
-В данном документе описывается функциональность модуля `gets.js`, который предоставляет универсальные методы для работы с различными типами данных в библиотеке deep.
-
-Методы доступа позволяют работать с различными типами данных (массивы, объекты, строки, Map, Set) единообразным способом, не изменяя исходные данные.
+В данном документе описывается функциональность модуля `gets.js`, который предоставляет универсальные методы доступа к данным различных типов.
 
 ## Производительность
 
 **Информация о системе:**
 
-- clk: ~0.46 GHz
+- clk: ~1.56 GHz
 - cpu: Intel(R) Core(TM) i9-9880H CPU @ 2.30GHz
 - runtime: node 23.4.0 (x64-darwin)
 
 | Тест | Среднее время выполнения | Операций в секунду |
 |------|--------------------------|--------------------|
-| Array.forEach (нативный) | 9.85 µs/итер | 101 522,843 опер/сек |
-| deep(Array).forEach | 14.77 µs/итер | 67 704,807 опер/сек |
-| Object.values + forEach (нативный) | 5.48 µs/итер | 182 481,752 опер/сек |
-| deep(Object).forEach | 12.35 µs/итер | 80 971,66 опер/сек |
-| String[Symbol.iterator] (нативный) | 5.76 µs/итер | 173 611,111 опер/сек |
-| deep(String).forEach | 5.09 µs/итер | 196 463,654 опер/сек |
-| Map.forEach (нативный) | 7.48 µs/итер | 133 689,84 опер/сек |
-| deep(Map).forEach | 5.03 µs/итер | 198 807,157 опер/сек |
-| Set.forEach (нативный) | 2.04 µs/итер | 490 196,078 опер/сек |
-| deep(Set).forEach | 4.70 µs/итер | 212 765,957 опер/сек |
-| Array.map (нативный) | 13.40 µs/итер | 74 626,866 опер/сек |
-| deep(Array).map | 7.71 µs/итер | 129 701,686 опер/сек |
-| Object.values + map (нативный) | 1.29 µs/итер | 775 193,798 опер/сек |
-| deep(Object).map | 5.49 µs/итер | 182 149,362 опер/сек |
-| String.split + map + join (нативный) | 9.28 µs/итер | 107 758,621 опер/сек |
-| deep(String).map | 6.55 µs/итер | 152 671,756 опер/сек |
-| Array.filter (нативный) | 6.99 µs/итер | 143 061,516 опер/сек |
-| deep(Array).filter | 7.39 µs/итер | 135 317,997 опер/сек |
-| Object.values + filter (нативный) | 1.48 µs/итер | 675 675,676 опер/сек |
-| deep(Object).filter | 9.16 µs/итер | 109 170,306 опер/сек |
-| Array.reduce (нативный) | 3.86 µs/итер | 259 067,358 опер/сек |
-| deep(Array).reduce | 5.42 µs/итер | 184 501,845 опер/сек |
-| Object.values + reduce (нативный) | 944.92 ns/итер | 1 058 290,649 опер/сек |
-| deep(Object).reduce | 4.74 µs/итер | 210 970,464 опер/сек |
-| Array.find (нативный) | 491.01 ns/итер | 2 036 618,399 опер/сек |
-| deep(Array).find | 1.19 µs/итер | 840 336,134 опер/сек |
-| Object.values + find (нативный) | 757.96 ns/итер | 1 319 330,835 опер/сек |
-| deep(Object).find | 2.56 µs/итер | 390 625 опер/сек |
-| Array.every (нативный) | 1.56 µs/итер | 641 025,641 опер/сек |
-| deep(Array).every | 2.09 µs/итер | 478 468,9 опер/сек |
-| Array.some (нативный) | 570.81 ns/итер | 1 751 896,428 опер/сек |
-| deep(Array).some | 1.11 µs/итер | 900 900,901 опер/сек |
-| Object.keys (нативный) | 121.83 ns/итер | 8 208 158,91 опер/сек |
-| deep(Object).keys | 1.12 µs/итер | 892 857,143 опер/сек |
-| Object.values (нативный) | 711.30 ns/итер | 1 405 876,564 опер/сек |
-| deep(Object).values | 1.36 µs/итер | 735 294,118 опер/сек |
-| Object.entries (нативный) | 2.11 µs/итер | 473 933,649 опер/сек |
-| deep(Object).entries | 1.91 µs/итер | 523 560,209 опер/сек |
-| Array.join (нативный) | 55.21 µs/итер | 18 112,661 опер/сек |
-| deep(Array).join | 59.34 µs/итер | 16 852,039 опер/сек |
-| Object.values + join (нативный) | 5.39 µs/итер | 185 528,757 опер/сек |
-| deep(Object).join | 6.10 µs/итер | 163 934,426 опер/сек |
+| Array.forEach (нативный) | 3.53 µs/итер | 283 286,119 опер/сек |
+| deep(Array).forEach | 4.84 µs/итер | 206 611,57 опер/сек |
+| Object.values + forEach (нативный) | 3.58 µs/итер | 279 329,609 опер/сек |
+| deep(Object).forEach | 6.68 µs/итер | 149 700,599 опер/сек |
+| String[Symbol.iterator] (нативный) | 2.30 µs/итер | 434 782,609 опер/сек |
+| deep(String).forEach | 2.65 µs/итер | 377 358,491 опер/сек |
+| Map.forEach (нативный) | 1.90 µs/итер | 526 315,789 опер/сек |
+| deep(Map).forEach | 1.80 µs/итер | 555 555,556 опер/сек |
+| Set.forEach (нативный) | 1.34 µs/итер | 746 268,657 опер/сек |
+| deep(Set).forEach | 1.89 µs/итер | 529 100,529 опер/сек |
+| Array.map (нативный) | 5.25 µs/итер | 190 476,19 опер/сек |
+| deep(Array).map | 459.31 µs/итер | 2 177,179 опер/сек |
+| Object.values + map (нативный) | 1.22 µs/итер | 819 672,131 опер/сек |
+| deep(Object).map | 549.93 µs/итер | 1 818,413 опер/сек |
+| String.split + map + join (нативный) | 7.93 µs/итер | 126 103,405 опер/сек |
+| deep(String).map | 475.36 µs/итер | 2 103,669 опер/сек |
+| Array.filter (нативный) | 3.92 µs/итер | 255 102,041 опер/сек |
+| deep(Array).filter | 229.96 µs/итер | 4 348,582 опер/сек |
+| Object.values + filter (нативный) | 1.30 µs/итер | 769 230,769 опер/сек |
+| deep(Object).filter | 237.67 µs/итер | 4 207,515 опер/сек |
+| Array.reduce (нативный) | 1.96 µs/итер | 510 204,082 опер/сек |
+| deep(Array).reduce | 193.53 µs/итер | 5 167,158 опер/сек |
+| Object.values + reduce (нативный) | 829.70 ns/итер | 1 205 254,911 опер/сек |
+| deep(Object).reduce | 253.56 µs/итер | 3 943,84 опер/сек |
+| Array.find (нативный) | 494.85 ns/итер | 2 020 814,388 опер/сек |
+| deep(Array).find | 788.99 ns/итер | 1 267 443,187 опер/сек |
+| Object.values + find (нативный) | 727.93 ns/итер | 1 373 758,466 опер/сек |
+| deep(Object).find | 2.30 µs/итер | 434 782,609 опер/сек |
+| Array.every (нативный) | 988.93 ns/итер | 1 011 193,917 опер/сек |
+| deep(Array).every | 228.00 µs/итер | 4 385,965 опер/сек |
+| Array.some (нативный) | 491.68 ns/итер | 2 033 843,15 опер/сек |
+| deep(Array).some | 1.08 µs/итер | 925 925,926 опер/сек |
+| Object.keys (нативный) | 102.05 ns/итер | 9 799 118,079 опер/сек |
+| deep(Object).keys | 286.60 ns/итер | 3 489 183,531 опер/сек |
+| Object.values (нативный) | 653.53 ns/итер | 1 530 151,638 опер/сек |
+| deep(Object).values | 860.80 ns/итер | 1 161 710,037 опер/сек |
+| Object.entries (нативный) | 1.39 µs/итер | 719 424,46 опер/сек |
+| deep(Object).entries | 1.52 µs/итер | 657 894,737 опер/сек |
+| Array.join (нативный) | 48.40 µs/итер | 20 661,157 опер/сек |
+| deep(Array).join | 263.04 µs/итер | 3 801,703 опер/сек |
+| Object.values + join (нативный) | 5.80 µs/итер | 172 413,793 опер/сек |
+| deep(Object).join | 233.93 µs/итер | 4 274,783 опер/сек |
 
 ## Основные особенности
 
-1. Все методы доступа работают с `this.this` внутри Association
-2. Методы не изменяют исходные данные (неизменяемые операции)
-3. Методы преобразования (map, filter) возвращают новые ассоциации (не примитивы)
-4. Методы анализа (every, some, find) возвращают примитивные значения
-5. Поддерживаются все основные типы коллекций
-6. Интеграция с системой отслеживания изменений (track)
+1. Все методы доступа **возвращают ассоциации** (объекты Association), а не примитивные значения
+2. Созданные ассоциации интегрированы с системой отслеживания изменений
+3. При изменении исходных данных, производные ассоциации автоматически обновляются
+4. Поддержка цепочек вызовов методов
+5. Универсальный доступ к различным типам данных
 
 ## Поддерживаемые типы данных
 
@@ -74,306 +71,317 @@
 - Строки (`String`)
 - Map
 - Set
-- Примитивы (с соответствующими преобразованиями)
+- WeakMap
+- WeakSet
+- Числа (ограниченно)
 
-## Система отслеживания изменений (Track)
+## Базовые методы доступа
 
-Методы, создающие новые коллекции (map, filter), возвращают ассоциации, которые автоматически отслеживают изменения в исходных данных. Связь между исходной и производной ассоциацией поддерживается с помощью механизма отслеживания:
+### get(key)
 
-1. Производная ассоциация хранит ссылку на исходную в своем объекте `temp.origin`
-2. Производная ассоциация подписывается на события `change` исходной
-3. При изменении исходной ассоциации, производная автоматически обновляет свои данные
-
-```js
-// Создаем исходную ассоциацию
-const source = deep([1, 2, 3, 4]);
-
-// Создаем производную ассоциацию с помощью map
-const doubled = source.map(x => x * 2);
-console.log(doubled.this); // [2, 4, 6, 8]
-
-// Проверяем связь
-console.log(doubled.origin === source); // true
-
-// При изменении исходной ассоциации, производная автоматически обновляется
-source.push(5);
-console.log(doubled.this); // [2, 4, 6, 8, 10]
-```
-
-## Доступные методы
-
-### forEach(callback)
-
-Перебирает все элементы коллекции и вызывает для каждого callback-функцию.
+Получает значение по ключу. Универсальный метод, работающий с разными типами данных.
 
 ```js
-deep([1, 2, 3]).forEach((value, index, collection) => {
-  console.log(value, index);
-});
+// Массивы
+const array = deep([1, 2, 3]);
+const secondItem = array.get(1); // Возвращает ассоциацию, содержащую 2
+console.log(secondItem.this); // 2
 
-deep({ a: 1, b: 2 }).forEach((value, key, collection) => {
-  console.log(key, value);
-});
+// Объекты
+const obj = deep({ a: 1, b: 2 });
+const valueB = obj.get('b'); // Возвращает ассоциацию, содержащую 2
+console.log(valueB.this); // 2
+
+// Map
+const map = deep(new Map([['a', 1], ['b', 2]]));
+const valueFromMap = map.get('b'); // Возвращает ассоциацию, содержащую 2
+console.log(valueFromMap.this); // 2
+
+// Set (получает элемент по индексу итерации)
+const set = deep(new Set([1, 2, 3]));
+const itemFromSet = set.get(1); // Возвращает ассоциацию, содержащую 2
+console.log(itemFromSet.this); // 2
+
+// Строки
+const str = deep('hello');
+const char = str.get(1); // Возвращает ассоциацию, содержащую 'e'
+console.log(char.this); // 'e'
 ```
+
+### has(key)
+
+Проверяет наличие ключа или значения.
+
+```js
+// Массивы (проверяет, есть ли элемент с таким индексом)
+const array = deep([1, 2, 3]);
+console.log(array.has(1)); // true
+console.log(array.has(5)); // false
+
+// Объекты (проверяет, есть ли свойство)
+const obj = deep({ a: 1, b: 2 });
+console.log(obj.has('b')); // true
+console.log(obj.has('c')); // false
+
+// Map (проверяет, есть ли ключ)
+const map = deep(new Map([['a', 1], ['b', 2]]));
+console.log(map.has('b')); // true
+console.log(map.has('c')); // false
+
+// Set (проверяет, есть ли значение)
+const set = deep(new Set([1, 2, 3]));
+console.log(set.has(2)); // true
+console.log(set.has(4)); // false
+```
+
+## Методы преобразования
 
 ### map(callback)
 
-Преобразует элементы коллекции с помощью callback-функции и возвращает новую ассоциацию.
+Создает новую ассоциацию, в которой каждый элемент является результатом вызова функции обратного вызова для соответствующего элемента исходной ассоциации.
 
 ```js
-const doubled = deep([1, 2, 3]).map(x => x * 2);
+// Массивы
+const array = deep([1, 2, 3]);
+const doubled = array.map(x => x * 2);
 console.log(doubled.this); // [2, 4, 6]
 
-const upperKeys = deep({ a: 1, b: 2 }).map((value, key) => key.toUpperCase());
-console.log(upperKeys.this); // ['A', 'B']
+// Объекты
+const obj = deep({ a: 1, b: 2, c: 3 });
+const objValues = obj.map((value, key) => `${key}:${value}`);
+console.log(objValues.this); // ['a:1', 'b:2', 'c:3']
+
+// Map
+const map = deep(new Map([['a', 1], ['b', 2]]));
+const mapValues = map.map((value, key) => value * 2);
+console.log(mapValues.this); // [2, 4]
+```
+
+**Важно**: Все ассоциации, созданные методом `map`, связаны с исходной ассоциацией. При изменении исходной ассоциации, результат `map` автоматически обновляется.
+
+```js
+const array = deep([1, 2, 3]);
+const doubled = array.map(x => x * 2);
+console.log(doubled.this); // [2, 4, 6]
+
+// Изменяем исходный массив
+array.push(4);
+
+// Производная ассоциация автоматически обновляется
+console.log(doubled.this); // [2, 4, 6, 8]
 ```
 
 ### filter(callback)
 
-Фильтрует элементы коллекции с помощью callback-функции и возвращает новую ассоциацию.
+Создает новую ассоциацию, содержащую только те элементы исходной ассоциации, для которых функция обратного вызова возвращает `true`.
 
 ```js
-const even = deep([1, 2, 3, 4]).filter(x => x % 2 === 0);
-console.log(even.this); // [2, 4]
+// Массивы
+const array = deep([1, 2, 3, 4, 5]);
+const evens = array.filter(x => x % 2 === 0);
+console.log(evens.this); // [2, 4]
 
-const bigValues = deep({ a: 1, b: 10 }).filter(value => value > 5);
-console.log(bigValues.this); // [10]
+// Объекты
+const obj = deep({ a: 1, b: 2, c: 3, d: 4 });
+const evensObj = obj.filter(value => value % 2 === 0);
+console.log(evensObj.this); // { b: 2, d: 4 }
+
+// Map
+const map = deep(new Map([['a', 1], ['b', 2], ['c', 3], ['d', 4]]));
+const evensMap = map.filter((value, key) => value % 2 === 0);
+console.log([...evensMap.this.entries()]); // [['b', 2], ['d', 4]]
 ```
 
-### reduce(callback, initialValue)
-
-Сворачивает коллекцию в одно значение с помощью callback-функции.
+Как и в случае с `map`, ассоциация, созданная методом `filter`, автоматически обновляется при изменении исходной ассоциации.
 
 ```js
-const sum = deep([1, 2, 3, 4]).reduce((acc, x) => acc + x, 0);
-console.log(sum); // 10
+const array = deep([1, 2, 3, 4, 5]);
+const evens = array.filter(x => x % 2 === 0);
+console.log(evens.this); // [2, 4]
 
-const concat = deep(['a', 'b', 'c']).reduce((acc, x) => acc + x, '');
-console.log(concat); // 'abc'
-```
+// Изменяем исходный массив
+array.push(6);
 
-### every(callback)
-
-Проверяет, удовлетворяют ли все элементы условию.
-
-```js
-const allPositive = deep([1, 2, 3]).every(x => x > 0);
-console.log(allPositive); // true
-
-const allEven = deep([2, 4, 5]).every(x => x % 2 === 0);
-console.log(allEven); // false
-```
-
-### some(callback)
-
-Проверяет, удовлетворяет ли хотя бы один элемент условию.
-
-```js
-const hasEven = deep([1, 2, 3]).some(x => x % 2 === 0);
-console.log(hasEven); // true
-
-const hasNegative = deep([1, 2, 3]).some(x => x < 0);
-console.log(hasNegative); // false
-```
-
-### find(callback)
-
-Находит первый элемент, удовлетворяющий условию.
-
-```js
-const found = deep([1, 2, 3, 4]).find(x => x > 2);
-console.log(found); // 3
-
-const notFound = deep([1, 2, 3]).find(x => x > 5);
-console.log(notFound); // undefined
-```
-
-### findKey(callback)
-
-Находит ключ первого элемента, удовлетворяющего условию.
-
-```js
-const key = deep({ a: 1, b: 2, c: 3 }).findKey(x => x > 2);
-console.log(key); // 'c'
-
-const arrayIndex = deep([10, 20, 30]).findKey(x => x > 15);
-console.log(arrayIndex); // 1
+// Производная ассоциация автоматически обновляется
+console.log(evens.this); // [2, 4, 6]
 ```
 
 ### keys()
 
-Возвращает ассоциацию с массивом ключей коллекции.
+Возвращает новую ассоциацию, содержащую все ключи исходной ассоциации.
 
 ```js
-const objKeys = deep({ a: 1, b: 2 }).keys();
-console.log(objKeys.this); // ['a', 'b']
+// Массивы (возвращает индексы)
+const array = deep([10, 20, 30]);
+const arrayKeys = array.keys();
+console.log(arrayKeys.this); // [0, 1, 2]
 
-const arrKeys = deep([10, 20, 30]).keys();
-console.log(arrKeys.this); // [0, 1, 2]
+// Объекты (возвращает имена свойств)
+const obj = deep({ a: 1, b: 2, c: 3 });
+const objKeys = obj.keys();
+console.log(objKeys.this); // ['a', 'b', 'c']
+
+// Map (возвращает ключи)
+const map = deep(new Map([['a', 1], ['b', 2], ['c', 3]]));
+const mapKeys = map.keys();
+console.log(mapKeys.this); // ['a', 'b', 'c']
 ```
 
 ### values()
 
-Возвращает ассоциацию с массивом значений коллекции.
+Возвращает новую ассоциацию, содержащую все значения исходной ассоциации.
 
 ```js
-const objValues = deep({ a: 1, b: 2 }).values();
-console.log(objValues.this); // [1, 2]
+// Массивы (то же самое, что и сам массив)
+const array = deep([10, 20, 30]);
+const arrayValues = array.values();
+console.log(arrayValues.this); // [10, 20, 30]
 
-const arrValues = deep([10, 20, 30]).values();
-console.log(arrValues.this); // [10, 20, 30]
+// Объекты (возвращает значения свойств)
+const obj = deep({ a: 1, b: 2, c: 3 });
+const objValues = obj.values();
+console.log(objValues.this); // [1, 2, 3]
+
+// Map (возвращает значения)
+const map = deep(new Map([['a', 1], ['b', 2], ['c', 3]]));
+const mapValues = map.values();
+console.log(mapValues.this); // [1, 2, 3]
 ```
 
 ### entries()
 
-Возвращает ассоциацию с массивом пар [ключ, значение] коллекции.
+Возвращает новую ассоциацию, содержащую все пары [ключ, значение] исходной ассоциации.
 
 ```js
-const objEntries = deep({ a: 1, b: 2 }).entries();
-console.log(objEntries.this); // [['a', 1], ['b', 2]]
+// Массивы
+const array = deep([10, 20, 30]);
+const arrayEntries = array.entries();
+console.log(arrayEntries.this); // [[0, 10], [1, 20], [2, 30]]
 
-const arrEntries = deep([10, 20]).entries();
-console.log(arrEntries.this); // [[0, 10], [1, 20]]
+// Объекты
+const obj = deep({ a: 1, b: 2, c: 3 });
+const objEntries = obj.entries();
+console.log(objEntries.this); // [['a', 1], ['b', 2], ['c', 3]]
+
+// Map
+const map = deep(new Map([['a', 1], ['b', 2], ['c', 3]]));
+const mapEntries = map.entries();
+console.log(mapEntries.this); // [['a', 1], ['b', 2], ['c', 3]]
 ```
 
-### join(separator)
+## Подключение системы отслеживания изменений
 
-Объединяет элементы коллекции в строку с указанным разделителем.
+Все методы доступа (map, filter, keys, values, entries) создают ассоциации, которые автоматически отслеживают изменения в исходных данных. Это позволяет создавать сложные цепочки преобразований данных, которые автоматически обновляются при изменении исходных данных.
 
-```js
-const joined = deep([1, 2, 3]).join('-');
-console.log(joined); // '1-2-3'
-
-const objJoined = deep({ a: 1, b: 2 }).join(',');
-console.log(objJoined); // '1,2'
-```
-
-## Пример использования с отслеживанием изменений
+### Цепочки преобразований
 
 ```js
 import deep from 'deep7';
 
-// Создаем исходный массив и его модификации
-const source = deep([1, 2, 3, 4, 5]);
+// Создаем исходную ассоциацию
+const numbers = deep([1, 2, 3, 4, 5]);
 
-// Цепочка трансформаций
-const doubled = source.map(x => x * 2);
-const filtered = doubled.filter(x => x > 5);
+// Создаем цепочку преобразований
+const doubled = numbers.map(x => x * 2);
+const evenDoubled = doubled.filter(x => x % 2 === 0);
+const squaredEvenDoubled = evenDoubled.map(x => x * x);
 
-// Проверяем начальные значения
-console.log(source.this);   // [1, 2, 3, 4, 5]
-console.log(doubled.this);  // [2, 4, 6, 8, 10]
-console.log(filtered.this); // [6, 8, 10]
+console.log(doubled.this);             // [2, 4, 6, 8, 10]
+console.log(evenDoubled.this);         // [2, 4, 6, 8, 10]
+console.log(squaredEvenDoubled.this);  // [4, 16, 36, 64, 100]
 
 // Изменяем исходный массив
-source.push(6);
+numbers.push(6);
 
-// Проверяем, как изменения распространились по цепочке
-console.log(source.this);   // [1, 2, 3, 4, 5, 6]
-console.log(doubled.this);  // [2, 4, 6, 8, 10, 12]
-console.log(filtered.this); // [6, 8, 10, 12]
-
-// Удаляем элемент из исходного массива
-source.delete(2); // Удаляем элемент с индексом 2 (значение 3)
-
-// Проверяем, как изменения распространились
-console.log(source.this);   // [1, 2, 4, 5, 6]
-console.log(doubled.this);  // [2, 4, 8, 10, 12]
-console.log(filtered.this); // [8, 10, 12]
-
-// Можно также подписаться на события изменения
-filtered.on('change', (event, data) => {
-  console.log('Отфильтрованный массив изменился:', filtered.this);
-  console.log('Причина:', data.detail?.operation);
-});
-
-// Теперь при изменении исходного массива будет выводиться сообщение
-source.set(0, 10);
-// Выведет: "Отфильтрованный массив изменился: [8, 10, 12, 20]"
-// "Причина: set"
+// Все цепочка автоматически обновляется
+console.log(doubled.this);             // [2, 4, 6, 8, 10, 12]
+console.log(evenDoubled.this);         // [2, 4, 6, 8, 10, 12]
+console.log(squaredEvenDoubled.this);  // [4, 16, 36, 64, 100, 144]
 ```
 
-## Сложные цепочки трансформаций
-
-Методы доступа поддерживают создание сложных цепочек трансформаций с автоматическим распространением изменений.
+### Отслеживание изменений в объектах
 
 ```js
 import deep from 'deep7';
 
-// Создаем исходные данные
-const users = deep([
-  { id: 1, name: 'Alice', age: 25 },
-  { id: 2, name: 'Bob', age: 30 },
-  { id: 3, name: 'Charlie', age: 35 }
-]);
+// Создаем исходный объект
+const user = deep({
+  name: 'John',
+  age: 30,
+  address: {
+    city: 'New York',
+    zip: 10001
+  }
+});
 
-// Создаем цепочку трансформаций
-const adults = users.filter(user => user.age >= 30);
-const names = adults.map(user => user.name);
-const upperNames = names.map(name => name.toUpperCase());
+// Создаем производные ассоциации
+const userInfo = user.map((value, key) => {
+  if (key === 'address') return `${value.city}, ${value.zip}`;
+  return value;
+});
 
-console.log(adults.this);     // [{id: 2, name: 'Bob', age: 30}, {id: 3, name: 'Charlie', age: 35}]
-console.log(names.this);      // ['Bob', 'Charlie']
-console.log(upperNames.this); // ['BOB', 'CHARLIE']
+console.log(userInfo.this); // ['John', 30, 'New York, 10001']
 
-// Добавляем нового пользователя в исходный массив
-users.push({ id: 4, name: 'Dave', age: 40 });
+// Изменяем исходный объект
+user.set('address', { city: 'Boston', zip: 20001 });
 
-// Все производные массивы обновляются автоматически
-console.log(adults.this);     // [{id: 2, name: 'Bob', age: 30}, {id: 3, name: 'Charlie', age: 35}, {id: 4, name: 'Dave', age: 40}]
-console.log(names.this);      // ['Bob', 'Charlie', 'Dave']
-console.log(upperNames.this); // ['BOB', 'CHARLIE', 'DAVE']
+// Производная ассоциация автоматически обновляется
+console.log(userInfo.this); // ['John', 30, 'Boston, 20001']
 ```
+
+### Отслеживание сложных структур данных
+
+```js
+import deep from 'deep7';
+
+// Создаем структуру данных с пользователями и их задачами
+const data = deep({
+  users: [
+    { id: 1, name: 'Alice', tasks: [1, 3] },
+    { id: 2, name: 'Bob', tasks: [2] },
+    { id: 3, name: 'Charlie', tasks: [] }
+  ],
+  tasks: [
+    { id: 1, title: 'Задача 1', completed: false },
+    { id: 2, title: 'Задача 2', completed: true },
+    { id: 3, title: 'Задача 3', completed: false }
+  ]
+});
+
+// Получаем список пользователей
+const users = data.get('users');
+
+// Получаем список задач
+const tasks = data.get('tasks');
+
+// Создаем список активных задач
+const activeTasks = tasks.filter(task => !task.completed);
+console.log(activeTasks.this); // [{ id: 1, title: 'Задача 1', completed: false }, { id: 3, title: 'Задача 3', completed: false }]
+
+// Изменяем статус задачи
+const taskIndex = tasks.findKey(task => task.id === 1);
+if (taskIndex !== undefined) {
+  const task = tasks.get(taskIndex);
+  task.set('completed', true);
+}
+
+// Список активных задач автоматически обновляется
+console.log(activeTasks.this); // [{ id: 3, title: 'Задача 3', completed: false }]
+```
+
+## Реактивные обновления
+
+Преимущество возвращения ассоциаций вместо простых значений заключается в том, что все изменения в исходных данных автоматически отражаются на производных данных. Это позволяет создавать реактивные пользовательские интерфейсы и сложные системы обработки данных без необходимости ручного обновления.
+
+При изменении исходных данных происходит следующее:
+1. Исходная ассоциация генерирует событие `change`
+2. Все производные ассоциации, созданные методами `map`, `filter`, `keys`, `values`, `entries`, получают это событие
+3. Производные ассоциации обновляют свои данные и генерируют собственные события `change`
+4. Изменения распространяются по всей цепочке связанных ассоциаций
+
+Это позволяет значительно упростить код и избежать проблем с синхронизацией данных.
 
 ## Производительность
 
 **Информация о системе:**
-
-- clk: ~1.31 GHz
-- cpu: Intel(R) Core(TM) i9-9880H CPU @ 2.30GHz
-- runtime: node 23.4.0 (x64-darwin)
-
-| Тест | Среднее время выполнения | Операций в секунду |
-|------|--------------------------|--------------------|
-| Array.forEach (нативный) | 4.63 µs/итер | 215 982,721 опер/сек |
-| deep(Array).forEach | 6.42 µs/итер | 155 763,24 опер/сек |
-| Object.values + forEach (нативный) | 2.96 µs/итер | 337 837,838 опер/сек |
-| deep(Object).forEach | 5.19 µs/итер | 192 678,227 опер/сек |
-| String[Symbol.iterator] (нативный) | 2.53 µs/итер | 395 256,917 опер/сек |
-| deep(String).forEach | 2.30 µs/итер | 434 782,609 опер/сек |
-| Map.forEach (нативный) | 1.54 µs/итер | 649 350,649 опер/сек |
-| deep(Map).forEach | 2.39 µs/итер | 418 410,042 опер/сек |
-| Set.forEach (нативный) | 1.11 µs/итер | 900 900,901 опер/сек |
-| deep(Set).forEach | 1.60 µs/итер | 625 000 опер/сек |
-| Array.map (нативный) | 5.87 µs/итер | 170 357,751 опер/сек |
-| deep(Array).map | 12.68 µs/итер | 78 864,353 опер/сек |
-| Object.values + map (нативный) | 1.18 µs/итер | 847 457,627 опер/сек |
-| deep(Object).map | 5.87 µs/итер | 170 357,751 опер/сек |
-| String.split + map + join (нативный) | 7.69 µs/итер | 130 039,012 опер/сек |
-| deep(String).map | 8.42 µs/итер | 118 764,846 опер/сек |
-| Array.filter (нативный) | 5.63 µs/итер | 177 619,893 опер/сек |
-| deep(Array).filter | 4.65 µs/итер | 215 053,763 опер/сек |
-| Object.values + filter (нативный) | 1.27 µs/итер | 787 401,575 опер/сек |
-| deep(Object).filter | 7.34 µs/итер | 136 239,782 опер/сек |
-| Array.reduce (нативный) | 2.68 µs/итер | 373 134,328 опер/сек |
-| deep(Array).reduce | 8.80 µs/итер | 113 636,364 опер/сек |
-| Object.values + reduce (нативный) | 3.17 µs/итер | 315 457,413 опер/сек |
-| deep(Object).reduce | 34.25 µs/итер | 29 197,08 опер/сек |
-| Array.find (нативный) | 2.24 µs/итер | 446 428,571 опер/сек |
-| deep(Array).find | 2.41 µs/итер | 414 937,759 опер/сек |
-| Object.values + find (нативный) | 2.05 µs/итер | 487 804,878 опер/сек |
-| deep(Object).find | 5.60 µs/итер | 178 571,429 опер/сек |
-| Array.every (нативный) | 3.82 µs/итер | 261 780,105 опер/сек |
-| deep(Array).every | 3.26 µs/итер | 306 748,466 опер/сек |
-| Array.some (нативный) | 5.37 µs/итер | 186 219,739 опер/сек |
-| deep(Array).some | 2.77 µs/итер | 361 010,83 опер/сек |
-| Object.keys (нативный) | 560.23 ns/итер | 1 784 981,168 опер/сек |
-| deep(Object).keys | 615.87 ns/итер | 1 623 719,291 опер/сек |
-| Object.values (нативный) | 707.77 ns/итер | 1 412 888,368 опер/сек |
-| deep(Object).values | 988.15 ns/итер | 1 011 992,106 опер/сек |
-| Object.entries (нативный) | 1.36 µs/итер | 735 294,118 опер/сек |
-| deep(Object).entries | 1.86 µs/итер | 537 634,409 опер/сек |
-| Array.join (нативный) | 62.64 µs/итер | 15 964,24 опер/сек |
-| deep(Array).join | 226.54 µs/итер | 4 414,231 опер/сек |
-| Object.values + join (нативный) | 12.97 µs/итер | 77 101,002 опер/сек |
-| deep(Object).join | 5.45 µs/итер | 183 486,239 опер/сек |
+Данные бенчмарков будут добавлены после проведения тестов.
