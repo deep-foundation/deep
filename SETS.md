@@ -1,369 +1,314 @@
-# Методы модификации данных
+# Методы работы с наборами (Sets)
 
-В данном документе описывается функциональность модуля `sets.js`, который предоставляет универсальные методы для модификации различных типов данных в библиотеке deep.
-
-Методы модификации позволяют изменять различные типы данных (массивы, объекты, строки, Map, Set, WeakMap, WeakSet) единообразным способом, с генерацией событий и интеграцией с системой отслеживания изменений.
+В данном документе описывается модуль для работы с наборами данных в Deep. Модуль предоставляет универсальные методы для операций над коллекциями.
 
 ## Производительность
 
 Данные о производительности будут добавлены после проведения бенчмарков.
 
-## Основные особенности
+## Основные методы
 
-1. Все методы модификации работают в контексте Association
-2. Методы генерируют события при изменении данных
-3. Методы поддерживают цепочки вызовов
-4. Интеграция с системой отслеживания изменений
-5. Автоматическая синхронизация связанных ассоциаций
+Модуль позволяет выполнять стандартные операции с массивами, объектами и другими коллекциями данных:
 
-## Поддерживаемые типы данных
+### add
 
-Методы модификации работают со следующими типами данных:
-- Массивы (`Array`)
-- Объекты (`Object`)
-- Строки (`String`)
-- Map
-- Set
-- WeakMap
-- WeakSet
-- Числа (ограниченно)
-
-## Базовые методы модификации
-
-### set(key, value)
-
-Устанавливает значение по ключу. Универсальный метод, работающий с разными типами данных.
+Добавляет элемент в коллекцию.
 
 ```js
-// Массивы
-const array = deep([1, 2, 3]);
-array.set(1, 10); // [1, 10, 3]
+import deep from 'deep7';
 
-// Объекты
-const obj = deep({ a: 1, b: 2 });
-obj.set('c', 3); // { a: 1, b: 2, c: 3 }
+// Добавить элемент в массив
+const arr = deep([1, 2, 3]);
+arr.add(4);
+console.log(arr.this); // [1, 2, 3, 4]
 
-// Map
-const map = deep(new Map([['a', 1], ['b', 2]]));
-map.set('c', 3); // Map { 'a' => 1, 'b' => 2, 'c' => 3 }
+// Добавить свойство в объект
+const obj = deep({a: 1, b: 2});
+obj.add('c', 3);
+console.log(obj.this); // {a: 1, b: 2, c: 3}
 
-// Set (добавляет элемент в множество)
-const set = deep(new Set([1, 2]));
-set.set(3); // Set { 1, 2, 3 }
-
-// Строки
-const str = deep('hello');
-str.set(1, 'a'); // 'hallo'
-```
-
-### delete(key)
-
-Удаляет элемент по ключу или индексу.
-
-```js
-// Массивы (удаляет элемент по индексу)
-const array = deep([1, 2, 3]);
-array.delete(1); // [1, 3]
-
-// Объекты (удаляет свойство)
-const obj = deep({ a: 1, b: 2, c: 3 });
-obj.delete('b'); // { a: 1, c: 3 }
-
-// Map (удаляет элемент по ключу)
-const map = deep(new Map([['a', 1], ['b', 2]]));
-map.delete('a'); // Map { 'b' => 2 }
-
-// Set (удаляет элемент из множества)
+// Добавить элемент в Set
 const set = deep(new Set([1, 2, 3]));
-set.delete(2); // Set { 1, 3 }
+set.add(4);
+console.log([...set.this]); // [1, 2, 3, 4]
 
-// Строки (удаляет символ по индексу)
-const str = deep('hello');
-str.delete(1); // 'hllo'
+// Добавить пару в Map
+const map = deep(new Map([['a', 1], ['b', 2]]));
+map.add('c', 3);
+console.log([...map.this.entries()]); // [['a', 1], ['b', 2], ['c', 3]]
 ```
 
-### add(value, key)
+### remove
 
-Добавляет значение. Для индексированных коллекций (массивы, строки) добавляет по индексу, для ключевых (объекты, Map) по ключу, для множеств просто добавляет значение.
+Удаляет элемент из коллекции.
 
 ```js
-// Массивы (добавляет элемент в конец массива)
-const array = deep([1, 2]);
-array.add(3); // [1, 2, 3]
+import deep from 'deep7';
 
-// Объекты (добавляет свойство)
-const obj = deep({ a: 1 });
-obj.add(2, 'b'); // { a: 1, b: 2 }
+// Удалить элемент из массива
+const arr = deep([1, 2, 3, 4]);
+arr.remove(2);
+console.log(arr.this); // [1, 3, 4]
 
-// Map (добавляет элемент)
-const map = deep(new Map([['a', 1]]));
-map.add(2, 'b'); // Map { 'a' => 1, 'b' => 2 }
+// Удалить свойство из объекта
+const obj = deep({a: 1, b: 2, c: 3});
+obj.remove('b');
+console.log(obj.this); // {a: 1, c: 3}
 
-// Set (добавляет значение в множество)
-const set = deep(new Set([1, 2]));
-set.add(3); // Set { 1, 2, 3 }
+// Удалить элемент из Set
+const set = deep(new Set([1, 2, 3, 4]));
+set.remove(2);
+console.log([...set.this]); // [1, 3, 4]
 
-// Строки (конкатенирует строки)
-const str = deep('hello');
-str.add(' world'); // 'hello world'
+// Удалить пару из Map
+const map = deep(new Map([['a', 1], ['b', 2], ['c', 3]]));
+map.remove('b');
+console.log([...map.this.entries()]); // [['a', 1], ['c', 3]]
 ```
 
-### remove(value)
+### clear
 
-Удаляет элемент по значению (для массивов и множеств).
+Очищает коллекцию, удаляя все элементы.
 
 ```js
-// Массивы (удаляет первое вхождение значения)
-const array = deep([1, 2, 3, 2]);
-array.remove(2); // [1, 3, 2]
+import deep from 'deep7';
 
-// Set (удаляет значение из множества)
-const set = deep(new Set([1, 2, 3]));
-set.remove(2); // Set { 1, 3 }
+// Очистить массив
+const arr = deep([1, 2, 3, 4]);
+arr.clear();
+console.log(arr.this); // []
 
-// Для других типов работает аналогично delete, если возможно найти ключ по значению
+// Очистить объект
+const obj = deep({a: 1, b: 2, c: 3});
+obj.clear();
+console.log(obj.this); // {}
+
+// Очистить Set
+const set = deep(new Set([1, 2, 3, 4]));
+set.clear();
+console.log([...set.this]); // []
+
+// Очистить Map
+const map = deep(new Map([['a', 1], ['b', 2], ['c', 3]]));
+map.clear();
+console.log([...map.this.entries()]); // []
 ```
 
-## Методы для работы с массивами
+### has
 
-### push(...items)
-
-Добавляет один или несколько элементов в конец массива и возвращает новую длину массива.
+Проверяет наличие элемента в коллекции.
 
 ```js
-const array = deep([1, 2, 3]);
-array.push(4, 5); // [1, 2, 3, 4, 5], возвращает 5 (новая длина)
+import deep from 'deep7';
+
+// Проверить наличие элемента в массиве
+const arr = deep([1, 2, 3, 4]);
+console.log(arr.has(2)); // true
+console.log(arr.has(5)); // false
+
+// Проверить наличие свойства в объекте
+const obj = deep({a: 1, b: 2, c: 3});
+console.log(obj.has('b')); // true
+console.log(obj.has('d')); // false
+
+// Проверить наличие элемента в Set
+const set = deep(new Set([1, 2, 3, 4]));
+console.log(set.has(2)); // true
+console.log(set.has(5)); // false
+
+// Проверить наличие ключа в Map
+const map = deep(new Map([['a', 1], ['b', 2], ['c', 3]]));
+console.log(map.has('b')); // true
+console.log(map.has('d')); // false
 ```
 
-При вызове `push` генерируются следующие события:
-- `set` с объектом detail, содержащим индекс и значение для каждого добавляемого элемента
-- `push` с объектом detail, содержащим список добавленных элементов
-- `length` с объектом detail, содержащим информацию об изменении длины
-- `change` с общей информацией о произведенном изменении
+### get
 
-### pop()
-
-Удаляет последний элемент из массива и возвращает его.
+Получает элемент из коллекции по ключу/индексу.
 
 ```js
-const array = deep([1, 2, 3]);
-const lastElement = array.pop(); // lastElement = 3, array.this = [1, 2]
+import deep from 'deep7';
+
+// Получить элемент массива по индексу
+const arr = deep([1, 2, 3, 4]);
+console.log(arr.get(2)); // 3
+
+// Получить свойство объекта по ключу
+const obj = deep({a: 1, b: 2, c: 3});
+console.log(obj.get('b')); // 2
+
+// Получить элемент из Map по ключу
+const map = deep(new Map([['a', 1], ['b', 2], ['c', 3]]));
+console.log(map.get('b')); // 2
 ```
 
-### shift()
+### set
 
-Удаляет первый элемент из массива и возвращает его.
+Устанавливает значение элемента по ключу/индексу.
 
 ```js
-const array = deep([1, 2, 3]);
-const firstElement = array.shift(); // firstElement = 1, array.this = [2, 3]
+import deep from 'deep7';
+
+// Установить элемент массива по индексу
+const arr = deep([1, 2, 3, 4]);
+arr.set(2, 30);
+console.log(arr.this); // [1, 2, 30, 4]
+
+// Установить свойство объекта по ключу
+const obj = deep({a: 1, b: 2, c: 3});
+obj.set('b', 20);
+console.log(obj.this); // {a: 1, b: 20, c: 3}
+
+// Установить значение в Map по ключу
+const map = deep(new Map([['a', 1], ['b', 2], ['c', 3]]));
+map.set('b', 20);
+console.log([...map.this.entries()]); // [['a', 1], ['b', 20], ['c', 3]]
 ```
 
-### unshift(...items)
+### size
 
-Добавляет один или несколько элементов в начало массива и возвращает новую длину массива.
+Возвращает размер (количество элементов) коллекции.
 
 ```js
-const array = deep([3, 4]);
-array.unshift(1, 2); // [1, 2, 3, 4], возвращает 4 (новая длина)
+import deep from 'deep7';
+
+// Размер массива
+const arr = deep([1, 2, 3, 4]);
+console.log(arr.size()); // 4
+
+// Количество свойств объекта
+const obj = deep({a: 1, b: 2, c: 3});
+console.log(obj.size()); // 3
+
+// Размер Set
+const set = deep(new Set([1, 2, 3, 4]));
+console.log(set.size()); // 4
+
+// Размер Map
+const map = deep(new Map([['a', 1], ['b', 2], ['c', 3]]));
+console.log(map.size()); // 3
 ```
 
-## Отслеживание изменений и события
+## Дополнительные методы
 
-Все методы модификации генерируют события, которые позволяют отслеживать изменения в реальном времени. Для подписки на события используется метод `.on()`.
+### isEmpty
+
+Проверяет, пуста ли коллекция.
 
 ```js
-const array = deep([1, 2, 3]);
+import deep from 'deep7';
 
-// Подписываемся на событие изменения
-array.on('change', (event, data) => {
-  console.log('Массив изменился!');
-  console.log('Операция:', data.detail?.operation);
-  console.log('Предыдущее состояние:', data.prev?.this);
-  console.log('Новое состояние:', data.next?.this);
+// Проверка пустоты массива
+const arr1 = deep([1, 2, 3]);
+const arr2 = deep([]);
+console.log(arr1.isEmpty()); // false
+console.log(arr2.isEmpty()); // true
+
+// Проверка пустоты объекта
+const obj1 = deep({a: 1, b: 2});
+const obj2 = deep({});
+console.log(obj1.isEmpty()); // false
+console.log(obj2.isEmpty()); // true
+
+// Проверка пустоты Set
+const set1 = deep(new Set([1, 2, 3]));
+const set2 = deep(new Set());
+console.log(set1.isEmpty()); // false
+console.log(set2.isEmpty()); // true
+
+// Проверка пустоты Map
+const map1 = deep(new Map([['a', 1], ['b', 2]]));
+const map2 = deep(new Map());
+console.log(map1.isEmpty()); // false
+console.log(map2.isEmpty()); // true
+```
+
+### clone
+
+Создает глубокую копию коллекции.
+
+```js
+import deep from 'deep7';
+
+// Клонирование массива
+const arr = deep([1, 2, {a: 3}]);
+const arrClone = arr.clone();
+arrClone.this[2].a = 4;
+console.log(arr.this[2].a); // 3 (оригинал не изменился)
+
+// Клонирование объекта
+const obj = deep({a: 1, b: {c: 2}});
+const objClone = obj.clone();
+objClone.this.b.c = 3;
+console.log(obj.this.b.c); // 2 (оригинал не изменился)
+```
+
+### forEach
+
+Выполняет функцию для каждого элемента коллекции.
+
+```js
+import deep from 'deep7';
+
+// forEach для массива
+const arr = deep([1, 2, 3]);
+arr.forEach((value, index) => {
+  console.log(`arr[${index}] = ${value}`);
 });
-
-// Добавляем элемент
-array.push(4);
 // Выведет:
-// Массив изменился!
-// Операция: push
-// Предыдущее состояние: [1, 2, 3]
-// Новое состояние: [1, 2, 3, 4]
+// arr[0] = 1
+// arr[1] = 2
+// arr[2] = 3
+
+// forEach для объекта
+const obj = deep({a: 1, b: 2, c: 3});
+obj.forEach((value, key) => {
+  console.log(`obj[${key}] = ${value}`);
+});
+// Выведет:
+// obj[a] = 1
+// obj[b] = 2
+// obj[c] = 3
+
+// forEach для Map
+const map = deep(new Map([['a', 1], ['b', 2], ['c', 3]]));
+map.forEach((value, key) => {
+  console.log(`map[${key}] = ${value}`);
+});
+// Выведет:
+// map[a] = 1
+// map[b] = 2
+// map[c] = 3
 ```
 
 ## Интеграция с системой отслеживания
 
-При изменении ассоциации все связанные с ней производные ассоциации (созданные через `map`, `filter`, и т.д.) автоматически обновляются. Это позволяет создавать сложные цепочки обработки данных с автоматической синхронизацией.
+Все методы работы с наборами данных интегрированы с системой отслеживания изменений. При изменении коллекции через методы `add`, `remove`, `set`, `clear` и другие, генерируются соответствующие события `change`, которые позволяют обновлять связанные ассоциации.
 
 ```js
 import deep from 'deep7';
 
-// Создаем исходный массив
+// Создаем исходную ассоциацию
 const numbers = deep([1, 2, 3, 4, 5]);
 
-// Создаем производные массивы
+// Создаем отображение, которое отслеживает изменения
 const doubled = numbers.map(x => x * 2);
-const evenDoubled = doubled.filter(x => x % 2 === 0);
+console.log(doubled.this); // [2, 4, 6, 8, 10]
 
-console.log(numbers.this);   // [1, 2, 3, 4, 5]
-console.log(doubled.this);   // [2, 4, 6, 8, 10]
-console.log(evenDoubled.this); // [2, 4, 6, 8, 10]
+// Добавляем элемент в исходную коллекцию
+numbers.add(6);
 
-// Изменяем исходный массив
-numbers.push(6);
+// Отображение автоматически обновится
+console.log(doubled.this); // [2, 4, 6, 8, 10, 12]
 
-// Все связанные массивы автоматически обновляются
-console.log(numbers.this);   // [1, 2, 3, 4, 5, 6]
-console.log(doubled.this);   // [2, 4, 6, 8, 10, 12]
-console.log(evenDoubled.this); // [2, 4, 6, 8, 10, 12]
+// Удаляем элемент из исходной коллекции
+numbers.remove(3);
+
+// Отображение снова обновится
+console.log(doubled.this); // [2, 4, 6, 10, 12]
 ```
 
-## Примеры использования
+## Производительность
 
-### Работа с массивами
-
-```js
-import deep from 'deep7';
-
-const tasks = deep([
-  { id: 1, title: 'Задача 1', completed: false },
-  { id: 2, title: 'Задача 2', completed: true }
-]);
-
-// Добавляем новую задачу
-tasks.push({ id: 3, title: 'Задача 3', completed: false });
-
-// Обновляем статус задачи
-const taskIndex = tasks.findKey(task => task.id === 1);
-if (taskIndex !== undefined) {
-  tasks.set(taskIndex, { ...tasks.this[taskIndex], completed: true });
-}
-
-// Удаляем завершенные задачи
-const pendingTasks = tasks.filter(task => !task.completed);
-console.log(pendingTasks.this); // [{ id: 3, title: 'Задача 3', completed: false }]
-
-// При изменении статуса задачи в исходном массиве,
-// фильтрованный список обновится автоматически
-tasks.set(2, { ...tasks.this[2], completed: true });
-console.log(pendingTasks.this); // []
-```
-
-### Работа с объектами
-
-```js
-import deep from 'deep7';
-
-const user = deep({
-  name: 'John',
-  age: 30,
-  address: {
-    city: 'New York',
-    street: 'Broadway'
-  }
-});
-
-// Обновляем свойство
-user.set('age', 31);
-
-// Добавляем новое свойство
-user.set('email', 'john@example.com');
-
-// Удаляем свойство
-user.delete('address');
-
-console.log(user.this);
-// { name: 'John', age: 31, email: 'john@example.com' }
-```
-
-### Работа со строками
-
-```js
-import deep from 'deep7';
-
-const text = deep('Hello world');
-
-// Заменяем символ
-text.set(0, 'h');
-
-// Добавляем к строке
-text.add('!');
-
-console.log(text.this); // 'hello world!'
-```
-
-### Работа с Map и Set
-
-```js
-import deep from 'deep7';
-
-// Map
-const userRoles = deep(new Map());
-
-// Добавляем записи
-userRoles.set('user1', 'admin');
-userRoles.set('user2', 'editor');
-
-// Удаляем запись
-userRoles.delete('user1');
-
-console.log(userRoles.this); // Map { 'user2' => 'editor' }
-
-// Set
-const uniqueIds = deep(new Set([1, 2, 3]));
-
-// Добавляем значения
-uniqueIds.add(4);
-uniqueIds.add(2); // Значение 2 уже существует, поэтому не будет добавлено
-
-console.log(uniqueIds.this); // Set { 1, 2, 3, 4 }
-```
-
-## Сложные примеры с отслеживанием
-
-### Связанные списки
-
-```js
-import deep from 'deep7';
-
-// Пользователи и их роли
-const users = deep([
-  { id: 1, name: 'Alice', role: 'admin' },
-  { id: 2, name: 'Bob', role: 'user' },
-  { id: 3, name: 'Charlie', role: 'editor' }
-]);
-
-// Создаем производные списки по ролям
-const admins = users.filter(user => user.role === 'admin');
-const editors = users.filter(user => user.role === 'editor');
-const allNames = users.map(user => user.name);
-
-// Подписываемся на изменения списков
-admins.on('change', () => {
-  console.log('Список администраторов изменился:', admins.this.map(a => a.name));
-});
-
-// Добавляем нового пользователя
-users.push({ id: 4, name: 'Dave', role: 'admin' });
-// Выведет: "Список администраторов изменился: ['Alice', 'Dave']"
-
-// Изменяем роль пользователя
-const bobIndex = users.findKey(user => user.id === 2);
-if (bobIndex !== undefined) {
-  users.set(bobIndex, { ...users.this[bobIndex], role: 'admin' });
-}
-// Выведет: "Список администраторов изменился: ['Alice', 'Bob', 'Dave']"
-
-// Удаляем пользователя
-const charlieIndex = users.findKey(user => user.id === 3);
-if (charlieIndex !== undefined) {
-  users.delete(charlieIndex);
-}
-
-// Проверяем все производные списки
-console.log('Все пользователи:', users.this.map(u => u.name)); // ['Alice', 'Bob', 'Dave']
-console.log('Администраторы:', admins.this.map(a => a.name)); // ['Alice', 'Bob', 'Dave']
-console.log('Редакторы:', editors.this.map(e => e.name)); // []
-console.log('Все имена:', allNames.this); // ['Alice', 'Bob', 'Dave']
-```
+**Информация о системе:**
+Данные бенчмарков будут добавлены после проведения тестов.
