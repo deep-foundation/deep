@@ -14,7 +14,10 @@ export * from './relations.js';
 export * from './sets.js';
 
 // Экспортируем deep как вызываемый экземпляр Association с методами из is.js и gets.js
-export const deep = new Association((...args) => new Association(...args));
+export const deep = new Association((...args) => {
+  if (args[0] instanceof Association) return args[0];
+  else return new Association(...args);
+});
 
 // Экспортируем саму Association для обратной совместимости
 export { all, Association, type, types };

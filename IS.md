@@ -8,44 +8,42 @@
 
 **Информация о системе:**
 
-- clk: ~1.56 GHz
+- clk: ~1.50 GHz
 - cpu: Intel(R) Core(TM) i9-9880H CPU @ 2.30GHz
 - runtime: node 23.4.0 (x64-darwin)
 
 | Тест | Среднее время выполнения | Операций в секунду |
 |------|--------------------------|--------------------|
-| value instanceof RegExp | 2.24 ns/итер | 446 428 571,429 опер/сек |
-| value instanceof Promise | 2.21 ns/итер | 452 488 687,783 опер/сек |
-| value instanceof Error | 2.80 ns/итер | 357 142 857,143 опер/сек |
-| deep(string).isString | 166.92 ns/итер | 5 990 893,841 опер/сек |
-| deep(number).isNumber | 188.39 ns/итер | 5 308 137,375 опер/сек |
-| deep(boolean).isBoolean | 164.46 ns/итер | 6 080 505,898 опер/сек |
-| deep(symbol).isSymbol | 183.56 ns/итер | 5 447 809,98 опер/сек |
-| deep(bigint).isBigInt | 171.07 ns/итер | 5 845 560,297 опер/сек |
-| deep(function).isFunction | 165.40 ns/итер | 6 045 949,214 опер/сек |
-| deep(undefined).isUndefined | 166.46 ns/итер | 6 007 449,237 опер/сек |
-| deep(null).isNull | 163.84 ns/итер | 6 103 515,625 опер/сек |
-| deep(array).isArray | 168.31 ns/итер | 5 941 417,622 опер/сек |
-| deep(object).isObject | 228.27 ns/итер | 4 380 777,15 опер/сек |
-| deep(plainObject).isPlainObject | 190.53 ns/итер | 5 248 517,294 опер/сек |
-| deep(date).isDate | 176.15 ns/итер | 5 676 979,847 опер/сек |
-| deep(regexp).isRegExp | 166.86 ns/итер | 5 993 048,064 опер/сек |
-| deep(set).isSet | 165.44 ns/итер | 6 044 487,427 опер/сек |
-| deep(map).isMap | 168.96 ns/итер | 5 918 560,606 опер/сек |
-| deep(promise).isPromise | 167.97 ns/итер | 5 953 444,067 опер/сек |
-| deep(error).isError | 170.65 ns/итер | 5 859 947,26 опер/сек |
-| deep(json).isJSON | 609.97 ns/итер | 1 639 424,89 опер/сек |
-| deep(empty).isEmpty | 183.93 ns/итер | 5 436 850,976 опер/сек |
-| deep(array).isMany | 186.91 ns/итер | 5 350 168,53 опер/сек |
-| deep(object).isMany | 270.85 ns/итер | 3 692 080,487 опер/сек |
-| deep(set).isMany | 185.83 ns/итер | 5 381 262,444 опер/сек |
-| deep(map).isMany | 170.39 ns/итер | 5 868 889,019 опер/сек |
-| deep(string).isMany | 169.59 ns/итер | 5 896 574,09 опер/сек |
-| deep(number).isMany | 166.84 ns/итер | 5 993 766,483 опер/сек |
-| deep(string).isString | 161.11 ns/итер | 6 206 939,358 опер/сек |
-| deep(number).isNumber | 168.67 ns/итер | 5 928 736,586 опер/сек |
-| deep(array).isArray | 173.06 ns/итер | 5 778 342,771 опер/сек |
-| deep(array).isMany | 166.87 ns/итер | 5 992 688,92 опер/сек |
+| value instanceof Error | 2.45 ns/итер | 408 163 265,306 опер/сек |
+| deep(string).isString | 243.09 ns/итер | 4 113 702,744 опер/сек |
+| deep(number).isNumber | 196.55 ns/итер | 5 087 763,928 опер/сек |
+| deep(boolean).isBoolean | 187.73 ns/итер | 5 326 799,126 опер/сек |
+| deep(symbol).isSymbol | 179.85 ns/итер | 5 560 189,046 опер/сек |
+| deep(bigint).isBigInt | 182.34 ns/итер | 5 484 260,173 опер/сек |
+| deep(function).isFunction | 190.50 ns/итер | 5 249 343,832 опер/сек |
+| deep(undefined).isUndefined | 218.13 ns/итер | 4 584 422,134 опер/сек |
+| deep(null).isNull | 177.05 ns/итер | 5 648 121,999 опер/сек |
+| deep(array).isArray | 202.44 ns/итер | 4 939 735,23 опер/сек |
+| deep(object).isObject | 243.14 ns/итер | 4 112 856,79 опер/сек |
+| deep(plainObject).isPlainObject | 223.75 ns/итер | 4 469 273,743 опер/сек |
+| deep(date).isDate | 192.82 ns/итер | 5 186 184,006 опер/сек |
+| deep(regexp).isRegExp | 186.60 ns/итер | 5 359 056,806 опер/сек |
+| deep(set).isSet | 211.21 ns/итер | 4 734 624,308 опер/сек |
+| deep(map).isMap | 229.23 ns/итер | 4 362 430,746 опер/сек |
+| deep(promise).isPromise | 182.87 ns/итер | 5 468 365,506 опер/сек |
+| deep(error).isError | 166.73 ns/итер | 5 997 720,866 опер/сек |
+| deep(json).isJSON | 599.41 ns/итер | 1 668 307,169 опер/сек |
+| deep(empty).isEmpty | 175.43 ns/итер | 5 700 279,314 опер/сек |
+| deep(array).isMany | 183.22 ns/итер | 5 457 919,441 опер/сек |
+| deep(object).isMany | 252.91 ns/итер | 3 953 975,723 опер/сек |
+| deep(set).isMany | 176.49 ns/итер | 5 666 043,402 опер/сек |
+| deep(map).isMany | 186.80 ns/итер | 5 353 319,058 опер/сек |
+| deep(string).isMany | 186.29 ns/итер | 5 367 974,663 опер/сек |
+| deep(number).isMany | 185.80 ns/итер | 5 382 131,324 опер/сек |
+| deep(string).isString | 209.75 ns/итер | 4 767 580,453 опер/сек |
+| deep(number).isNumber | 188.41 ns/итер | 5 307 573,908 опер/сек |
+| deep(array).isArray | 197.11 ns/итер | 5 073 309,32 опер/сек |
+| deep(array).isMany | 202.17 ns/итер | 4 946 332,295 опер/сек |
 
 ## Использование
 
@@ -157,20 +155,16 @@ const isBeforeObject = order.indexOf('array') < order.indexOf('object'); // true
 
 ## Интеграция с Association
 
-Модуль автоматически интегрируется с классом `Association`, добавляя методы проверки типов к экземплярам.
+Все методы модуля `is.js` автоматически добавляются в `Association._proxy`, что делает их доступными через свойства экземпляров `Association`:
 
 ```javascript
-// Пример использования
-import deep from 'deep7';
+// Это устаревший подход, не рекомендуется
+// import { isArray } from './is.js';
+// console.log(isArray(new Association([1, 2, 3]))); // true
 
-const str = deep('test');
-str.isString; // true
-str.isNumber; // false
-
-const obj = deep({});
-obj.isObject; // true
-obj.isPlainObject; // true
-obj.isArray; // false
+// Через ассоциативное свойство (рекомендуемый способ)
+import { deep } from './index.js';
+console.log(deep([1, 2, 3]).isArray); // true
 ```
 
 ## Примеры
@@ -361,11 +355,11 @@ Map {
 Все методы модуля `is.js` автоматически добавляются в `Association._proxy`, что делает их доступными через свойства экземпляров `Association`:
 
 ```javascript
-// Через функцию
-import { isArray } from './is.js';
-console.log(isArray(new Association([1, 2, 3]))); // true
+// Это устаревший подход, не рекомендуется
+// import { isArray } from './is.js';
+// console.log(isArray(new Association([1, 2, 3]))); // true
 
-// Через свойство (рекомендуемый способ)
+// Через ассоциативное свойство (рекомендуемый способ)
 import { deep } from './index.js';
 console.log(deep([1, 2, 3]).isArray); // true
 ```

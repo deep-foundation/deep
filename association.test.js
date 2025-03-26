@@ -170,7 +170,6 @@ test('Association - проверка символа в temp.symbol', () => {
 
   // Проверяем, что строковое представление символа содержит адрес файла и позицию
   const symbolString = a.temp.symbol.toString();
-  console.log('Строковое представление символа:', symbolString);
 
   // Проверяем формат символа - должен быть путь_к_файлу:строка:колонка
   const filePathRegex = /Symbol\((?:file:\/\/)?\/[^:]+:\d+:\d+\)/;
