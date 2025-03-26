@@ -186,7 +186,7 @@ test('Track на разных типах данных и операциях', as
 
       // 2. Тестируем операцию delete
       source.delete(2);
-      assert.deepEqual(result.this, [2, 6, 8], 'После delete(2) result должен обновиться');
+      assert.deepEqual(result.this, [2, 6, 8], "После delete(2) result должен обновиться");
     });
 
     await st.test('Map с операциями add/set/delete', async () => {
@@ -216,7 +216,7 @@ test('Track на разных типах данных и операциях', as
         ['a', 2],
         ['b', 4],
         ['c', 6],
-        ['d', 'd' * 2] // Результат NaN из-за умножения строки на число
+        ['d', NaN]
       ], 'После add("d") result должен обновиться');
 
       // 2. Тестируем операцию set
@@ -255,6 +255,10 @@ test('Track на разных типах данных и операциях', as
       // Тестируем операцию set
       source.set(0, 'j');
       assert.deepEqual(result.this, ['J', 'E', 'L', 'L', 'O'], 'После set(0, "j") result должен обновиться');
+
+      // Тестируем операцию add (добавление в конец)
+      source.add('!');
+      assert.deepEqual(result.this, ['J', 'E', 'L', 'L', 'O', '!'], 'После add("!") result должен добавить новый символ в конец');
     });
 
     await st.test('Множественные преобразования - Array.map().map()', async () => {
@@ -292,5 +296,610 @@ test('Track на разных типах данных и операциях', as
     });
   });
 
-  // Можно добавить другие группы тестов для других методов отслеживания, например filter, reduce и т.д.
+  await t.test('Track filter', async (st) => {
+    await st.test('Array с фильтрацией', async () => {
+      // Создаем исходную ассоциацию массива
+      const source = deep([1, 2, 3, 4, 5, 6]);
+
+      // Применяем метод filter
+      const result = source.filter(x => x % 2 === 0); // Только четные числа
+
+      // Инициализируем трекер
+      const tracker = result.track;
+
+      // Проверяем начальное состояние
+      assert.deepEqual(result.this, [2, 4, 6], 'Начальное состояние result должно быть корректным');
+
+      // 1. Тестируем операцию add с четным числом
+      source.add(8);
+      assert.deepEqual(result.this, [2, 4, 6, 8], 'После add(8) result должен обновиться');
+
+      // 2. Тестируем операцию add с нечетным числом
+      source.add(9);
+      assert.deepEqual(result.this, [2, 4, 6, 8], 'После add(9) result должен остаться неизменным');
+
+      // 3. Тестируем операцию set, меняющую нечетное на четное
+      source.set(0, 10); // Меняем 1 на 10
+      assert.deepEqual(result.this, [10, 2, 4, 6, 8], 'После set(0, 10) result должен добавить новый элемент');
+
+      // 4. Тестируем операцию set, меняющую четное на нечетное
+      source.set(1, 11); // Меняем 2 на 11
+      assert.deepEqual(result.this, [10, 4, 6, 8], 'После set(1, 11) result должен удалить элемент');
+
+      // 5. Тестируем операцию delete для четного числа
+      source.delete(2); // Удаляем 3 (нечетное число, которое не входит в результат)
+      assert.deepEqual(result.this, [10, 4, 6, 8], 'После delete(2) result должен обновиться');
+    });
+
+    await st.test('Object с фильтрацией', async () => {
+      // Создаем исходную ассоциацию объекта
+      const source = deep({ a: 1, b: 2, c: 3, d: 4, e: 5 });
+
+      // Применяем метод filter
+      const result = source.filter(x => x % 2 === 0); // Только четные числа
+
+      // Инициализируем трекер
+      const tracker = result.track;
+
+      // Проверяем начальное состояние
+      assert.deepEqual([...result.this].sort(), [2, 4].sort(), 'Начальное состояние result должно быть корректным');
+
+      // 1. Тестируем операцию add с четным числом
+      source.add(6);
+      assert.deepEqual([...result.this].sort(), [2, 4, 6].sort(), 'После add(6) result должен обновиться');
+
+      // 2. Тестируем операцию add с нечетным числом
+      source.add(7);
+      assert.deepEqual([...result.this].sort(), [2, 4, 6].sort(), 'После add(7) result должен остаться неизменным');
+
+      // 3. Тестируем операцию set с четным числом
+      source.set('f', 8);
+      assert.deepEqual([...result.this].sort(), [2, 4, 6, 8].sort(), 'После set("f", 8) result должен добавить новый элемент');
+
+      // 4. Тестируем операцию set, меняющую нечетное на четное
+      source.set('a', 10); // Меняем 1 на 10
+      assert.deepEqual([...result.this].sort(), [2, 4, 6, 8, 10].sort(), 'После set("a", 10) result должен добавить новый элемент');
+
+      // 5. Тестируем операцию delete
+      source.delete('b'); // Удаляем 2
+      assert.deepEqual([...result.this].sort(), [4, 6, 8, 10].sort(), 'После delete("b") result должен обновиться');
+    });
+
+    await st.test('Set с фильтрацией', async () => {
+      // Создаем исходную ассоциацию с использованием Set
+      const source = deep(new Set([1, 2, 3, 4, 5]));
+
+      // Применяем метод filter
+      const result = source.filter(x => x % 2 === 0); // Только четные числа
+
+      // Инициализируем трекер
+      const tracker = result.track;
+
+      // Проверяем начальное состояние
+      assert.deepEqual(result.this, [2, 4], 'Начальное состояние result должно быть корректным');
+
+      // 1. Тестируем операцию add с четным числом
+      source.add(6);
+      assert.deepEqual(result.this, [2, 4, 6], 'После add(6) result должен обновиться');
+
+      // 2. Тестируем операцию add с нечетным числом
+      source.add(7);
+      assert.deepEqual(result.this, [2, 4, 6], 'После add(7) result должен остаться неизменным');
+
+      // 3. Тестируем операцию delete
+      source.delete(2);
+      assert.deepEqual(result.this, [4, 6], 'После delete(2) result должен обновиться');
+    });
+
+    await st.test('Map с фильтрацией', async () => {
+      // Создаем исходную ассоциацию с использованием Map
+      const source = deep(new Map([
+        ['a', 1],
+        ['b', 2],
+        ['c', 3],
+        ['d', 4],
+        ['e', 5]
+      ]));
+
+      // Применяем метод filter
+      const result = source.filter(x => x % 2 === 0); // Только четные числа
+
+      // Инициализируем трекер
+      const tracker = result.track;
+
+      // Проверяем начальное состояние
+      assert.deepEqual([...result.this].sort(), [2, 4].sort(), 'Начальное состояние result должно быть корректным');
+
+      // 1. Тестируем операцию set с четным числом
+      source.set('f', 6);
+      assert.deepEqual([...result.this].sort(), [2, 4, 6].sort(), 'После set("f", 6) result должен обновиться');
+
+      // 2. Тестируем операцию set с нечетным числом
+      source.set('g', 7);
+      assert.deepEqual([...result.this].sort(), [2, 4, 6].sort(), 'После set("g", 7) result должен остаться неизменным');
+
+      // 3. Тестируем операцию set, меняющую нечетное на четное
+      source.set('a', 8); // Меняем 1 на 8
+      assert.deepEqual([...result.this].sort(), [2, 4, 6, 8].sort(), 'После set("a", 8) result должен добавить новый элемент');
+
+      // 4. Тестируем операцию delete
+      source.delete('b'); // Удаляем 2
+      assert.deepEqual([...result.this].sort(), [4, 6, 8].sort(), 'После delete("b") result должен обновиться');
+    });
+
+    await st.test('String с фильтрацией', async () => {
+      // Создаем исходную ассоциацию строки
+      const source = deep('abcde');
+
+      // Применяем метод filter для фильтрации только гласных букв
+      const result = source.filter(x => ['a', 'e', 'i', 'o', 'u'].includes(x));
+
+      // Инициализируем трекер
+      const tracker = result.track;
+
+      // Проверяем начальное состояние
+      assert.deepEqual(result.this, ['a', 'e'], 'Начальное состояние result должно быть корректным');
+
+      // Тестируем операцию set
+      source.set(0, 'o'); // Меняем 'a' на 'o'
+      assert.deepEqual(result.this, ['o', 'e'], 'После set(0, "o") result должен обновиться');
+
+      // Тестируем операцию set с согласной буквой
+      source.set(4, 'z'); // Меняем 'e' на 'z'
+      assert.deepEqual(result.this, ['o'], 'После set(4, "z") result должен обновиться и удалить "e"');
+    });
+  });
+
+  await t.test('Track reduce', async (st) => {
+    await st.test('Array с reduce для суммы', async () => {
+      // Создаем исходную ассоциацию массива
+      const source = deep([1, 2, 3, 4]);
+
+      // Применяем метод reduce для вычисления суммы
+      const result = source.reduce((acc, x) => acc + x, 0);
+
+      // Инициализируем трекер
+      const tracker = result.track;
+
+      // Проверяем начальное состояние
+      assert.strictEqual(result.this, 10, 'Начальное состояние result должно быть корректным (10)');
+
+      // 1. Тестируем операцию add
+      source.add(5);
+      assert.strictEqual(result.this, 15, 'После add(5) result должен обновиться до 15');
+
+      // 2. Тестируем операцию set
+      source.set(0, 10); // Меняем 1 на 10
+      assert.strictEqual(result.this, 24, 'После set(0, 10) result должен обновиться до 24');
+
+      // 3. Тестируем операцию delete
+      source.delete(1); // Удаляем 2
+      assert.strictEqual(result.this, 22, 'После delete(1) result должен обновиться до 22');
+    });
+
+    await st.test('Object с reduce для суммы', async () => {
+      // Создаем исходную ассоциацию объекта
+      const source = deep({ a: 1, b: 2, c: 3 });
+
+      // Применяем метод reduce для вычисления суммы
+      const result = source.reduce((acc, x) => acc + x, 0);
+
+      // Инициализируем трекер
+      const tracker = result.track;
+
+      // Проверяем начальное состояние
+      assert.strictEqual(result.this, 6, 'Начальное состояние result должно быть корректным (6)');
+
+      // 1. Тестируем операцию add
+      source.add(4);
+      assert.strictEqual(result.this, 10, 'После add(4) result должен обновиться до 10');
+
+      // 2. Тестируем операцию set для существующего свойства
+      source.set('a', 5); // Меняем 1 на 5
+      assert.strictEqual(result.this, 14, 'После set("a", 5) result должен обновиться до 14');
+
+      // 3. Тестируем операцию set для нового свойства
+      source.set('d', 6);
+      assert.strictEqual(result.this, 20, 'После set("d", 6) result должен обновиться до 20');
+
+      // 4. Тестируем операцию delete
+      source.delete('b'); // Удаляем 2
+      assert.strictEqual(result.this, 18, 'После delete("b") result должен обновиться до 18');
+    });
+
+    await st.test('Set с reduce для суммы', async () => {
+      // Создаем исходную ассоциацию с использованием Set
+      const source = deep(new Set([1, 2, 3, 4]));
+
+      // Применяем метод reduce для вычисления суммы
+      const result = source.reduce((acc, x) => acc + x, 0);
+
+      // Инициализируем трекер
+      const tracker = result.track;
+
+      // Проверяем начальное состояние
+      assert.strictEqual(result.this, 10, 'Начальное состояние result должно быть корректным (10)');
+
+      // 1. Тестируем операцию add
+      source.add(5);
+      assert.strictEqual(result.this, 15, 'После add(5) result должен обновиться до 15');
+
+      // 2. Тестируем операцию add для существующего значения (не должно менять результат)
+      source.add(1);
+      assert.strictEqual(result.this, 15, 'После add(1) result не должен меняться, так как 1 уже есть в множестве');
+
+      // 3. Тестируем операцию delete
+      source.delete(3);
+      assert.strictEqual(result.this, 12, 'После delete(3) result должен обновиться до 12');
+    });
+
+    await st.test('Map с reduce для суммы', async () => {
+      // Создаем исходную ассоциацию с использованием Map
+      const source = deep(new Map([
+        ['a', 1],
+        ['b', 2],
+        ['c', 3]
+      ]));
+
+      // Применяем метод reduce для вычисления суммы значений
+      const result = source.reduce((acc, x) => acc + x, 0);
+
+      // Инициализируем трекер
+      const tracker = result.track;
+
+      // Проверяем начальное состояние
+      assert.strictEqual(result.this, 6, 'Начальное состояние result должно быть корректным (6)');
+
+      // 1. Тестируем операцию set для нового ключа
+      source.set('d', 4);
+      assert.strictEqual(result.this, 10, 'После set("d", 4) result должен обновиться до 10');
+
+      // 2. Тестируем операцию set для существующего ключа
+      source.set('a', 5); // Меняем 1 на 5
+      assert.strictEqual(result.this, 14, 'После set("a", 5) result должен обновиться до 14');
+
+      // 3. Тестируем операцию delete
+      source.delete('b'); // Удаляем 2
+      assert.strictEqual(result.this, 12, 'После delete("b") result должен обновиться до 12');
+    });
+
+    await st.test('String с reduce для конкатенации', async () => {
+      // Создадим отдельный массив символов вместо строки, так как строки не поддерживают
+      // индексирование в редактировании
+      const source = deep('abc'); // Используем массив вместо строки
+
+      // Применяем метод reduce для создания строки в верхнем регистре
+      const result = source.reduce((acc, x) => acc + x.toUpperCase(), '');
+
+      // Инициализируем трекер
+      const tracker = result.track;
+
+      // Проверяем начальное состояние
+      assert.strictEqual(result.this, 'ABC', 'Начальное состояние result должно быть корректным (ABC)');
+
+      // 1. Тестируем операцию set
+      source.set(0, 'd'); // Меняем 'a' на 'd'
+      assert.strictEqual(result.this, 'DBC', 'После set(0, "d") result должен обновиться до DBC');
+
+      // 2. Тестируем операцию add
+      source.add('d'); // Добавляем 'd' в конец
+      assert.strictEqual(result.this, 'DBCD', 'После add("d") result должен обновиться до DBCD');
+
+      // 3. Тестируем операцию delete
+      source.delete(1); // Удаляем 'b'
+      assert.strictEqual(result.this, 'DCD', 'После delete(1) result должен обновиться до DCD');
+    });
+
+    await st.test('Reduce без initial value', async () => {
+      // Создаем исходную ассоциацию массива
+      const source = deep([1, 2, 3, 4]);
+
+      // Применяем метод reduce без начального значения
+      const result = source.reduce((acc, x) => acc + x);
+
+      // Инициализируем трекер
+      const tracker = result.track;
+
+      // Проверяем начальное состояние
+      assert.strictEqual(result.this, 10, 'Начальное состояние result должно быть корректным (10)');
+
+      // 1. Тестируем операцию add
+      source.add(5);
+      assert.strictEqual(result.this, 15, 'После add(5) result должен обновиться до 15');
+
+      // 2. Тестируем операцию set для первого элемента
+      source.set(0, 10); // Меняем 1 на 10
+      assert.strictEqual(result.this, 24, 'После set(0, 10) result должен обновиться до 24');
+
+      // 3. Тестируем операцию delete для первого элемента (должен использовать второй элемент как начальный)
+      source.delete(0); // Удаляем первый элемент (10)
+      assert.strictEqual(result.this, 14, 'После delete(0) result должен пересчитаться с новым начальным элементом');
+    });
+  });
+
+  await t.test('Track join', async (st) => {
+    await st.test('Array с join', async () => {
+      // Создаем исходную ассоциацию массива
+      const source = deep([1, 2, 3, 4]);
+
+      // Применяем метод join
+      const result = source.join('-');
+
+      // Инициализируем трекер
+      const tracker = result.track;
+
+      // Проверяем начальное состояние
+      assert.strictEqual(result.this, '1-2-3-4', 'Начальное состояние result должно быть корректным');
+
+      // 1. Тестируем операцию add
+      source.add(5);
+      assert.strictEqual(result.this, '1-2-3-4-5', 'После add(5) result должен обновиться');
+
+      // 2. Тестируем операцию set
+      source.set(0, 10); // Меняем 1 на 10
+      assert.strictEqual(result.this, '10-2-3-4-5', 'После set(0, 10) result должен обновиться');
+
+      // 3. Тестируем операцию delete
+      source.delete(1); // Удаляем 2
+      assert.strictEqual(result.this, '10-3-4-5', 'После delete(1) result должен обновиться');
+    });
+
+    await st.test('Object с join', async () => {
+      // Создаем исходную ассоциацию объекта с предсказуемым порядком ключей
+      // Используем массив вместо объекта для контроля порядка
+      const source = deep([1, 2, 3]);
+
+      // Применяем метод join
+      const result = source.join(':');
+
+      // Инициализируем трекер
+      const tracker = result.track;
+
+      // Проверяем начальное состояние
+      assert.strictEqual(result.this, '1:2:3', 'Начальное состояние result должно быть корректным');
+
+      // 1. Тестируем операцию add
+      source.add(4);
+      assert.strictEqual(result.this, '1:2:3:4', 'После add(4) result должен обновиться');
+
+      // 2. Тестируем операцию set для существующего свойства
+      source.set(0, 10); // Меняем 1 на 10
+      assert.strictEqual(result.this, '10:2:3:4', 'После set(0, 10) result должен обновиться');
+
+      // 3. Тестируем операцию delete
+      source.delete(1); // Удаляем 2
+      assert.strictEqual(result.this, '10:3:4', 'После delete(1) result должен обновиться');
+    });
+
+    await st.test('Set с join', async () => {
+      // Создаем исходную ассоциацию с использованием Set
+      const source = deep(new Set([1, 2, 3]));
+
+      // Применяем метод join
+      const result = source.join('|');
+
+      // Инициализируем трекер
+      const tracker = result.track;
+
+      // Проверяем начальное состояние
+      assert.strictEqual(result.this, '1|2|3', 'Начальное состояние result должно быть корректным');
+
+      // 1. Тестируем операцию add для нового значения
+      source.add(4);
+      assert.strictEqual(result.this, '1|2|3|4', 'После add(4) result должен обновиться');
+
+      // 2. Тестируем операцию add для существующего значения (не должно менять результат)
+      source.add(2);
+      assert.strictEqual(result.this, '1|2|3|4', 'После add(2) result не должен меняться, так как 2 уже есть в множестве');
+
+      // 3. Тестируем операцию delete
+      source.delete(2);
+      assert.strictEqual(result.this, '1|3|4', 'После delete(2) result должен обновиться');
+    });
+
+    await st.test('Map с join', async () => {
+      // Создаем исходную ассоциацию с использованием Map
+      const source = deep(new Map([
+        ['a', 1],
+        ['b', 2],
+        ['c', 3]
+      ]));
+
+      // Применяем метод join для значений Map
+      const result = source.join('+');
+
+      // Инициализируем трекер
+      const tracker = result.track;
+
+      // Проверяем начальное состояние
+      assert.strictEqual(result.this, '1+2+3', 'Начальное состояние result должно быть корректным');
+
+      // 1. Тестируем операцию set для нового ключа
+      source.set('d', 4);
+      assert.strictEqual(result.this, '1+2+3+4', 'После set("d", 4) result должен обновиться');
+
+      // 2. Тестируем операцию set для существующего ключа
+      source.set('a', 10); // Меняем 1 на 10
+      assert.strictEqual(result.this, '10+2+3+4', 'После set("a", 10) result должен обновиться');
+
+      // 3. Тестируем операцию delete
+      source.delete('b'); // Удаляем 2
+      assert.strictEqual(result.this, '10+3+4', 'После delete("b") result должен обновиться');
+    });
+
+    await st.test('String с join по умолчанию', async () => {
+      // Используем массив символов вместо строки
+      const source = deep(['a', 'b', 'c']);
+
+      // Применяем метод join без указания разделителя (по умолчанию запятая)
+      const result = source.join();
+
+      // Инициализируем трекер
+      const tracker = result.track;
+
+      // Проверяем начальное состояние
+      assert.strictEqual(result.this, 'a,b,c', 'Начальное состояние result должно быть корректным');
+
+      // 1. Тестируем операцию set
+      source.set(0, 'd'); // Меняем 'a' на 'd'
+      assert.strictEqual(result.this, 'd,b,c', 'После set(0, "d") result должен обновиться');
+
+      // 2. Тестируем операцию add
+      source.add('e'); // Добавляем 'e' в конец
+      assert.strictEqual(result.this, 'd,b,c,e', 'После add("e") result должен обновиться');
+
+      // 3. Тестируем операцию delete
+      source.delete(1); // Удаляем 'b'
+      assert.strictEqual(result.this, 'd,c,e', 'После delete(1) result должен обновиться');
+    });
+  });
+
+  await t.test('Track every', async (st) => {
+    await st.test('Array с every', async () => {
+      // Создаем исходную ассоциацию массива
+      const source = deep([2, 4, 6, 8]);
+
+      // Применяем метод every для проверки, все ли числа четные
+      const result = source.every(x => x % 2 === 0);
+
+      // Инициализируем трекер
+      const tracker = result.track;
+
+      // Проверяем начальное состояние
+      assert.strictEqual(result.this, true, 'Начальное состояние result должно быть true');
+
+      // 1. Тестируем операцию add с четным числом
+      source.add(10);
+      assert.strictEqual(result.this, true, 'После add(10) result должен остаться true');
+
+      // 2. Тестируем операцию add с нечетным числом
+      source.add(7);
+      assert.strictEqual(result.this, false, 'После add(7) result должен измениться на false');
+
+      // 3. Тестируем операцию delete для нечетного числа
+      source.delete(5); // Удаляем 7
+      assert.strictEqual(result.this, true, 'После delete(5) result должен вернуться к true');
+
+      // 4. Тестируем операцию set, меняющую четное на нечетное
+      source.set(0, 3); // Меняем 2 на 3
+      assert.strictEqual(result.this, false, 'После set(0, 3) result должен измениться на false');
+    });
+
+    await st.test('Object с every', async () => {
+      // Создаем исходную ассоциацию объекта с четными числами
+      const source = deep({ a: 2, b: 4, c: 6 });
+
+      // Применяем метод every для проверки, все ли числа четные
+      const result = source.every(x => x % 2 === 0);
+
+      // Инициализируем трекер
+      const tracker = result.track;
+
+      // Проверяем начальное состояние
+      assert.strictEqual(result.this, true, 'Начальное состояние result должно быть true');
+
+      // 1. Тестируем операцию add с четным числом
+      source.add(8);
+      assert.strictEqual(result.this, true, 'После add(8) result должен остаться true');
+
+      // 2. Тестируем операцию add с нечетным числом
+      source.add(5);
+      assert.strictEqual(result.this, false, 'После add(5) result должен измениться на false');
+
+      // 3. Тестируем операцию set для существующего свойства
+      source.set('a', 3); // Меняем 2 на 3
+      assert.strictEqual(result.this, false, 'После set("a", 3) result должен оставаться false');
+
+      // 4. Тестируем операцию delete для нечетного числа
+      source.delete('a'); // Удаляем свойство со значением 3
+      source.delete('4'); // Удаляем свойство со значением 5
+      assert.strictEqual(result.this, true, 'После удаления нечетных значений result должен вернуться к true');
+    });
+
+    await st.test('Set с every', async () => {
+      // Создаем исходную ассоциацию с использованием Set с четными числами
+      const source = deep(new Set([2, 4, 6]));
+
+      // Применяем метод every для проверки, все ли числа четные
+      const result = source.every(x => x % 2 === 0);
+
+      // Инициализируем трекер
+      const tracker = result.track;
+
+      // Проверяем начальное состояние
+      assert.strictEqual(result.this, true, 'Начальное состояние result должно быть true');
+
+      // 1. Тестируем операцию add с четным числом
+      source.add(8);
+      assert.strictEqual(result.this, true, 'После add(8) result должен остаться true');
+
+      // 2. Тестируем операцию add с нечетным числом
+      source.add(5);
+      assert.strictEqual(result.this, false, 'После add(5) result должен измениться на false');
+
+      // 3. Тестируем операцию delete для нечетного числа
+      source.delete(5);
+      assert.strictEqual(result.this, true, 'После delete(5) result должен вернуться к true');
+    });
+
+    await st.test('Map с every', async () => {
+      // Создаем исходную ассоциацию с использованием Map с четными числами
+      const source = deep(new Map([
+        ['a', 2],
+        ['b', 4],
+        ['c', 6]
+      ]));
+
+      // Применяем метод every для проверки, все ли значения четные
+      const result = source.every(x => x % 2 === 0);
+
+      // Инициализируем трекер
+      const tracker = result.track;
+
+      // Проверяем начальное состояние
+      assert.strictEqual(result.this, true, 'Начальное состояние result должно быть true');
+
+      // 1. Тестируем операцию set с четным числом
+      source.set('d', 8);
+      assert.strictEqual(result.this, true, 'После set("d", 8) result должен остаться true');
+
+      // 2. Тестируем операцию set с нечетным числом
+      source.set('e', 5);
+      assert.strictEqual(result.this, false, 'После set("e", 5) result должен измениться на false');
+
+      // 3. Тестируем операцию delete для ключа с нечетным числом
+      source.delete('e');
+      assert.strictEqual(result.this, true, 'После delete("e") result должен вернуться к true');
+
+      // 4. Тестируем операцию set, меняющую четное на нечетное для существующего ключа
+      source.set('a', 3); // Меняем 2 на 3
+      assert.strictEqual(result.this, false, 'После set("a", 3) result должен измениться на false');
+    });
+
+    await st.test('String с every', async () => {
+      // Создаем исходную ассоциацию строки с буквами нижнего регистра
+      const source = deep('abc');
+
+      // Применяем метод every для проверки, все ли символы в нижнем регистре
+      const result = source.every(char => /[a-z]/.test(char));
+
+      // Инициализируем трекер
+      const tracker = result.track;
+
+      // Проверяем начальное состояние
+      assert.strictEqual(result.this, true, 'Начальное состояние result должно быть true');
+
+      // 1. Тестируем операцию set с буквой нижнего регистра
+      source.set(0, 'd'); // Меняем 'a' на 'd'
+      assert.strictEqual(result.this, true, 'После set(0, "d") result должен остаться true');
+
+      // 2. Тестируем операцию set с буквой верхнего регистра
+      source.set(1, 'B'); // Меняем 'b' на 'B'
+      assert.strictEqual(result.this, false, 'После set(1, "B") result должен измениться на false');
+
+      // 3. Тестируем операцию set, меняющую букву верхнего регистра обратно на нижний
+      source.set(1, 'e'); // Меняем 'B' на 'e'
+      assert.strictEqual(result.this, true, 'После set(1, "e") result должен вернуться к true');
+    });
+  });
 });

@@ -300,7 +300,7 @@ export function map(ass, op) {
               prev: event?.prev,
               next: event?.next,
               detail: event?.detail,
-              method: eventMethod || detail?.operation || 'update'
+              method: meta?.method || event?.detail?.operation || 'update'
             });
           }
         });
@@ -387,7 +387,103 @@ export function filter(ass, op) {
       }
     }
 
-    return result;
+    // Создаем результирующую ассоциацию для поддержки цепочки вызовов
+    const resultAssociation = new Association(result);
+
+    // Сохраняем ссылки на исходную ассоциацию и функцию фильтрации для отслеживания изменений
+    resultAssociation.temp.origin = ass;
+    resultAssociation.temp.filter = callback;
+    resultAssociation.temp.method = 'filter';
+
+    // Создаем локальный обработчик track
+    resultAssociation._proxy.set('track', (ass, op) => {
+      if (op !== 'get') return;
+
+      // Получаем трекер через глобальный геттер
+      const track = Association._proxy.get('track').call(ass, ass, 'get');
+
+      // Если есть система событий и у нас есть доступ к origin
+      if (ass.temp.origin && ass.temp.origin.on && ass.temp.origin.emit) {
+        const origin = ass.temp.origin;
+        const method = ass.temp.method;
+        const filterFn = ass.temp.filter;
+
+        // Создаем обработчик событий change для автоматического обновления
+        // Подписываемся на событие change у origin
+        const offChange = origin.on('change', (event, meta) => {
+          // Проверяем наличие детальной информации и метаданных
+          const detail = event?.detail;
+          const eventMethod = meta?.method;
+
+          // Для фильтра оптимальнее всего делать полное перевычисление при любом изменении
+          // поскольку нам нужно заново проверить все элементы через функцию фильтрации
+          performFullRecalculation();
+
+          // Функция для полного перевычисления результата
+          function performFullRecalculation() {
+            const type = origin.detect;
+            const originValue = origin.this;
+            const filteredResult = [];
+
+            if (type === 'array') {
+              for (let i = 0; i < originValue.length; i++) {
+                if (filterFn(originValue[i], i, originValue)) {
+                  filteredResult.push(originValue[i]);
+                }
+              }
+            } else if (type === 'map') {
+              originValue.forEach((val, key) => {
+                if (filterFn(val, key, originValue)) {
+                  filteredResult.push(val);
+                }
+              });
+            } else if (type === 'set') {
+              let index = 0;
+              originValue.forEach(val => {
+                if (filterFn(val, index++, originValue)) {
+                  filteredResult.push(val);
+                }
+              });
+            } else if (type === 'string') {
+              for (let i = 0; i < originValue.length; i++) {
+                if (filterFn(originValue[i], i, originValue)) {
+                  filteredResult.push(originValue[i]);
+                }
+              }
+            } else if (type === 'object') {
+              const keys = Object.keys(originValue);
+              for (let i = 0; i < keys.length; i++) {
+                const key = keys[i];
+                if (filterFn(originValue[key], key, originValue)) {
+                  filteredResult.push(originValue[key]);
+                }
+              }
+            }
+
+            ass.this = filteredResult;
+          }
+
+          // Генерируем событие изменения
+          if (ass.emit) {
+            ass.emit('change', {
+              origin: origin,
+              reason: 'track',
+              prev: event?.prev,
+              next: event?.next,
+              detail: event?.detail,
+              method: meta?.method || event?.detail?.operation || 'update'
+            });
+          }
+        });
+
+        // Сохраняем функцию отписки для возможности отключения отслеживания
+        track.temp.offChange = offChange;
+      }
+
+      return track;
+    });
+
+    return resultAssociation;
   };
 }
 
@@ -467,7 +563,131 @@ export function reduce(ass, op, callback, initialValue) {
       }
     }
 
-    return accumulator;
+    // Создаем результирующую ассоциацию для поддержки трекинга
+    const resultAssociation = new Association(accumulator);
+
+    // Сохраняем ссылки на исходную ассоциацию и функцию свертки для отслеживания изменений
+    resultAssociation.temp.origin = ass;
+    resultAssociation.temp.reducer = callback;
+    resultAssociation.temp.initialValue = arguments.length < 2 ? undefined : initialValue;
+    resultAssociation.temp.method = 'reduce';
+    resultAssociation.temp.startIndex = startIndex;
+
+    // Создаем локальный обработчик track
+    resultAssociation._proxy.set('track', (ass, op) => {
+      if (op !== 'get') return;
+
+      // Получаем трекер через глобальный геттер
+      const track = Association._proxy.get('track').call(ass, ass, 'get');
+
+      // Если есть система событий и у нас есть доступ к origin
+      if (ass.temp.origin && ass.temp.origin.on && ass.temp.origin.emit) {
+        const origin = ass.temp.origin;
+        const method = ass.temp.method;
+        const reducerFn = ass.temp.reducer;
+        const initialVal = ass.temp.initialValue;
+        const startIdx = ass.temp.startIndex;
+
+        // Создаем обработчик событий change для автоматического обновления
+        // Подписываемся на событие change у origin
+        const offChange = origin.on('change', (event, meta) => {
+          // Для reduce всегда делаем полное перевычисление при любом изменении
+          // поскольку нам нужно пересчитать весь накопленный результат
+          performFullRecalculation();
+
+          // Функция для полного перевычисления результата
+          function performFullRecalculation() {
+            const type = origin.detect;
+            const originValue = origin.this;
+            let result;
+
+            // Функция инициализации аккумулятора
+            function initializeAccumulator() {
+              // Если был явно указан initialValue, используем его
+              if (initialVal !== undefined) {
+                return initialVal;
+              }
+
+              // Иначе используем первый элемент коллекции
+              if (Array.isArray(originValue) && originValue.length > 0) {
+                return originValue[0];
+              } else if (originValue instanceof Map && originValue.size > 0) {
+                const firstEntry = originValue.entries().next().value;
+                return firstEntry[1];
+              } else if (originValue instanceof Set && originValue.size > 0) {
+                return originValue.values().next().value;
+              } else if (typeof originValue === 'string' && originValue.length > 0) {
+                return originValue[0];
+              } else if (typeof originValue === 'object' && Object.keys(originValue).length > 0) {
+                const keys = Object.keys(originValue);
+                return originValue[keys[0]];
+              } else {
+                return initialVal; // Пустая коллекция без initialValue
+              }
+            }
+
+            // Инициализируем аккумулятор
+            let accumulator = initializeAccumulator();
+            let startIndex = initialVal !== undefined ? 0 : 1;
+
+            // Выполняем свертку
+            if (Array.isArray(originValue)) {
+              for (let i = startIndex; i < originValue.length; i++) {
+                accumulator = reducerFn(accumulator, originValue[i], i, originValue);
+              }
+            } else if (originValue instanceof Map) {
+              let index = 0;
+              originValue.forEach((val, key) => {
+                if (index >= startIndex) {
+                  accumulator = reducerFn(accumulator, val, key, originValue);
+                }
+                index++;
+              });
+            } else if (originValue instanceof Set) {
+              let index = 0;
+              originValue.forEach(val => {
+                if (index >= startIndex) {
+                  accumulator = reducerFn(accumulator, val, index, originValue);
+                }
+                index++;
+              });
+            } else if (typeof originValue === 'string') {
+              for (let i = startIndex; i < originValue.length; i++) {
+                accumulator = reducerFn(accumulator, originValue[i], i, originValue);
+              }
+            } else if (typeof originValue === 'object') {
+              const keys = Object.keys(originValue);
+              for (let i = startIndex; i < keys.length; i++) {
+                const key = keys[i];
+                accumulator = reducerFn(accumulator, originValue[key], key, originValue);
+              }
+            }
+
+            // Обновляем результат
+            ass.this = accumulator;
+          }
+
+          // Генерируем событие изменения
+          if (ass.emit) {
+            ass.emit('change', {
+              origin: origin,
+              reason: 'track',
+              prev: event?.prev,
+              next: event?.next,
+              detail: event?.detail,
+              method: meta?.method || event?.detail?.operation || 'update'
+            });
+          }
+        });
+
+        // Сохраняем функцию отписки для возможности отключения отслеживания
+        track.temp.offChange = offChange;
+      }
+
+      return track;
+    });
+
+    return resultAssociation;
   };
 }
 
@@ -483,6 +703,7 @@ export function every(ass, op) {
 
   return function(callback) {
     const value = ass.this;
+    let result = true;
 
     if (value === null || value === undefined) {
       return true;
@@ -491,26 +712,30 @@ export function every(ass, op) {
     if (Array.isArray(value)) {
       for (let i = 0; i < value.length; i++) {
         if (!callback(value[i], i, value)) {
-          return false;
+          result = false;
+          break;
         }
       }
     } else if (value instanceof Map) {
       for (const [key, val] of value.entries()) {
         if (!callback(val, key, value)) {
-          return false;
+          result = false;
+          break;
         }
       }
     } else if (value instanceof Set) {
       let index = 0;
       for (const val of value) {
         if (!callback(val, index++, value)) {
-          return false;
+          result = false;
+          break;
         }
       }
     } else if (typeof value === 'string') {
       for (let i = 0; i < value.length; i++) {
         if (!callback(value[i], i, value)) {
-          return false;
+          result = false;
+          break;
         }
       }
     } else if (typeof value === 'object') {
@@ -518,12 +743,112 @@ export function every(ass, op) {
       for (let i = 0; i < keys.length; i++) {
         const key = keys[i];
         if (!callback(value[key], key, value)) {
-          return false;
+          result = false;
+          break;
         }
       }
     }
 
-    return true;
+    // Создаем результирующую ассоциацию для поддержки трекинга
+    const resultAssociation = new Association(result);
+
+    // Сохраняем ссылки на исходную ассоциацию и функцию проверки для отслеживания изменений
+    resultAssociation.temp.origin = ass;
+    resultAssociation.temp.predicate = callback;
+    resultAssociation.temp.method = 'every';
+
+    // Создаем локальный обработчик track
+    resultAssociation._proxy.set('track', (ass, op) => {
+      if (op !== 'get') return;
+
+      // Получаем трекер через глобальный геттер
+      const track = Association._proxy.get('track').call(ass, ass, 'get');
+
+      // Если есть система событий и у нас есть доступ к origin
+      if (ass.temp.origin && ass.temp.origin.on && ass.temp.origin.emit) {
+        const origin = ass.temp.origin;
+        const method = ass.temp.method;
+        const predicateFn = ass.temp.predicate;
+
+        // Создаем обработчик событий change для автоматического обновления
+        // Подписываемся на событие change у origin
+        const offChange = origin.on('change', (event, meta) => {
+          // Для every всегда делаем полное перевычисление при любом изменении
+          performFullRecalculation();
+
+          // Функция для полного перевычисления результата
+          function performFullRecalculation() {
+            const type = origin.detect;
+            const originValue = origin.this;
+            let everyResult = true;
+
+            if (originValue === null || originValue === undefined) {
+              everyResult = true;
+            } else if (Array.isArray(originValue)) {
+              for (let i = 0; i < originValue.length; i++) {
+                if (!predicateFn(originValue[i], i, originValue)) {
+                  everyResult = false;
+                  break;
+                }
+              }
+            } else if (originValue instanceof Map) {
+              for (const [key, val] of originValue.entries()) {
+                if (!predicateFn(val, key, originValue)) {
+                  everyResult = false;
+                  break;
+                }
+              }
+            } else if (originValue instanceof Set) {
+              let index = 0;
+              for (const val of originValue) {
+                if (!predicateFn(val, index++, originValue)) {
+                  everyResult = false;
+                  break;
+                }
+              }
+            } else if (typeof originValue === 'string') {
+              for (let i = 0; i < originValue.length; i++) {
+                if (!predicateFn(originValue[i], i, originValue)) {
+                  everyResult = false;
+                  break;
+                }
+              }
+            } else if (typeof originValue === 'object') {
+              const keys = Object.keys(originValue);
+              for (let i = 0; i < keys.length; i++) {
+                const key = keys[i];
+                if (!predicateFn(originValue[key], key, originValue)) {
+                  everyResult = false;
+                  break;
+                }
+              }
+            }
+
+            // Обновляем результат
+            ass.this = everyResult;
+          }
+
+          // Генерируем событие изменения
+          if (ass.emit) {
+            ass.emit('change', {
+              origin: origin,
+              reason: 'track',
+              prev: event?.prev,
+              next: event?.next,
+              detail: event?.detail,
+              method: meta?.method || event?.detail?.operation || 'update'
+            });
+          }
+        });
+
+        // Сохраняем функцию отписки для возможности отключения отслеживания
+        track.temp.offChange = offChange;
+      }
+
+      return track;
+    });
+
+    return resultAssociation;
   };
 }
 
@@ -809,19 +1134,96 @@ export function join(ass, op, separator) {
       return '';
     }
 
+    let result = '';
+
     if (Array.isArray(value)) {
-      return value.join(separator);
+      result = value.join(separator);
     } else if (value instanceof Map) {
-      return Array.from(value.values()).join(separator);
+      result = Array.from(value.values()).join(separator);
     } else if (value instanceof Set) {
-      return Array.from(value).join(separator);
+      result = Array.from(value).join(separator);
     } else if (typeof value === 'string') {
-      return value.split('').join(separator);
+      result = value.split('').join(separator);
     } else if (typeof value === 'object') {
-      return Object.values(value).join(separator);
+      result = Object.values(value).join(separator);
+    } else {
+      result = String(value);
     }
 
-    return String(value);
+    // Создаем результирующую ассоциацию для поддержки трекинга
+    const resultAssociation = new Association(result);
+
+    // Сохраняем ссылки на исходную ассоциацию и параметры для отслеживания изменений
+    resultAssociation.temp.origin = ass;
+    resultAssociation.temp.separator = separator;
+    resultAssociation.temp.method = 'join';
+
+    // Создаем локальный обработчик track
+    resultAssociation._proxy.set('track', (ass, op) => {
+      if (op !== 'get') return;
+
+      // Получаем трекер через глобальный геттер
+      const track = Association._proxy.get('track').call(ass, ass, 'get');
+
+      // Если есть система событий и у нас есть доступ к origin
+      if (ass.temp.origin && ass.temp.origin.on && ass.temp.origin.emit) {
+        const origin = ass.temp.origin;
+        const method = ass.temp.method;
+        const sep = ass.temp.separator;
+
+        // Создаем обработчик событий change для автоматического обновления
+        // Подписываемся на событие change у origin
+        const offChange = origin.on('change', (event, meta) => {
+          // Для join всегда делаем полное перевычисление при любом изменении
+          performFullRecalculation();
+
+          // Функция для полного перевычисления результата
+          function performFullRecalculation() {
+            const type = origin.detect;
+            const originValue = origin.this;
+            let newResult = '';
+
+            if (originValue === null || originValue === undefined) {
+              newResult = '';
+            } else if (Array.isArray(originValue)) {
+              newResult = originValue.join(sep);
+            } else if (originValue instanceof Map) {
+              newResult = Array.from(originValue.values()).join(sep);
+            } else if (originValue instanceof Set) {
+              newResult = Array.from(originValue).join(sep);
+            } else if (typeof originValue === 'string') {
+              newResult = originValue.split('').join(sep);
+            } else if (typeof originValue === 'object') {
+              newResult = Object.values(originValue).join(sep);
+            } else {
+              newResult = String(originValue);
+            }
+
+            // Обновляем результат
+            ass.this = newResult;
+          }
+
+          // Генерируем событие изменения
+          if (ass.emit) {
+            ass.emit('change', {
+              origin: origin,
+              reason: 'track',
+              prev: event?.prev,
+              next: event?.next,
+              detail: event?.detail,
+              method: meta?.method || event?.detail?.operation || 'update'
+            });
+          }
+        });
+
+        // Сохраняем функцию отписки для возможности отключения отслеживания
+        track.temp.offChange = offChange;
+      }
+
+      return track;
+    });
+
+    return resultAssociation;
   };
 }
 

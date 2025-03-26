@@ -54,6 +54,12 @@ export function add(ass, op, args) {
         ass.this[addedKey] = value;
         break;
 
+      case 'string':
+        // Для строки добавляем String(value) в конец
+        addedKey = ass.this.length;
+        ass.this += String(value);
+        break;
+
       default:
         throw new Error(`unexpected type ${type}`);
     }
@@ -70,12 +76,13 @@ export function add(ass, op, args) {
         key: addedKey,
         value: value,
         // Позиция в коллекции для массивов и объектов
-        position: type === 'array' || type === 'object' ? addedKey : undefined,
+        position: type === 'array' || type === 'object' || type === 'string' ? addedKey : undefined,
         // Размер коллекции после изменения
         size: type === 'array' ? ass.this.length :
               type === 'set' ? ass.this.size :
               type === 'map' ? ass.this.size :
-              type === 'object' ? Object.keys(ass.this).length : undefined
+              type === 'object' ? Object.keys(ass.this).length :
+              type === 'string' ? ass.this.length : undefined
       }
     }, {
       method: 'add',

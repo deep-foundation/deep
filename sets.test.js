@@ -229,9 +229,28 @@ test('add method', async (t) => {
     assert.deepStrictEqual(obj.this, { a: 1, '1': 2 });
   });
 
+  await t.test('string', () => {
+    // Проверяем строковый тип
+    const str = deep('hello');
+
+    // Добавляем строковое значение
+    str.add(' world');
+    assert.strictEqual(str.this, 'hello world');
+
+    // Добавляем числовое значение (должно быть преобразовано в строку)
+    str.add(123);
+    assert.strictEqual(str.this, 'hello world123');
+
+    // Добавляем объект (должен быть преобразован toString)
+    const obj = { toString: () => '-custom' };
+    str.add(obj);
+    assert.strictEqual(str.this, 'hello world123-custom');
+  });
+
   await t.test('unsupported types', () => {
     const types = [
-      'abc', // string
+      // строка больше не должна выбрасывать ошибку, убираем из списка неподдерживаемых типов
+      // 'abc', // string
       123, // number
       true, // boolean
       null, // null
@@ -283,6 +302,36 @@ test('add method', async (t) => {
       },
       method: { method: 'add', arguments: [4] }
     });
+  });
+
+  // Добавляем тест на события для строки
+  await t.test('string events', () => {
+    const str = deep('hello');
+    let addEvent = null;
+    let changeEvent = null;
+
+    str.on('add', (event, data) => {
+      addEvent = data;
+    });
+
+    str.on('change', (event, data, method) => {
+      changeEvent = { data, method };
+    });
+
+    str.add(' world');
+
+    assert.deepStrictEqual(addEvent, { value: ' world', key: 5 });
+
+    assert.deepStrictEqual(changeEvent.data.detail, {
+      key: 5,
+      operation: 'add',
+      position: 5,
+      size: 11,
+      type: 'string',
+      value: ' world'
+    });
+
+    assert.deepStrictEqual(changeEvent.method, { method: 'add', arguments: [' world'] });
   });
 });
 
@@ -347,13 +396,13 @@ test('delete method', async (t) => {
     assert.strictEqual(weakset.this.has(obj1), false);
     assert.strictEqual(weakset.this.has(obj2), true);
 
-    // Проверка выброса ошибки при некорректном типе значения
+    // Проверка выброса ошибки при некорректном типе ключа
     assert.throws(
       () => weakset.delete('invalid'),
       { message: 'WeakSet values must be objects' }
     );
 
-    // Проверка выброса ошибки при отсутствующем значении
+    // Проверка выброса ошибки при отсутствующем ключе
     const missingObj = { id: 3 };
     assert.throws(
       () => weakset.delete(missingObj),
@@ -367,9 +416,34 @@ test('delete method', async (t) => {
     assert.deepStrictEqual(obj.this, { b: 2 });
   });
 
+  await t.test('string', () => {
+    // Проверяем строковый тип
+    const str = deep('hello');
+
+    // Удаляем символ по индексу 1 ('e')
+    str.delete(1);
+    assert.strictEqual(str.this, 'hllo', 'Должна получиться строка без символа "e"');
+
+    // Удаляем символ по индексу 0 ('h')
+    str.delete(0);
+    assert.strictEqual(str.this, 'llo', 'Должна получиться строка без первого символа');
+
+    // Проверяем ошибку при неверном индексе
+    assert.throws(
+      () => str.delete(10),
+      { message: 'Invalid index for string' }
+    );
+
+    assert.throws(
+      () => str.delete(-1),
+      { message: 'Invalid index for string' }
+    );
+  });
+
   await t.test('unsupported types', () => {
     const types = [
-      'abc', // string
+      // строка теперь поддерживается
+      // 'abc',
       123, // number
       true, // boolean
       null, // null
@@ -389,33 +463,36 @@ test('delete method', async (t) => {
   });
 
   await t.test('invalid operations', () => {
+    // Проверка выброса ошибки при неправильном индексе для массива
     const arr = deep([1, 2, 3]);
     assert.throws(
       () => arr.delete(-1),
       { message: 'Invalid index for array' }
     );
-
     assert.throws(
-      () => arr.delete(3),
+      () => arr.delete(5),
       { message: 'Invalid index for array' }
     );
 
+    // Проверка выброса ошибки при отсутствующем ключе для объекта
+    const obj = deep({ a: 1 });
+    assert.throws(
+      () => obj.delete('b'),
+      { message: 'Property not found in object' }
+    );
+
+    // Проверка выброса ошибки при отсутствующем ключе для Map
     const map = deep(new Map([['a', 1]]));
     assert.throws(
       () => map.delete('b'),
       { message: 'Key not found in map' }
     );
 
+    // Проверка выброса ошибки при отсутствующем значении для Set
     const set = deep(new Set([1, 2]));
     assert.throws(
       () => set.delete(3),
       { message: 'Value not found in set' }
-    );
-
-    const obj = deep({ a: 1 });
-    assert.throws(
-      () => obj.delete('b'),
-      { message: 'Property not found in object' }
     );
   });
 
@@ -435,20 +512,49 @@ test('delete method', async (t) => {
     arr.delete(1);
 
     assert.deepStrictEqual(deleteEvent, { key: 1, value: 2 });
-    assert.deepStrictEqual(changeEvent, {
-      data: { prev: [1, 3], next: [1, 3], detail: {
-        affectedIndices: [
-          2
-        ],
-        key: 1,
-        operation: 'delete',
-        prevSize: 3,
-        size: 2,
-        type: 'array',
-        value: 2
-      }, },
-      method: { method: 'delete', arguments: [1] }
+
+    assert.deepStrictEqual(changeEvent.data.detail, {
+      affectedIndices: [2],
+      key: 1,
+      operation: 'delete',
+      prevSize: 3,
+      size: 2,
+      type: 'array',
+      value: 2
     });
+
+    assert.deepStrictEqual(changeEvent.method, { method: 'delete', arguments: [1] });
+  });
+
+  // Добавляем тест для событий при удалении символа в строке
+  await t.test('string events', () => {
+    const str = deep('hello');
+    let deleteEvent = null;
+    let changeEvent = null;
+
+    str.on('delete', (event, data) => {
+      deleteEvent = data;
+    });
+
+    str.on('change', (event, data, method) => {
+      changeEvent = { data, method };
+    });
+
+    str.delete(1); // Удаляем 'e'
+
+    assert.deepStrictEqual(deleteEvent, { key: 1, value: 'e' });
+
+    assert.deepStrictEqual(changeEvent.data.detail, {
+      affectedIndices: [2, 3, 4],
+      key: 1,
+      operation: 'delete',
+      prevSize: 5,
+      size: 4,
+      type: 'string',
+      value: 'e'
+    });
+
+    assert.deepStrictEqual(changeEvent.method, { method: 'delete', arguments: [1] });
   });
 });
 

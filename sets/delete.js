@@ -77,6 +77,16 @@ export function deleteMethod(ass, op, args) {
         delete ass.this[key];
         break;
 
+      case 'string':
+        if (typeof key !== 'number' || key < 0 || key >= ass.this.length) {
+          throw new Error('Invalid index for string');
+        }
+        deletedValue = ass.this[key];
+        prevSize = ass.this.length;
+        // Удаляем символ по индексу и собираем строку обратно
+        ass.this = ass.this.substring(0, key) + ass.this.substring(key + 1);
+        break;
+
       default:
         throw new Error(`unexpected type ${type}`);
     }
@@ -98,9 +108,10 @@ export function deleteMethod(ass, op, args) {
         size: type === 'array' ? ass.this.length :
               type === 'set' ? ass.this.size :
               type === 'map' ? ass.this.size :
-              type === 'object' ? Object.keys(ass.this).length : undefined,
-        // Для массивов - затронутые индексы
-        affectedIndices: type === 'array' ?
+              type === 'object' ? Object.keys(ass.this).length :
+              type === 'string' ? ass.this.length : undefined,
+        // Для массивов и строк - затронутые индексы
+        affectedIndices: (type === 'array' || type === 'string') ?
                          Array.from({ length: prevSize - key - 1 }, (_, i) => key + i + 1) :
                          undefined
       }

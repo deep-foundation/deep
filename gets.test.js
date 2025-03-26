@@ -124,19 +124,19 @@ test('filter для разных типов данных', async (t) => {
   await t.test('Для массива', () => {
     const array = [1, 2, 3, 4, 5];
     const result = deep(array).filter(x => x % 2 === 0);
-    assert.deepStrictEqual(result, [2, 4]);
+    assert.deepStrictEqual(result.this, [2, 4]);
   });
 
   await t.test('Для объекта', () => {
     const obj = { a: 1, b: 2, c: 3, d: 4 };
     const result = deep(obj).filter(x => x % 2 === 0);
-    assert.deepStrictEqual(result, [2, 4]);
+    assert.deepStrictEqual(result.this, [2, 4]);
   });
 
   await t.test('Для строки', () => {
     const str = 'abcde';
     const result = deep(str).filter(x => ['a', 'e'].includes(x));
-    assert.deepStrictEqual(result, ['a', 'e']);
+    assert.deepStrictEqual(result.this, ['a', 'e']);
   });
 });
 
@@ -144,42 +144,42 @@ test('reduce для разных типов данных', async (t) => {
   await t.test('Для массива', () => {
     const array = [1, 2, 3, 4];
     const result = deep(array).reduce((acc, x) => acc + x, 0);
-    assert.strictEqual(result, 10);
+    assert.strictEqual(result.this, 10);
   });
 
   await t.test('Для объекта', () => {
     const obj = { a: 1, b: 2, c: 3 };
     const result = deep(obj).reduce((acc, x) => acc + x, 0);
-    assert.strictEqual(result, 6);
+    assert.strictEqual(result.this, 6);
   });
 
   await t.test('Для строки', () => {
     const str = 'abc';
     const result = deep(str).reduce((acc, x) => acc + x.toUpperCase(), '');
-    assert.strictEqual(result, 'ABC');
+    assert.strictEqual(result.this, 'ABC');
   });
 
   await t.test('Без initial value', () => {
     const array = [1, 2, 3, 4];
     const result = deep(array).reduce((acc, x) => acc + x);
-    assert.strictEqual(result, 10);
+    assert.strictEqual(result.this, 10);
   });
 });
 
 test('every для разных типов данных', async (t) => {
   await t.test('Для массива', () => {
-    assert.strictEqual(deep([2, 4, 6]).every(x => x % 2 === 0), true);
-    assert.strictEqual(deep([2, 3, 6]).every(x => x % 2 === 0), false);
+    assert.strictEqual(deep([2, 4, 6]).every(x => x % 2 === 0).this, true);
+    assert.strictEqual(deep([2, 3, 6]).every(x => x % 2 === 0).this, false);
   });
 
   await t.test('Для объекта', () => {
-    assert.strictEqual(deep({ a: 2, b: 4 }).every(x => x % 2 === 0), true);
-    assert.strictEqual(deep({ a: 2, b: 3 }).every(x => x % 2 === 0), false);
+    assert.strictEqual(deep({ a: 2, b: 4 }).every(x => x % 2 === 0).this, true);
+    assert.strictEqual(deep({ a: 2, b: 3 }).every(x => x % 2 === 0).this, false);
   });
 
   await t.test('Для строки', () => {
-    assert.strictEqual(deep('abc').every(x => /[a-z]/.test(x)), true);
-    assert.strictEqual(deep('ab1').every(x => /[a-z]/.test(x)), false);
+    assert.strictEqual(deep('abc').every(x => /[a-z]/.test(x)).this, true);
+    assert.strictEqual(deep('ab1').every(x => /[a-z]/.test(x)).this, false);
   });
 });
 
@@ -234,18 +234,18 @@ test('keys, values, entries для разных типов данных', async 
 
 test('join для разных типов данных', async (t) => {
   await t.test('join для массива', () => {
-    assert.strictEqual(deep([1, 2, 3]).join(), '1,2,3');
-    assert.strictEqual(deep([1, 2, 3]).join('-'), '1-2-3');
+    assert.strictEqual(deep([1, 2, 3]).join().this, '1,2,3');
+    assert.strictEqual(deep([1, 2, 3]).join('-').this, '1-2-3');
   });
 
   await t.test('join для объекта', () => {
     // Порядок ключей в объектах может быть разным, поэтому проверяем по-другому
-    const joined = deep({ a: 1, b: 2 }).join('-');
+    const joined = deep({ a: 1, b: 2 }).join('-').this;
     assert.ok(joined === '1-2' || joined === '2-1');
   });
 
   await t.test('join для строки', () => {
-    assert.strictEqual(deep('abc').join(), 'a,b,c');
-    assert.strictEqual(deep('abc').join('-'), 'a-b-c');
+    assert.strictEqual(deep('abc').join().this, 'a,b,c');
+    assert.strictEqual(deep('abc').join('-').this, 'a-b-c');
   });
 });
