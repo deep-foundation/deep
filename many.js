@@ -3,16 +3,95 @@
  */
 
 import { Association } from './association.js';
+import { is } from './is.js';
+
+// Добавляем геттеры для проверки типов
+Object.defineProperties(Set.prototype, {
+  isSet: { get: function() { return true } },
+  isArray: { get: function() { return false } },
+  isObject: { get: function() { return false } },
+  isMap: { get: function() { return false } }
+});
+
+Object.defineProperties(Array.prototype, {
+  isSet: { get: function() { return false } },
+  isArray: { get: function() { return true } },
+  isObject: { get: function() { return false } },
+  isMap: { get: function() { return false } }
+});
+
+Object.defineProperties(Map.prototype, {
+  isSet: { get: function() { return false } },
+  isArray: { get: function() { return false } },
+  isObject: { get: function() { return false } },
+  isMap: { get: function() { return true } }
+});
+
+Object.defineProperties(Object.prototype, {
+  isSet: { get: function() { return false } },
+  isArray: { get: function() { return false } },
+  isObject: { get: function() { return true } },
+  isMap: { get: function() { return false } }
+});
 
 /**
- * Проверяет, является ли значение множеством Set
+ * Проверяет, является ли значение множественным типом данных
  * @param {*} value - Проверяемое значение
- * @throws {Error} Если значение не является Set
+ * @returns {boolean} - true если значение является множественным типом
  */
-function assertSet(value, methodName) {
-  if (!(value instanceof Set)) {
-    throw new Error(`${methodName} метод работает только с типом Set`);
+function isManyType(value) {
+  return value.isArray || value.isSet || value.isObject || value.isMap;
+}
+
+/**
+ * Проверяет совместимость типов для операции
+ * @param {*} first - Первое значение
+ * @param {*} second - Второе значение
+ * @throws {Error} Если типы несовместимы
+ */
+function assertCompatibleTypes(first, second, methodName) {
+  if (!isManyType(first)) {
+    throw new Error(`${methodName} метод работает только с множественными типами данных`);
   }
+
+  if (!isManyType(second)) {
+    throw new Error(`${methodName} метод работает только с множественными типами данных`);
+  }
+
+  const isFirstArrayOrSet = first.isArray || first.isSet;
+  const isSecondArrayOrSet = second.isArray || second.isSet;
+  const isFirstObjectOrMap = first.isObject || first.isMap;
+  const isSecondObjectOrMap = second.isObject || second.isMap;
+
+  if ((isFirstArrayOrSet && !isSecondArrayOrSet) || (!isFirstArrayOrSet && isSecondArrayOrSet)) {
+    throw new Error(`${methodName} метод не поддерживает смешивание массивов/множеств с объектами/картами`);
+  }
+
+  if ((isFirstObjectOrMap && !isSecondObjectOrMap) || (!isFirstObjectOrMap && isSecondObjectOrMap)) {
+    throw new Error(`${methodName} метод не поддерживает смешивание массивов/множеств с объектами/картами`);
+  }
+}
+
+/**
+ * Преобразует значение в Set
+ * @param {*} value - Значение для преобразования
+ * @returns {Set} - Множество
+ */
+function toSet(value) {
+  if (value.isSet) return value;
+  if (value.isArray) return new Set(value);
+  throw new Error('Неподдерживаемый тип данных для преобразования в Set');
+}
+
+/**
+ * Преобразует значение в Map
+ * @param {*} value - Значение для преобразования
+ * @returns {Map} - Карта
+ */
+function toMap(value) {
+  if (value.isMap) return value;
+  if (value.isObject) return new Map(Object.entries(value));
+  throw new Error('Неподдерживаемый тип данных для преобразования в Map');
 }
 
 // Добавляем нативные методы в прототип Set, если они отсутствуют
@@ -62,22 +141,50 @@ if (!Set.prototype.symmetricDifference) {
  * @param {Association} ass - Экземпляр Association
  * @param {string} op - Операция ('get', 'apply')
  * @param {Array} args - Аргументы метода
- * @returns {Set} - Новое множество, содержащее элементы из A, которых нет в B
+ * @returns {Set|Map} - Новое множество/карта, содержащее элементы из A, которых нет в B
  */
 export function difference(ass, op, args) {
   if (op === 'get') {
     return function(other) {
-      assertSet(ass.this, 'difference');
-      assertSet(other, 'difference');
-      return new Association(ass.this.difference(other));
+      assertCompatibleTypes(ass.this, other, 'difference');
+
+      if (ass.this.isArray || ass.this.isSet) {
+        const set1 = toSet(ass.this);
+        const set2 = toSet(other);
+        return new Association(set1.difference(set2));
+      } else {
+        const map1 = toMap(ass.this);
+        const map2 = toMap(other);
+        const result = new Map();
+        for (const [key, value] of map1) {
+          if (!map2.has(key)) {
+            result.set(key, value);
+          }
+        }
+        return new Association(result);
+      }
     };
   }
 
   if (op === 'apply') {
     const [other] = args;
-    assertSet(ass.this, 'difference');
-    assertSet(other, 'difference');
-    return ass.this.difference(other);
+    assertCompatibleTypes(ass.this, other, 'difference');
+
+    if (ass.this.isArray || ass.this.isSet) {
+      const set1 = toSet(ass.this);
+      const set2 = toSet(other);
+      return set1.difference(set2);
+    } else {
+      const map1 = toMap(ass.this);
+      const map2 = toMap(other);
+      const result = new Map();
+      for (const [key, value] of map1) {
+        if (!map2.has(key)) {
+          result.set(key, value);
+        }
+      }
+      return result;
+    }
   }
 }
 
@@ -86,22 +193,50 @@ export function difference(ass, op, args) {
  * @param {Association} ass - Экземпляр Association
  * @param {string} op - Операция ('get', 'apply')
  * @param {Array} args - Аргументы метода
- * @returns {Set} - Новое множество, содержащее общие элементы A и B
+ * @returns {Set|Map} - Новое множество/карта, содержащее общие элементы A и B
  */
 export function intersection(ass, op, args) {
   if (op === 'get') {
     return function(other) {
-      assertSet(ass.this, 'intersection');
-      assertSet(other, 'intersection');
-      return new Association(ass.this.intersection(other));
+      assertCompatibleTypes(ass.this, other, 'intersection');
+
+      if (ass.this.isArray || ass.this.isSet) {
+        const set1 = toSet(ass.this);
+        const set2 = toSet(other);
+        return new Association(set1.intersection(set2));
+      } else {
+        const map1 = toMap(ass.this);
+        const map2 = toMap(other);
+        const result = new Map();
+        for (const [key, value] of map1) {
+          if (map2.has(key)) {
+            result.set(key, value);
+          }
+        }
+        return new Association(result);
+      }
     };
   }
 
   if (op === 'apply') {
     const [other] = args;
-    assertSet(ass.this, 'intersection');
-    assertSet(other, 'intersection');
-    return ass.this.intersection(other);
+    assertCompatibleTypes(ass.this, other, 'intersection');
+
+    if (ass.this.isArray || ass.this.isSet) {
+      const set1 = toSet(ass.this);
+      const set2 = toSet(other);
+      return set1.intersection(set2);
+    } else {
+      const map1 = toMap(ass.this);
+      const map2 = toMap(other);
+      const result = new Map();
+      for (const [key, value] of map1) {
+        if (map2.has(key)) {
+          result.set(key, value);
+        }
+      }
+      return result;
+    }
   }
 }
 
@@ -110,22 +245,60 @@ export function intersection(ass, op, args) {
  * @param {Association} ass - Экземпляр Association
  * @param {string} op - Операция ('get', 'apply')
  * @param {Array} args - Аргументы метода
- * @returns {Set} - Новое множество, содержащее элементы, присутствующие только в одном из множеств
+ * @returns {Set|Map} - Новое множество/карта, содержащее элементы, присутствующие только в одном из множеств
  */
 export function symmetricDifference(ass, op, args) {
   if (op === 'get') {
     return function(other) {
-      assertSet(ass.this, 'symmetricDifference');
-      assertSet(other, 'symmetricDifference');
-      return new Association(ass.this.symmetricDifference(other));
+      assertCompatibleTypes(ass.this, other, 'symmetricDifference');
+
+      if (ass.this.isArray || ass.this.isSet) {
+        const set1 = toSet(ass.this);
+        const set2 = toSet(other);
+        return new Association(set1.symmetricDifference(set2));
+      } else {
+        const map1 = toMap(ass.this);
+        const map2 = toMap(other);
+        const result = new Map();
+        for (const [key, value] of map1) {
+          if (!map2.has(key)) {
+            result.set(key, value);
+          }
+        }
+        for (const [key, value] of map2) {
+          if (!map1.has(key)) {
+            result.set(key, value);
+          }
+        }
+        return new Association(result);
+      }
     };
   }
 
   if (op === 'apply') {
     const [other] = args;
-    assertSet(ass.this, 'symmetricDifference');
-    assertSet(other, 'symmetricDifference');
-    return ass.this.symmetricDifference(other);
+    assertCompatibleTypes(ass.this, other, 'symmetricDifference');
+
+    if (ass.this.isArray || ass.this.isSet) {
+      const set1 = toSet(ass.this);
+      const set2 = toSet(other);
+      return set1.symmetricDifference(set2);
+    } else {
+      const map1 = toMap(ass.this);
+      const map2 = toMap(other);
+      const result = new Map();
+      for (const [key, value] of map1) {
+        if (!map2.has(key)) {
+          result.set(key, value);
+        }
+      }
+      for (const [key, value] of map2) {
+        if (!map1.has(key)) {
+          result.set(key, value);
+        }
+      }
+      return result;
+    }
   }
 }
 
@@ -134,22 +307,38 @@ export function symmetricDifference(ass, op, args) {
  * @param {Association} ass - Экземпляр Association
  * @param {string} op - Операция ('get', 'apply')
  * @param {Array} args - Аргументы метода
- * @returns {Set} - Новое множество, содержащее все элементы из обоих множеств
+ * @returns {Set|Map} - Новое множество/карта, содержащее все элементы из обоих множеств
  */
 export function union(ass, op, args) {
   if (op === 'get') {
     return function(other) {
-      assertSet(ass.this, 'union');
-      assertSet(other, 'union');
-      return new Association(new Set([...ass.this, ...other]));
+      assertCompatibleTypes(ass.this, other, 'union');
+
+      if (ass.this.isArray || ass.this.isSet) {
+        const set1 = toSet(ass.this);
+        const set2 = toSet(other);
+        return new Association(new Set([...set1, ...set2]));
+      } else {
+        const map1 = toMap(ass.this);
+        const map2 = toMap(other);
+        return new Association(new Map([...map1, ...map2]));
+      }
     };
   }
 
   if (op === 'apply') {
     const [other] = args;
-    assertSet(ass.this, 'union');
-    assertSet(other, 'union');
-    return new Set([...ass.this, ...other]);
+    assertCompatibleTypes(ass.this, other, 'union');
+
+    if (ass.this.isArray || ass.this.isSet) {
+      const set1 = toSet(ass.this);
+      const set2 = toSet(other);
+      return new Set([...set1, ...set2]);
+    } else {
+      const map1 = toMap(ass.this);
+      const map2 = toMap(other);
+      return new Map([...map1, ...map2]);
+    }
   }
 }
 

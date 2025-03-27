@@ -1,236 +1,189 @@
 /**
  * Бенчмарк для методов модификации (sets.js)
  */
+import { deep } from './index.js';
 import Benchmarkify from 'benchmarkify';
-import deep from './index.js';
 
-const benchmark = new Benchmarkify("Deep Methods Benchmark - Sets").printHeader();
+const benchmark = new Benchmarkify("Sets.js Benchmarks").printHeader();
 
-// Создание бенчмарка
-const bench = benchmark.createSuite("Методы работы с наборами (sets.js)");
+// Подготавливаем данные для тестов
+const smallArray = [1, 2, 3, 4];
+const smallObject = { a: 1, b: 2, c: 3 };
+const smallMap = new Map([['a', 1], ['b', 2], ['c', 3]]);
+const smallSet = new Set([1, 2, 3, 4]);
 
-// Начальные данные для тестов
-const arraySize = 1000;
-const testArray = Array.from({ length: arraySize }, (_, i) => i);
-const testObject = Object.fromEntries(testArray.map((val, i) => [`key${i}`, val]));
-const testMap = new Map(testArray.map((val, i) => [`key${i}`, val]));
-const testSet = new Set(testArray);
+const bigArray = Array.from({ length: 1000 }, (_, i) => i);
+const bigObject = Object.fromEntries(Array.from({ length: 1000 }, (_, i) => [`key${i}`, i]));
+const bigMap = new Map(Array.from({ length: 1000 }, (_, i) => [`key${i}`, i]));
+const bigSet = new Set(Array.from({ length: 1000 }, (_, i) => i));
 
-// Оборачиваем в deep
-const deepArray = deep(testArray.slice());
-const deepObject = deep({ ...testObject });
-const deepMap = deep(new Map(testMap));
-const deepSet = deep(new Set(testSet));
+// Бенчмарк для set (4 элемента)
+benchmark.createSuite('set (4 elements)')
+  .add('array.set(index, value)', () => {
+    deep([...smallArray]).set(0, 999);
+  })
+  .add('object.set(key, value)', () => {
+    deep({ ...smallObject }).set('a', 999);
+  })
+  .add('map.set(key, value)', () => {
+    deep(new Map(smallMap)).set('a', 999);
+  });
 
-// Бенчмарк метода add
-bench.add("add в массив", () => {
-  const arr = deep(testArray.slice());
-  arr.add(arraySize);
-  return arr.this.length === arraySize + 1;
-});
+// Бенчмарк для set (1000 элементов)
+benchmark.createSuite('set (1000 elements)')
+  .add('array.set(index, value)', () => {
+    deep([...bigArray]).set(0, 999);
+  })
+  .add('object.set(key, value)', () => {
+    deep({ ...bigObject }).set('key0', 999);
+  })
+  .add('map.set(key, value)', () => {
+    deep(new Map(bigMap)).set('key0', 999);
+  });
 
-bench.add("push в обычный массив (нативный)", () => {
-  const arr = testArray.slice();
-  arr.push(arraySize);
-  return arr.length === arraySize + 1;
-});
+// Бенчмарк для add (4 элемента)
+benchmark.createSuite('add (4 elements)')
+  .add('array.add(value)', () => {
+    deep([...smallArray]).add(999);
+  })
+  .add('object.add(key, value)', () => {
+    deep({ ...smallObject }).add('d', 999);
+  })
+  .add('map.add(key, value)', () => {
+    deep(new Map(smallMap)).add('d', 999);
+  })
+  .add('set.add(value)', () => {
+    deep(new Set(smallSet)).add(999);
+  });
 
-bench.add("add в объект", () => {
-  const obj = deep({ ...testObject });
-  obj.add(`newKey`, arraySize);
-  return obj.this.newKey === arraySize;
-});
+// Бенчмарк для add (1000 элементов)
+benchmark.createSuite('add (1000 elements)')
+  .add('array.add(value)', () => {
+    deep([...bigArray]).add(999);
+  })
+  .add('object.add(key, value)', () => {
+    deep({ ...bigObject }).add('key999', 999);
+  })
+  .add('map.add(key, value)', () => {
+    deep(new Map(bigMap)).add('key999', 999);
+  })
+  .add('set.add(value)', () => {
+    deep(new Set(bigSet)).add(999);
+  });
 
-bench.add("add в Map", () => {
-  const map = deep(new Map(testMap));
-  map.add(`newKey`, arraySize);
-  return map.this.get('newKey') === arraySize;
-});
+// Бенчмарк для delete (4 элемента)
+benchmark.createSuite('delete (4 elements)')
+  .add('array.delete(index)', () => {
+    deep([...smallArray]).delete(0);
+  })
+  .add('object.delete(key)', () => {
+    deep({ ...smallObject }).delete('a');
+  })
+  .add('map.delete(key)', () => {
+    deep(new Map(smallMap)).delete('a');
+  })
+  .add('set.delete(value)', () => {
+    deep(new Set(smallSet)).delete(1);
+  });
 
-bench.add("add в Set", () => {
-  const set = deep(new Set(testSet));
-  set.add(arraySize);
-  return set.this.has(arraySize);
-});
+// Бенчмарк для delete (1000 элементов)
+benchmark.createSuite('delete (1000 elements)')
+  .add('array.delete(index)', () => {
+    deep([...bigArray]).delete(0);
+  })
+  .add('object.delete(key)', () => {
+    deep({ ...bigObject }).delete('key0');
+  })
+  .add('map.delete(key)', () => {
+    deep(new Map(bigMap)).delete('key0');
+  })
+  .add('set.delete(value)', () => {
+    deep(new Set(bigSet)).delete(0);
+  });
 
-// Бенчмарк метода remove
-bench.add("remove из массива", () => {
-  const arr = deep(testArray.slice());
-  arr.remove(50);
-  return arr.this.length === arraySize - 1;
-});
+// Бенчмарк для remove (4 элемента)
+benchmark.createSuite('remove (4 elements)')
+  .add('array.remove(value)', () => {
+    deep([...smallArray]).remove(1);
+  })
+  .add('object.remove(value)', () => {
+    deep({ ...smallObject }).remove(1);
+  })
+  .add('map.remove(value)', () => {
+    deep(new Map(smallMap)).remove(1);
+  })
+  .add('set.remove(value)', () => {
+    deep(new Set(smallSet)).remove(1);
+  });
 
-bench.add("splice из обычного массива (нативный)", () => {
-  const arr = testArray.slice();
-  const index = arr.indexOf(50);
-  if (index > -1) {
-    arr.splice(index, 1);
-  }
-  return arr.length === arraySize - 1;
-});
+// Бенчмарк для remove (1000 элементов)
+benchmark.createSuite('remove (1000 elements)')
+  .add('array.remove(value)', () => {
+    deep([...bigArray]).remove(0);
+  })
+  .add('object.remove(value)', () => {
+    deep({ ...bigObject }).remove(0);
+  })
+  .add('map.remove(value)', () => {
+    deep(new Map(bigMap)).remove(0);
+  })
+  .add('set.remove(value)', () => {
+    deep(new Set(bigSet)).remove(0);
+  });
 
-bench.add("remove из объекта", () => {
-  const obj = deep({ ...testObject });
-  obj.remove('key50');
-  return obj.this.key50 === undefined;
-});
+// Бенчмарк для push (4 элемента)
+benchmark.createSuite('push (4 elements)')
+  .add('array.push(value)', () => {
+    deep([...smallArray]).push(999);
+  });
 
-bench.add("remove из Map", () => {
-  const map = deep(new Map(testMap));
-  map.remove('key50');
-  return !map.this.has('key50');
-});
+// Бенчмарк для push (1000 элементов)
+benchmark.createSuite('push (1000 elements)')
+  .add('array.push(value)', () => {
+    deep([...bigArray]).push(999);
+  });
 
-bench.add("remove из Set", () => {
-  const set = deep(new Set(testSet));
-  set.remove(50);
-  return !set.this.has(50);
-});
+// Бенчмарк для pop (4 элемента)
+benchmark.createSuite('pop (4 elements)')
+  .add('array.pop()', () => {
+    deep([...smallArray]).pop();
+  });
 
-// Бенчмарк метода clear
-bench.add("clear для массива", () => {
-  const arr = deep(testArray.slice());
-  arr.clear();
-  return arr.this.length === 0;
-});
+// Бенчмарк для pop (1000 элементов)
+benchmark.createSuite('pop (1000 elements)')
+  .add('array.pop()', () => {
+    deep([...bigArray]).pop();
+  });
 
-bench.add("length = 0 для обычного массива (нативный)", () => {
-  const arr = testArray.slice();
-  arr.length = 0;
-  return arr.length === 0;
-});
+// Бенчмарк для shift (4 элемента)
+benchmark.createSuite('shift (4 elements)')
+  .add('array.shift()', () => {
+    deep([...smallArray]).shift();
+  });
 
-bench.add("clear для объекта", () => {
-  const obj = deep({ ...testObject });
-  obj.clear();
-  return Object.keys(obj.this).length === 0;
-});
+// Бенчмарк для shift (1000 элементов)
+benchmark.createSuite('shift (1000 elements)')
+  .add('array.shift()', () => {
+    deep([...bigArray]).shift();
+  });
 
-bench.add("clear для Map", () => {
-  const map = deep(new Map(testMap));
-  map.clear();
-  return map.this.size === 0;
-});
+// Бенчмарк для unshift (4 элемента)
+benchmark.createSuite('unshift (4 elements)')
+  .add('array.unshift(value)', () => {
+    deep([...smallArray]).unshift(999);
+  });
 
-bench.add("clear для Set", () => {
-  const set = deep(new Set(testSet));
-  set.clear();
-  return set.this.size === 0;
-});
+// Бенчмарк для unshift (1000 элементов)
+benchmark.createSuite('unshift (1000 elements)')
+  .add('array.unshift(value)', () => {
+    deep([...bigArray]).unshift(999);
+  });
 
-// Бенчмарк метода has
-bench.add("has для массива", () => {
-  return deepArray.has(50);
-});
+// Запускаем все бенчмарки
+async function runBenchmarks() {
+  console.log('🚀 Запуск бенчмарков...\n');
+  await benchmark.run();
+  console.log('\n✅ Бенчмарки завершены');
+}
 
-bench.add("includes для обычного массива (нативный)", () => {
-  return testArray.includes(50);
-});
-
-bench.add("has для объекта", () => {
-  return deepObject.has('key50');
-});
-
-bench.add("hasOwnProperty для обычного объекта (нативный)", () => {
-  return testObject.hasOwnProperty('key50');
-});
-
-bench.add("has для Map", () => {
-  return deepMap.has('key50');
-});
-
-bench.add("has для Set", () => {
-  return deepSet.has(50);
-});
-
-// Бенчмарк метода get
-bench.add("get для массива", () => {
-  return deepArray.get(50).this === 50;
-});
-
-bench.add("индексный доступ для обычного массива (нативный)", () => {
-  return testArray[50] === 50;
-});
-
-bench.add("get для объекта", () => {
-  return deepObject.get('key50').this === 50;
-});
-
-bench.add("прямой доступ для обычного объекта (нативный)", () => {
-  return testObject.key50 === 50;
-});
-
-bench.add("get для Map", () => {
-  return deepMap.get('key50').this === 50;
-});
-
-bench.add("get для Set", () => {
-  return deepSet.get(50).this === 50;
-});
-
-// Бенчмарк метода set
-bench.add("set для массива", () => {
-  const arr = deep(testArray.slice());
-  arr.set(50, 999);
-  return arr.this[50] === 999;
-});
-
-bench.add("индексное присваивание для обычного массива (нативный)", () => {
-  const arr = testArray.slice();
-  arr[50] = 999;
-  return arr[50] === 999;
-});
-
-bench.add("set для объекта", () => {
-  const obj = deep({ ...testObject });
-  obj.set('key50', 999);
-  return obj.this.key50 === 999;
-});
-
-bench.add("прямое присваивание для обычного объекта (нативный)", () => {
-  const obj = { ...testObject };
-  obj.key50 = 999;
-  return obj.key50 === 999;
-});
-
-bench.add("set для Map", () => {
-  const map = deep(new Map(testMap));
-  map.set('key50', 999);
-  return map.this.get('key50') === 999;
-});
-
-bench.add("set для Set", () => {
-  // Для Set нет прямого эквивалента, поэтому тестируем удаление и добавление
-  const set = deep(new Set(testSet));
-  set.remove(50);
-  set.add(999);
-  return !set.this.has(50) && set.this.has(999);
-});
-
-// Бенчмарк метода size
-bench.add("size для массива", () => {
-  return deepArray.size() === arraySize;
-});
-
-bench.add("length для обычного массива (нативный)", () => {
-  return testArray.length === arraySize;
-});
-
-bench.add("size для объекта", () => {
-  return deepObject.size() === arraySize;
-});
-
-bench.add("Object.keys().length для обычного объекта (нативный)", () => {
-  return Object.keys(testObject).length === arraySize;
-});
-
-bench.add("size для Map", () => {
-  return deepMap.size() === arraySize;
-});
-
-bench.add("size для Set", () => {
-  return deepSet.size() === arraySize;
-});
-
-// Запуск бенчмарка
-benchmark.run();
+runBenchmarks().catch(console.error);

@@ -1,195 +1,170 @@
 /**
- * Бенчмарк для системы отслеживания (track)
+ * Бенчмарки для модуля track.js
  */
+
+import { deep } from './index.js';
 import Benchmarkify from 'benchmarkify';
-import deep from './index.js';
 
-const benchmark = new Benchmarkify("Deep Methods Benchmark - Track").printHeader();
+// Создаем бенчмарк
+const benchmark = new Benchmarkify('Track.js Benchmarks').printHeader();
 
-// Создание бенчмарка
-const bench = benchmark.createSuite("Система отслеживания изменений (Track)");
+// Подготавливаем данные для тестов
+const smallArray = Array.from({ length: 100 }, (_, i) => i);
+const smallSet = new Set(smallArray);
+const smallMap = new Map(smallArray.map((v, i) => [`key${i}`, v]));
+const smallObj = Object.fromEntries(smallArray.map((v, i) => [`key${i}`, v]));
 
-// Количество элементов для тестов
-const arraySize = 1000;
-const testArray = Array.from({ length: arraySize }, (_, i) => i);
+// Функция для создания цепочки зависимостей
+function createChain(source, length) {
+  let current = source;
+  const chain = [current];
 
-// Простое отслеживание изменений
-bench.add("map - создание производного массива", () => {
-  const sourceArray = deep(testArray.slice());
-  const mapped = sourceArray.map(x => x * 2);
-  return mapped.this.length === arraySize;
-});
-
-bench.add("map - создание производного массива + изменение исходного", () => {
-  const sourceArray = deep(testArray.slice());
-  const mapped = sourceArray.map(x => x * 2);
-  sourceArray.push(arraySize);
-  return mapped.this.length === arraySize + 1;
-});
-
-bench.add("filter - создание отфильтрованного массива", () => {
-  const sourceArray = deep(testArray.slice());
-  const filtered = sourceArray.filter(x => x % 2 === 0);
-  return filtered.this.length === arraySize / 2;
-});
-
-bench.add("filter - создание отфильтрованного массива + изменение исходного", () => {
-  const sourceArray = deep(testArray.slice());
-  const filtered = sourceArray.filter(x => x % 2 === 0);
-  sourceArray.push(arraySize);
-  return filtered.this.length === arraySize / 2 + 1;
-});
-
-// Цепочки преобразований
-bench.add("цепочка map -> filter", () => {
-  const sourceArray = deep(testArray.slice());
-  const mapped = sourceArray.map(x => x * 2);
-  const filtered = mapped.filter(x => x % 4 === 0);
-  return filtered.this.length === arraySize / 2;
-});
-
-bench.add("цепочка map -> filter + изменение исходного", () => {
-  const sourceArray = deep(testArray.slice());
-  const mapped = sourceArray.map(x => x * 2);
-  const filtered = mapped.filter(x => x % 4 === 0);
-  sourceArray.push(arraySize);
-  return filtered.this.length === arraySize / 2 + (arraySize % 2 === 0 ? 1 : 0);
-});
-
-bench.add("цепочка map -> filter -> map", () => {
-  const sourceArray = deep(testArray.slice());
-  const mapped = sourceArray.map(x => x * 2);
-  const filtered = mapped.filter(x => x % 4 === 0);
-  const divided = filtered.map(x => x / 2);
-  return divided.this.length === arraySize / 2;
-});
-
-bench.add("цепочка map -> filter -> map + изменение исходного", () => {
-  const sourceArray = deep(testArray.slice());
-  const mapped = sourceArray.map(x => x * 2);
-  const filtered = mapped.filter(x => x % 4 === 0);
-  const divided = filtered.map(x => x / 2);
-  sourceArray.push(arraySize);
-  return divided.this.length === arraySize / 2 + (arraySize % 2 === 0 ? 1 : 0);
-});
-
-// Сложные операции с объектами
-bench.add("отслеживание объектов - map", () => {
-  const users = deep([
-    { id: 1, name: 'User 1', age: 20 },
-    { id: 2, name: 'User 2', age: 30 },
-    { id: 3, name: 'User 3', age: 25 },
-    { id: 4, name: 'User 4', age: 40 }
-  ]);
-
-  const names = users.map(user => user.name);
-  users.push({ id: 5, name: 'User 5', age: 35 });
-
-  return names.this.length === 5 && names.this[4] === 'User 5';
-});
-
-bench.add("отслеживание объектов - filter", () => {
-  const users = deep([
-    { id: 1, name: 'User 1', age: 20 },
-    { id: 2, name: 'User 2', age: 30 },
-    { id: 3, name: 'User 3', age: 25 },
-    { id: 4, name: 'User 4', age: 40 }
-  ]);
-
-  const adults = users.filter(user => user.age >= 30);
-  users.push({ id: 5, name: 'User 5', age: 35 });
-
-  return adults.this.length === 3 && adults.this[2].id === 5;
-});
-
-bench.add("отслеживание объектов - filter -> map", () => {
-  const users = deep([
-    { id: 1, name: 'User 1', age: 20 },
-    { id: 2, name: 'User 2', age: 30 },
-    { id: 3, name: 'User 3', age: 25 },
-    { id: 4, name: 'User 4', age: 40 }
-  ]);
-
-  const adults = users.filter(user => user.age >= 30);
-  const adultNames = adults.map(user => user.name);
-  users.push({ id: 5, name: 'User 5', age: 35 });
-
-  return adultNames.this.length === 3 && adultNames.this[2] === 'User 5';
-});
-
-// Многоуровневые преобразования
-bench.add("многоуровневые преобразования - 5 уровней", () => {
-  const source = deep(testArray.slice());
-
-  const level1 = source.map(x => x + 1);
-  const level2 = level1.filter(x => x % 2 === 0);
-  const level3 = level2.map(x => x * 2);
-  const level4 = level3.filter(x => x % 4 === 0);
-  const level5 = level4.map(x => x / 4);
-
-  source.push(arraySize);
-
-  return level5.this.length > 0;
-});
-
-// Производительность при больших изменениях
-bench.add("множественные изменения - 10 push", () => {
-  const source = deep(testArray.slice());
-  const mapped = source.map(x => x * 2);
-
-  for (let i = 0; i < 10; i++) {
-    source.push(arraySize + i);
+  for (let i = 0; i < length; i++) {
+    current = current.map(x => x * 2);
+    chain.push(current);
   }
 
-  return mapped.this.length === arraySize + 10;
-});
+  return chain;
+}
 
-bench.add("множественные изменения - 100 push", () => {
-  const source = deep(testArray.slice());
-  const mapped = source.map(x => x * 2);
-
-  for (let i = 0; i < 100; i++) {
-    source.push(arraySize + i);
+// Функция для создания параллельных зависимостей
+function createParallel(source, count) {
+  const deps = [];
+  for (let i = 0; i < count; i++) {
+    deps.push(source.map(x => x * (i + 1)));
   }
+  return deps;
+}
 
-  return mapped.this.length === arraySize + 100;
+// Создаем бенчмарки для каждого типа данных
+const dataTypes = [
+  {
+    name: 'Array',
+    source: smallArray,
+    create: deep,
+    modify: (source) => source.push(100),
+    check: (dep) => dep.this.length === 101
+  },
+  {
+    name: 'Set',
+    source: smallSet,
+    create: deep,
+    modify: (source) => source.add(100),
+    check: (dep) => dep.this.length === 101
+  },
+  {
+    name: 'Map',
+    source: smallMap,
+    create: deep,
+    modify: (source) => source.set('key100', 100),
+    check: (dep) => dep.this.size === 101
+  },
+  {
+    name: 'Object',
+    source: smallObj,
+    create: deep,
+    modify: (source) => source.key100 = 100,
+    check: (dep) => Object.keys(deps[0].this).length === 101
+  }
+];
+
+// Создаем бенчмарки для каждого типа данных
+dataTypes.forEach(({ name, source, create, modify, check }) => {
+  // Бенчмарк для параллельных зависимостей
+  benchmark.createSuite(`parallel dependencies (${name})`)
+    .add('1 dependency', () => {
+      const src = create(source);
+      const deps = createParallel(src, 1);
+      modify(src);
+      return check(deps[0]);
+    })
+    .add('2 dependencies', () => {
+      const src = create(source);
+      const deps = createParallel(src, 2);
+      modify(src);
+      return check(deps[0]);
+    })
+    .add('3 dependencies', () => {
+      const src = create(source);
+      const deps = createParallel(src, 3);
+      modify(src);
+      return check(deps[0]);
+    })
+    .add('4 dependencies', () => {
+      const src = create(source);
+      const deps = createParallel(src, 4);
+      modify(src);
+      return check(deps[0]);
+    })
+    .add('5 dependencies', () => {
+      const src = create(source);
+      const deps = createParallel(src, 5);
+      modify(src);
+      return check(deps[0]);
+    })
+    .add('6 dependencies', () => {
+      const src = create(source);
+      const deps = createParallel(src, 6);
+      modify(src);
+      return check(deps[0]);
+    })
+    .add('7 dependencies', () => {
+      const src = create(source);
+      const deps = createParallel(src, 7);
+      modify(src);
+      return check(deps[0]);
+    });
+
+  // Бенчмарк для цепочек зависимостей
+  benchmark.createSuite(`chain dependencies (${name})`)
+    .add('chain length 1', () => {
+      const src = create(source);
+      const chain = createChain(src, 1);
+      modify(src);
+      return check(chain[1]);
+    })
+    .add('chain length 2', () => {
+      const src = create(source);
+      const chain = createChain(src, 2);
+      modify(src);
+      return check(chain[2]);
+    })
+    .add('chain length 3', () => {
+      const src = create(source);
+      const chain = createChain(src, 3);
+      modify(src);
+      return check(chain[3]);
+    })
+    .add('chain length 4', () => {
+      const src = create(source);
+      const chain = createChain(src, 4);
+      modify(src);
+      return check(chain[4]);
+    })
+    .add('chain length 5', () => {
+      const src = create(source);
+      const chain = createChain(src, 5);
+      modify(src);
+      return check(chain[5]);
+    })
+    .add('chain length 6', () => {
+      const src = create(source);
+      const chain = createChain(src, 6);
+      modify(src);
+      return check(chain[6]);
+    })
+    .add('chain length 7', () => {
+      const src = create(source);
+      const chain = createChain(src, 7);
+      modify(src);
+      return check(chain[7]);
+    });
 });
 
-// События и обработчики
-bench.add("подписка на события", () => {
-  const source = deep(testArray.slice());
-  const mapped = source.map(x => x * 2);
+// Запускаем все бенчмарки
+async function runBenchmarks() {
+  console.log('🚀 Запуск бенчмарков...\n');
+  await benchmark.run();
+}
 
-  let changeCount = 0;
-  mapped.on('change', () => {
-    changeCount++;
-  });
-
-  source.push(arraySize);
-  source.push(arraySize + 1);
-
-  return changeCount === 2;
-});
-
-// Бенчмарк сравнения с нативными методами
-bench.add("нативный map + ручное обновление", () => {
-  const originalArray = testArray.slice();
-  let mappedArray = originalArray.map(x => x * 2);
-
-  originalArray.push(arraySize);
-  mappedArray = originalArray.map(x => x * 2);
-
-  return mappedArray.length === arraySize + 1;
-});
-
-bench.add("deep map с автоматическим обновлением", () => {
-  const originalArray = deep(testArray.slice());
-  const mappedArray = originalArray.map(x => x * 2);
-
-  originalArray.push(arraySize);
-
-  return mappedArray.this.length === arraySize + 1;
-});
-
-// Запуск бенчмарка
-benchmark.run();
+runBenchmarks();

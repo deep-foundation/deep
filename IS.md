@@ -8,42 +8,44 @@
 
 **Информация о системе:**
 
-- clk: ~1.50 GHz
+- clk: ~1.09 GHz
 - cpu: Intel(R) Core(TM) i9-9880H CPU @ 2.30GHz
 - runtime: node 23.4.0 (x64-darwin)
 
 | Тест | Среднее время выполнения | Операций в секунду |
 |------|--------------------------|--------------------|
-| value instanceof Error | 2.45 ns/итер | 408 163 265,306 опер/сек |
-| deep(string).isString | 243.09 ns/итер | 4 113 702,744 опер/сек |
-| deep(number).isNumber | 196.55 ns/итер | 5 087 763,928 опер/сек |
-| deep(boolean).isBoolean | 187.73 ns/итер | 5 326 799,126 опер/сек |
-| deep(symbol).isSymbol | 179.85 ns/итер | 5 560 189,046 опер/сек |
-| deep(bigint).isBigInt | 182.34 ns/итер | 5 484 260,173 опер/сек |
-| deep(function).isFunction | 190.50 ns/итер | 5 249 343,832 опер/сек |
-| deep(undefined).isUndefined | 218.13 ns/итер | 4 584 422,134 опер/сек |
-| deep(null).isNull | 177.05 ns/итер | 5 648 121,999 опер/сек |
-| deep(array).isArray | 202.44 ns/итер | 4 939 735,23 опер/сек |
-| deep(object).isObject | 243.14 ns/итер | 4 112 856,79 опер/сек |
-| deep(plainObject).isPlainObject | 223.75 ns/итер | 4 469 273,743 опер/сек |
-| deep(date).isDate | 192.82 ns/итер | 5 186 184,006 опер/сек |
-| deep(regexp).isRegExp | 186.60 ns/итер | 5 359 056,806 опер/сек |
-| deep(set).isSet | 211.21 ns/итер | 4 734 624,308 опер/сек |
-| deep(map).isMap | 229.23 ns/итер | 4 362 430,746 опер/сек |
-| deep(promise).isPromise | 182.87 ns/итер | 5 468 365,506 опер/сек |
-| deep(error).isError | 166.73 ns/итер | 5 997 720,866 опер/сек |
-| deep(json).isJSON | 599.41 ns/итер | 1 668 307,169 опер/сек |
-| deep(empty).isEmpty | 175.43 ns/итер | 5 700 279,314 опер/сек |
-| deep(array).isMany | 183.22 ns/итер | 5 457 919,441 опер/сек |
-| deep(object).isMany | 252.91 ns/итер | 3 953 975,723 опер/сек |
-| deep(set).isMany | 176.49 ns/итер | 5 666 043,402 опер/сек |
-| deep(map).isMany | 186.80 ns/итер | 5 353 319,058 опер/сек |
-| deep(string).isMany | 186.29 ns/итер | 5 367 974,663 опер/сек |
-| deep(number).isMany | 185.80 ns/итер | 5 382 131,324 опер/сек |
-| deep(string).isString | 209.75 ns/итер | 4 767 580,453 опер/сек |
-| deep(number).isNumber | 188.41 ns/итер | 5 307 573,908 опер/сек |
-| deep(array).isArray | 197.11 ns/итер | 5 073 309,32 опер/сек |
-| deep(array).isMany | 202.17 ns/итер | 4 946 332,295 опер/сек |
+| value instanceof RegExp | 2.60 ns/итер | 384 615 384,615 опер/сек |
+| value instanceof Promise | 2.43 ns/итер | 411 522 633,745 опер/сек |
+| value instanceof Error | 2.51 ns/итер | 398 406 374,502 опер/сек |
+| deep(string).isString | 181.53 ns/итер | 5 508 731,339 опер/сек |
+| deep(number).isNumber | 166.30 ns/итер | 6 013 229,104 опер/сек |
+| deep(boolean).isBoolean | 222.19 ns/итер | 4 500 652,595 опер/сек |
+| deep(symbol).isSymbol | 175.77 ns/итер | 5 689 253,001 опер/сек |
+| deep(bigint).isBigInt | 208.89 ns/итер | 4 787 208,579 опер/сек |
+| deep(function).isFunction | 163.84 ns/итер | 6 103 515,625 опер/сек |
+| deep(undefined).isUndefined | 165.72 ns/итер | 6 034 274,68 опер/сек |
+| deep(null).isNull | 175.41 ns/итер | 5 700 929,251 опер/сек |
+| deep(array).isArray | 182.22 ns/итер | 5 487 871,803 опер/сек |
+| deep(object).isObject | 224.94 ns/итер | 4 445 629,946 опер/сек |
+| deep(plainObject).isPlainObject | 186.04 ns/итер | 5 375 188,132 опер/сек |
+| deep(date).isDate | 168.08 ns/итер | 5 949 547,834 опер/сек |
+| deep(regexp).isRegExp | 194.83 ns/итер | 5 132 679,772 опер/сек |
+| deep(set).isSet | 198.26 ns/итер | 5 043 881,771 опер/сек |
+| deep(map).isMap | 197.77 ns/итер | 5 056 378,622 опер/сек |
+| deep(promise).isPromise | 170.49 ns/итер | 5 865 446,654 опер/сек |
+| deep(error).isError | 172.59 ns/итер | 5 794 078,452 опер/сек |
+| deep(json).isJSON | 585.57 ns/итер | 1 707 737,76 опер/сек |
+| deep(empty).isEmpty | 166.21 ns/итер | 6 016 485,169 опер/сек |
+| deep(array).isMany | 169.44 ns/итер | 5 901 794,145 опер/сек |
+| deep(object).isMany | 236.61 ns/итер | 4 226 364,059 опер/сек |
+| deep(set).isMany | 170.71 ns/итер | 5 857 887,646 опер/сек |
+| deep(map).isMany | 172.86 ns/итер | 5 785 028,347 опер/сек |
+| deep(string).isMany | 171.34 ns/итер | 5 836 348,78 опер/сек |
+| deep(number).isMany | 167.63 ns/итер | 5 965 519,298 опер/сек |
+| deep(string).isString | 171.68 ns/итер | 5 824 790,308 опер/сек |
+| deep(number).isNumber | 167.55 ns/итер | 5 968 367,651 опер/сек |
+| deep(array).isArray | 164.74 ns/итер | 6 070 171,179 опер/сек |
+| deep(array).isMany | 164.86 ns/итер | 6 065 752,76 опер/сек |
 
 ## Использование
 
