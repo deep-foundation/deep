@@ -8,33 +8,38 @@
 import { Association } from './association.js';
 
 /**
- * Геттер и сеттер для свойства origin
+ * Геттер и сеттер для свойства origins
  *
  * @param {Association} ass - Экземпляр ассоциации
  * @param {string} op - Операция ('get', 'set')
  * @param {Array} args - Аргументы для операции set
- * @returns {Association|boolean} - Оригинальная ассоциация при get, успех операции при set
+ * @returns {Array|boolean} - Массив ассоциаций-истоков при get, успех операции при set
  */
-export function origin(ass, op, args) {
+export function origins(ass, op, args) {
   if (op === 'get') {
-    // Возвращаем кешированное значение из temp
-    return ass.temp.origin || null;
+    // Возвращаем кешированное значение из temp или пустой массив
+    return ass.temp.origins || [];
   } else if (op === 'set') {
-    // Проверяем, что аргумент является ассоциацией
-    if (args && args[0] instanceof Association) {
+    // Проверяем, что аргумент является массивом ассоциаций
+    if (args && Array.isArray(args[0])) {
+      // Проверяем, что все элементы массива - ассоциации
+      if (args[0].some(item => !(item instanceof Association))) {
+        throw new Error('all origins must be Associations');
+      }
+
       // Сохраняем старое значение для события
-      const oldOrigin = ass.temp.origin;
+      const oldOrigins = ass.temp.origins || [];
 
       // Обновляем значение
-      ass.temp.origin = args[0];
+      ass.temp.origins = args[0];
 
       // Если есть система событий, генерируем событие изменения
       if (ass.emit) {
-        ass.emit('origin', { prev: oldOrigin, current: args[0] });
+        ass.emit('origins', { prev: oldOrigins, current: args[0] });
       }
 
       return true;
-    } else throw new Error('origin must be an Association');
+    } else throw new Error('origins must be an array of Associations');
   }
 }
 
@@ -42,13 +47,13 @@ export function origin(ass, op, args) {
  * Конструктор ассоциация для создания трекера
  * Не должен использоваться вручную, он автоматически создается используя ass.track;
  *
- * @param {Association} origin - Исходная ассоциация
+ * @param {Array} originsArray - Массив исходных ассоциаций
  * @param {Association} result - Результирующая ассоциация
  * @returns {Association} - Трекер отношений
  */
-export const Track = new Association((origin, result) => {
+export const Track = new Association((originsArray, result) => {
   const track = new Track();
-  track.temp.origin = origin;
+  track.origins = originsArray;
   track.temp.result = result;
   return track;
 });
@@ -61,24 +66,26 @@ export const Track = new Association((origin, result) => {
  * @returns {Association} - Экземпляр трекера
  */
 export function track(ass, op) {
+  // Используем this как контекст, если ass не передан
+  const context = ass || this;
+
   if (op === 'get') {
     // Если трекер уже создан, возвращаем его
-    if (ass.temp.track) {
-      return ass.temp.track;
+    if (context.temp.track) {
+      return context.temp.track;
     }
 
-    // Если есть origin, создаем трекер
-    if (ass.temp.origin) {
-      // Track будет инициализирован позже в index.js
-      ass.temp.track = ass.temp.track || Track(ass.temp.origin, ass);
-      return ass.temp.track;
+    // Если есть origins, создаем трекер
+    if (context.origins.length > 0) {
+      context.temp.track = context.temp.track || Track(context.origins, context);
+      return context.temp.track;
     }
 
-    // Если нет origin, возвращаем null
+    // Если нет истоков, возвращаем null
     return null;
   }
 }
 
 // Регистрируем геттеры в статическом _proxy ассоциации
-Association._proxy.set('origin', origin);
+Association._proxy.set('origins', origins);
 Association._proxy.set('track', track);

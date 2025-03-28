@@ -12,26 +12,32 @@
 - CPU: Intel(R) Core(TM) i9-9880H CPU @ 2.30GHz × 6
 - Memory: 16 GB
 
+### set (4 elements)
+
 | Тест | Среднее время выполнения | Операций в секунду |
 |------|--------------------------|--------------------|
-| set (4 elements): array.set(index, value) | 769.23 µs/итер | 1 300 опер/сек |
-| set (4 elements): object.set(key, value) | 2083.33 µs/итер | 480 опер/сек |
-| set (4 elements): map.set(key, value) | 1494.77 µs/итер | 669 опер/сек |
-| set (1000 elements): array.set(index, value) | 1058.20 µs/итер | 945 опер/сек |
-| set (1000 elements): object.set(key, value) | 388.20 µs/итер | 2 576 опер/сек |
-| set (1000 elements): map.set(key, value) | 749.63 µs/итер | 1 334 опер/сек |
-| add (4 elements): array.add(value) | 393.70 µs/итер | 2 540 опер/сек |
-| add (4 elements): object.add(key, value) | 372.58 µs/итер | 2 684 опер/сек |
-| add (4 elements): map.add(key, value) | 520.02 µs/итер | 1 923 опер/сек |
-| add (4 elements): set.add(value) | 372.58 µs/итер | 2 684 опер/сек |
-| add (1000 elements): array.add(value) | 749.63 µs/итер | 1 334 опер/сек |
-| add (1000 elements): object.add(key, value) | 486.62 µs/итер | 2 055 опер/сек |
-| add (1000 elements): map.add(key, value) | 605.33 µs/итер | 1 652 опер/сек |
-| add (1000 elements): set.add(value) | 542.59 µs/итер | 1 843 опер/сек |
-| delete (4 elements): array.delete(index) | 377.50 µs/итер | 2 649 опер/сек |
-| delete (4 elements): object.delete(key) | 406.50 µs/итер | 2 460 опер/сек |
-| delete (4 elements): map.delete(key) | 422.83 µs/итер | 2 365 опер/сек |
-| delete (4 elements): set.delete(value) | 458.93 µs/итер | 2 179 опер/сек |
+| array.set(index, value) | 373.41 µs/итер | 2 678 опер/сек |
+| object.set(key, value) | 404.69 µs/итер | 2 471 опер/сек |
+| map.set(key, value) | 366.57 µs/итер | 2 728 опер/сек |
+
+### add (4 elements)
+
+| Тест | Среднее время выполнения | Операций в секунду |
+|------|--------------------------|--------------------|
+| array.add(value) | 326.48 µs/итер | 3 063 опер/сек |
+| object.add(key, value) | 349.65 µs/итер | 2 860 опер/сек |
+| map.add(key, value) | 279.72 µs/итер | 3 575 опер/сек |
+| set.add(value) | 362.45 µs/итер | 2 759 опер/сек |
+
+### delete (4 elements)
+
+| Тест | Среднее время выполнения | Операций в секунду |
+|------|--------------------------|--------------------|
+| array.delete(index) | 361.01 µs/итер | 2 770 опер/сек |
+| object.delete(key) | 269.47 µs/итер | 3 711 опер/сек |
+| map.delete(key) | 227.89 µs/итер | 4 388 опер/сек |
+| set.delete(value) | 309.98 µs/итер | 3 226 опер/сек |
+
 
 ## Основные особенности
 

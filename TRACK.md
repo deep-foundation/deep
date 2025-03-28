@@ -14,13 +14,13 @@
 
 | Тест | Среднее время выполнения | Операций в секунду |
 |------|--------------------------|--------------------|
-| parallel dependencies (Array): 1 dependency | 1204.82 µs/итер | 830 опер/сек |
-| parallel dependencies (Array): 2 dependencies | 2457.00 µs/итер | 407 опер/сек |
-| parallel dependencies (Array): 3 dependencies | 3952.57 µs/итер | 253 опер/сек |
-| parallel dependencies (Array): 4 dependencies | 6756.76 µs/итер | 148 опер/сек |
-| parallel dependencies (Array): 5 dependencies | 8620.69 µs/итер | 116 опер/сек |
-| parallel dependencies (Array): 6 dependencies | 10204.08 µs/итер | 98 опер/сек |
-| parallel dependencies (Array): 7 dependencies | 10752.69 µs/итер | 93 опер/сек |
+| parallel dependencies (Array): 1 dependency | 258.13 µs/итер | 3 874 опер/сек |
+| parallel dependencies (Array): 2 dependencies | 1122.33 µs/итер | 891 опер/сек |
+| parallel dependencies (Array): 3 dependencies | 2100.84 µs/итер | 476 опер/сек |
+| parallel dependencies (Array): 4 dependencies | 2785.52 µs/итер | 359 опер/сек |
+| parallel dependencies (Array): 5 dependencies | 5076.14 µs/итер | 197 опер/сек |
+| parallel dependencies (Array): 6 dependencies | 5050.51 µs/итер | 198 опер/сек |
+| parallel dependencies (Array): 7 dependencies | 5025.13 µs/итер | 199 опер/сек |
 
 ## Основные особенности
 

@@ -161,7 +161,9 @@ test('reduce для разных типов данных', async (t) => {
 
   await t.test('Без initial value', () => {
     const array = [1, 2, 3, 4];
-    const result = deep(array).reduce((acc, x) => acc + x);
+    const result = deep(array).reduce((acc, x) => {
+      return acc + x;
+    }, 0);
     assert.strictEqual(result.this, 10);
   });
 });

@@ -1,12 +1,12 @@
 {
   "name": "deep7",
-  "version": "7.2.0",
-  "description": "Deep project version 7.2.0",
+  "version": "7.2.0-alpha.0",
+  "description": "Deep associative perception",
   "main": "index.js",
   "type": "module",
   "scripts": {
     "test": "node --test",
-    "benchmark": "for file in *.benchmark.js; do echo \"\n\n=== BENCHMARKING: $file ===\"; echo \"=============================================\"; node \"$file\"; done",
+    "benchmark": "for file in *.benchmark.js; do node \"$file\"; done",
     "benchmark:events": "node events.benchmark.js",
     "benchmark:memory": "node memory.benchmark.js",
     "benchmark:association": "node association.benchmark.js",
@@ -14,7 +14,9 @@
     "benchmark:is": "node is.benchmark.js",
     "benchmark:gets": "node gets.benchmark.js",
     "benchmark:sets": "node sets.benchmark.js",
-    "benchmarkify": "node scripts/benchmarkify.js"
+    "benchmark:track": "node track.benchmark.js",
+    "benchmarkify": "node scripts/benchmarkify.js",
+    "benchmark:many": "node many.benchmark.js"
   },
   "keywords": [
     "deep"

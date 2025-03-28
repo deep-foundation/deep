@@ -12,25 +12,28 @@
 - CPU: Intel(R) Core(TM) i9-9880H CPU @ 2.30GHz × 6
 - Memory: 16 GB
 
+### Обычные проверки типов
+
 | Тест | Среднее время выполнения | Операций в секунду |
 |------|--------------------------|--------------------|
-| Обычные проверки типов: typeof string === "string" | 0.07 µs/итер | 14 984 821 опер/сек |
-| Обычные проверки типов: typeof number === "number" | 0.10 µs/итер | 9 805 793 опер/сек |
-| Обычные проверки типов: typeof boolean === "boolean" | 0.07 µs/итер | 14 270 120 опер/сек |
-| Обычные проверки типов: typeof symbol === "symbol" | 0.07 µs/итер | 14 937 770 опер/сек |
-| Обычные проверки типов: typeof bigint === "bigint" | 0.07 µs/итер | 14 114 097 опер/сек |
-| Обычные проверки типов: typeof function === "function" | 0.07 µs/итер | 15 093 916 опер/сек |
-| Обычные проверки типов: value === undefined | 0.12 µs/итер | 8 695 168 опер/сек |
-| Обычные проверки типов: value === null | 0.08 µs/итер | 12 897 290 опер/сек |
-| Обычные проверки типов: Array.isArray(array) | 0.09 µs/итер | 11 569 207 опер/сек |
-| Обычные проверки типов: typeof object === "object" | 0.07 µs/итер | 13 528 472 опер/сек |
-| Обычные проверки типов: value instanceof Date | 0.07 µs/итер | 14 339 096 опер/сек |
-| Обычные проверки типов: value instanceof RegExp | 0.09 µs/итер | 10 729 698 опер/сек |
-| Обычные проверки типов: value instanceof Set | 0.09 µs/итер | 10 621 050 опер/сек |
-| Обычные проверки типов: value instanceof Map | 0.08 µs/итер | 12 054 673 опер/сек |
-| Обычные проверки типов: value instanceof Promise | 0.09 µs/итер | 11 582 995 опер/сек |
-| Обычные проверки типов: value instanceof Error | 0.08 µs/итер | 12 536 292 опер/сек |
-| Обычные проверки типов: Array.isArray(array) || value instanceof Set/Map || typeof object === "object" | 0.07 µs/итер | 15 362 248 опер/сек |
+| typeof string === "string" | 0.02 µs/итер | 41 493 682 опер/сек |
+| typeof number === "number" | 0.03 µs/итер | 28 576 349 опер/сек |
+| typeof boolean === "boolean" | 0.03 µs/итер | 32 448 581 опер/сек |
+| typeof symbol === "symbol" | 0.03 µs/итер | 31 559 810 опер/сек |
+| typeof bigint === "bigint" | 0.03 µs/итер | 32 373 394 опер/сек |
+| typeof function === "function" | 0.03 µs/итер | 31 645 873 опер/сек |
+| value === undefined | 0.03 µs/итер | 30 844 181 опер/сек |
+| value === null | 0.03 µs/итер | 29 694 703 опер/сек |
+| Array.isArray(array) | 0.04 µs/итер | 24 333 593 опер/сек |
+| typeof object === "object" | 0.03 µs/итер | 32 735 387 опер/сек |
+| value instanceof Date | 0.03 µs/итер | 29 470 594 опер/сек |
+| value instanceof RegExp | 0.03 µs/итер | 30 629 674 опер/сек |
+| value instanceof Set | 0.06 µs/итер | 16 001 229 опер/сек |
+| value instanceof Map | 0.06 µs/итер | 17 706 946 опер/сек |
+| value instanceof Promise | 0.04 µs/итер | 22 727 715 опер/сек |
+| value instanceof Error | 0.04 µs/итер | 27 265 899 опер/сек |
+| Array.isArray(array) || value instanceof Set/Map || typeof object === "object" | 0.04 µs/итер | 26 822 169 опер/сек |
+
 
 ## Использование
 

@@ -100,8 +100,8 @@ function stripAnsi(str) {
   return str.replace(/\x1B\[\d+m/g, '');
 }
 
-// Функция для создания таблицы из результатов бенчмарка
-function createMarkdownTable(benchmarkOutput) {
+// Функция для создания таблиц из результатов бенчмарка
+function createMarkdownTables(benchmarkOutput) {
   // Очищаем от ANSI-кодов цветов
   const cleanOutput = stripAnsi(benchmarkOutput);
 
@@ -110,7 +110,7 @@ function createMarkdownTable(benchmarkOutput) {
 
   // Найдем информационные строки
   let systemInfo = [];
-  let tableData = [];
+  let tablesBySuite = new Map(); // Таблицы для каждого сьюта
   let processedNames = new Set(); // Для исключения дубликатов
 
   // Добавим отладочную информацию
@@ -118,17 +118,6 @@ function createMarkdownTable(benchmarkOutput) {
 
   // Режим отладки можно включить через переменную окружения
   const isDebugMode = process.env.DEBUG === 'true';
-
-  // Если включен режим отладки, выведем все строки, содержащие ops/sec или ops/s
-  if (isDebugMode) {
-    console.log('Все строки, содержащие ops/sec, ops/s, s/iter или ms/iter:');
-    lines.forEach((line, i) => {
-      if (line.includes('ops/sec') || line.includes('ops/s') ||
-          line.includes('s/iter') || line.includes('ms/iter')) {
-        console.log(`[${i}]: ${line}`);
-      }
-    });
-  }
 
   // Собираем системную информацию
   for (let i = 0; i < lines.length; i++) {
@@ -141,68 +130,42 @@ function createMarkdownTable(benchmarkOutput) {
 
   // Ищем строки с результатами для последующей обработки
   const checkmarkLines = [];
-  const allResults = [];
   let suiteForLine = {};
-  let currentLineIndex = 0;
+  let currentSuite = "Основной";
 
-  // Сначала проходим и находим все сьюты и их индексы
-  const suiteRanges = [];
+  // Сначала проходим и находим все сьюты
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // Определение текущего сьюта - ищем строки вида "Suite: имя_сьюта" или "имя_сьюта\n========"
+    // Определение текущего сьюта
     if (line.includes('Suite:')) {
-      const suiteName = line.replace('Suite:', '').trim();
-      suiteRanges.push({ start: i, name: suiteName });
-      console.log(`Найден сьют: ${suiteName} (строка ${i})`);
+      currentSuite = line.replace('Suite:', '').trim();
+      if (!tablesBySuite.has(currentSuite)) {
+        tablesBySuite.set(currentSuite, []);
+      }
     }
     else if (i < lines.length - 1 && lines[i+1].match(/^=+$/)) {
-      // Формат benchmarkify: название сьюта и следующая строка с ====
-      const suiteName = line.trim();
-      suiteRanges.push({ start: i, name: suiteName });
-      console.log(`Найден сьют в формате benchmarkify: ${suiteName} (строка ${i})`);
-    }
-
-    // Ищем строки с результатами для последующей обработки
-    if (line.includes('ops/sec') || line.includes('ops/s') ||
-        line.includes('s/iter') || line.includes('ms/iter')) {
-      checkmarkLines.push({ index: i, content: line });
-    }
-  }
-
-  // Сортируем сьюты по порядку их появления
-  suiteRanges.sort((a, b) => a.start - b.start);
-
-  // Определяем текущий сьют для каждой строки с результатами
-  for (const { index, content } of checkmarkLines) {
-    // Находим, к какому сьюту относится строка
-    let suiteName = "Основной";
-    for (let i = suiteRanges.length - 1; i >= 0; i--) {
-      if (index > suiteRanges[i].start) {
-        suiteName = suiteRanges[i].name;
-        break;
+      currentSuite = line.trim();
+      if (!tablesBySuite.has(currentSuite)) {
+        tablesBySuite.set(currentSuite, []);
       }
     }
 
-    // Формат 1: "test_name -XX.XX% (123,456 ops/sec)" (benchmarkify)
+    // Ищем строки с результатами
+    if (line.includes('ops/sec') || line.includes('ops/s') ||
+        line.includes('s/iter') || line.includes('ms/iter')) {
+      checkmarkLines.push({ index: i, content: line, suite: currentSuite });
+    }
+  }
+
+  // Обрабатываем каждую строку с результатами
+  for (const { content, suite } of checkmarkLines) {
+    // Все существующие форматы матчинга...
     let match = content.match(/^\s*(.*?)\s+[\-\d\.]+%\s+\(([\d,]+)\s+ops\/sec\)/);
+    if (!match) match = content.match(/^[✓✔]\s+(.*?)\s+([\d,]+)\s+ops\/sec/);
+    if (!match) match = content.match(/^\s*(.*?)\s+([\d,]+)\s+ops\/sec/);
+    if (!match) match = content.match(/^\s*(.*?)\s+([\d,]+)\s+ops\/s/);
 
-    // Формат 2: "✓ test_name 123,456 ops/sec" (mitata со значком ✓)
-    if (!match) {
-      match = content.match(/^[✓✔]\s+(.*?)\s+([\d,]+)\s+ops\/sec/);
-    }
-
-    // Формат 3: "test_name 123,456 ops/sec" (mitata без значка)
-    if (!match) {
-      match = content.match(/^\s*(.*?)\s+([\d,]+)\s+ops\/sec/);
-    }
-
-    // Формат 4: "test_name 123,456 ops/s (xx ns)" (вариант mitata)
-    if (!match) {
-      match = content.match(/^\s*(.*?)\s+([\d,]+)\s+ops\/s/);
-    }
-
-    // Формат 5: "test_name XX.XX s/iter" (mitata время в секундах)
     if (!match) {
       const timeMatch = content.match(/^\s*(.*?)\s+([\d,.]+)\s+s\/iter/);
       if (timeMatch) {
@@ -210,14 +173,10 @@ function createMarkdownTable(benchmarkOutput) {
         const timeInSeconds = parseFloat(timeMatch[2].replace(/,/g, '.'));
         if (timeInSeconds > 0) {
           match = [null, name, Math.round(1 / timeInSeconds)];
-          if (isDebugMode) {
-            console.log(`Преобразовано из s/iter: ${name} -> ${match[2]} ops/sec`);
-          }
         }
       }
     }
 
-    // Формат 6: "test_name XX.XX ms/iter" (mitata время в миллисекундах)
     if (!match) {
       const timeMatch = content.match(/^\s*(.*?)\s+([\d,.]+)\s+ms\/iter/);
       if (timeMatch) {
@@ -225,14 +184,10 @@ function createMarkdownTable(benchmarkOutput) {
         const timeInMs = parseFloat(timeMatch[2].replace(/,/g, '.'));
         if (timeInMs > 0) {
           match = [null, name, Math.round(1000 / timeInMs)];
-          if (isDebugMode) {
-            console.log(`Преобразовано из ms/iter: ${name} -> ${match[2]} ops/sec`);
-          }
         }
       }
     }
 
-    // Формат 7: "test_name XX.XX µs/iter" (mitata время в микросекундах)
     if (!match) {
       const timeMatch = content.match(/^\s*(.*?)\s+([\d,.]+)\s+µs\/iter/);
       if (timeMatch) {
@@ -240,70 +195,54 @@ function createMarkdownTable(benchmarkOutput) {
         const timeInUs = parseFloat(timeMatch[2].replace(/,/g, '.'));
         if (timeInUs > 0) {
           match = [null, name, Math.round(1000000 / timeInUs)];
-          if (isDebugMode) {
-            console.log(`Преобразовано из µs/iter: ${name} -> ${match[2]} ops/sec`);
-          }
         }
       }
     }
 
     if (match) {
       const name = match[1].trim();
-      const fullName = `${suiteName}: ${name}`;
+      const opsPerSec = parseInt(match[2].replace(/,/g, ''), 10);
+      const microsPerOp = Math.round((1000000 / opsPerSec) * 100) / 100;
 
-      if (processedNames.has(fullName)) continue; // Пропускаем дубликаты
+      if (!processedNames.has(name)) {
+        processedNames.add(name);
+        const row = {
+          name,
+          microsPerOp: `${microsPerOp} µs/итер`,
+          opsPerSec: `${opsPerSec.toLocaleString('ru-RU')} опер/сек`
+        };
 
-      // Удаляем запятые из числа перед преобразованием в Integer
-      const opsPerSec = typeof match[2] === 'number' ? match[2] : parseInt(match[2].replace(/,/g, ''), 10);
-
-      console.log(`Найден результат: "${fullName}" -> ${opsPerSec} ops/sec (строка ${index})`);
-
-      // Пропускаем тесты с wildcard подписками для Events
-      if ((fullName.includes('Events:') || fullName.includes('EventEmitter:')) &&
-          (fullName.includes('wildcard') || fullName.includes('Wildcard'))) {
-        console.log(`  Пропускаем wildcard тест: ${fullName}`);
-        continue;
+        // Добавляем результат в соответствующую таблицу сьюта
+        if (!tablesBySuite.has(suite)) {
+          tablesBySuite.set(suite, []);
+        }
+        tablesBySuite.get(suite).push(row);
       }
-
-      // Вычисляем среднее время выполнения
-      const avgInMicroseconds = 1000000 / opsPerSec;
-      const avg = avgInMicroseconds.toFixed(2);
-
-      tableData.push({ name: fullName, avg, unit: 'µs', opsPerSec });
-      processedNames.add(fullName);
-    } else {
-      console.log(`Не удалось разобрать строку ${index}: "${content.substring(0, 50)}${content.length > 50 ? '...' : ''}"`);
     }
   }
 
-  console.log(`Найдено ${tableData.length} тестов для включения в таблицу`);
+  // Создаем markdown для каждой таблицы
+  let markdownContent = '';
 
-  // Создаем таблицу Markdown
-  let markdown = '';
+  // Добавляем системную информацию
+  markdownContent += '**Информация о системе:**\n\n';
+  markdownContent += systemInfo.map(info => `- ${info}`).join('\n');
+  markdownContent += '\n\n';
 
-  // Добавляем информацию о системе
-  if (systemInfo.length > 0) {
-    markdown += "**Информация о системе:**\n\n";
-    for (const info of systemInfo) {
-      markdown += `- ${info}\n`;
-    }
-    markdown += "\n";
-  }
-
-  if (tableData.length === 0) {
-    markdown += "*Не удалось получить результаты бенчмарка. Проверьте вывод скрипта.*\n\n";
-  } else {
-    // Создаем заголовок таблицы
-    markdown += "| Тест | Среднее время выполнения | Операций в секунду |\n";
-    markdown += "|------|--------------------------|--------------------|\n";
-
-    // Добавляем строки таблицы
-    for (const data of tableData) {
-      markdown += `| ${data.name} | ${data.avg} ${data.unit}/итер | ${data.opsPerSec.toLocaleString('ru-RU')} опер/сек |\n`;
+  // Добавляем таблицы для каждого сьюта
+  for (const [suiteName, rows] of tablesBySuite) {
+    if (rows.length > 0) {
+      markdownContent += `### ${suiteName}\n\n`;
+      markdownContent += '| Тест | Среднее время выполнения | Операций в секунду |\n';
+      markdownContent += '|------|--------------------------|--------------------|';
+      for (const row of rows) {
+        markdownContent += `\n| ${row.name} | ${row.microsPerOp} | ${row.opsPerSec} |`;
+      }
+      markdownContent += '\n\n';
     }
   }
 
-  return { markdown, tableData, systemInfo };
+  return markdownContent;
 }
 
 // Функция для создания сравнительной таблицы для Memory
@@ -409,9 +348,8 @@ function updateMarkdownFile(mdFilePath, benchmarkOutput, benchmarkName) {
     const endIndex = match ? match.index : content.length;
     console.log(`Следующий заголовок найден в позиции ${endIndex}`);
 
-    // Создаем таблицу из результатов бенчмарка и получаем данные для анализа
-    const { markdown: markdownTable, tableData, systemInfo } = createMarkdownTable(benchmarkOutput);
-    console.log(`Создана таблица с ${tableData.length} строками результатов`);
+    // Создаем новые таблицы
+    const newTables = createMarkdownTables(benchmarkOutput);
 
     // Создаем содержимое раздела в зависимости от типа бенчмарка
     let newContent = '';
@@ -420,7 +358,7 @@ function updateMarkdownFile(mdFilePath, benchmarkOutput, benchmarkName) {
       newContent = createMemoryComparisonTable(tableData, systemInfo);
     } else {
       // Для других бенчмарков используем обычную таблицу
-      newContent = markdownTable;
+      newContent = newTables;
     }
 
     // Формируем новое содержимое раздела с заголовком

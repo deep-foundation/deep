@@ -14,22 +14,30 @@
 
 | Тест | Среднее время выполнения | Операций в секунду |
 |------|--------------------------|--------------------|
-| difference (4 elements): set.difference(set) | 5128.21 µs/итер | 195 опер/сек |
-| difference (4 elements): array.difference(set) | 1831.50 µs/итер | 546 опер/сек |
-| difference (4 elements): set.difference(array) | 1092.90 µs/итер | 915 опер/сек |
-| difference (4 elements): array.difference(array) | 759.30 µs/итер | 1 317 опер/сек |
-| difference (4 elements): map.difference(map) | 604.59 µs/итер | 1 654 опер/сек |
-| difference (4 elements): object.difference(map) | 727.80 µs/итер | 1 374 опер/сек |
-| difference (4 elements): map.difference(object) | 764.53 µs/итер | 1 308 опер/сек |
-| difference (4 elements): object.difference(object) | 877.96 µs/итер | 1 139 опер/сек |
-| difference (1000 elements): set.difference(set) | 5128.21 µs/итер | 195 опер/сек |
-| difference (1000 elements): array.difference(set) | 1831.50 µs/итер | 546 опер/сек |
-| difference (1000 elements): set.difference(array) | 1092.90 µs/итер | 915 опер/сек |
-| difference (1000 elements): array.difference(array) | 759.30 µs/итер | 1 317 опер/сек |
-| difference (1000 elements): map.difference(map) | 604.59 µs/итер | 1 654 опер/сек |
-| difference (1000 elements): object.difference(map) | 727.80 µs/итер | 1 374 опер/сек |
-| difference (1000 elements): map.difference(object) | 764.53 µs/итер | 1 308 опер/сек |
-| difference (1000 elements): object.difference(object) | 877.96 µs/итер | 1 139 опер/сек |
+| difference (4 elements): set.difference(set) | 130.04 µs/итер | 7 690 опер/сек |
+| difference (4 elements): array.difference(set) | 138.35 µs/итер | 7 228 опер/сек |
+| difference (4 elements): set.difference(array) | 105.15 µs/итер | 9 510 опер/сек |
+| difference (4 elements): array.difference(array) | 76.92 µs/итер | 13 000 опер/сек |
+| difference (4 elements): map.difference(map) | 75.69 µs/итер | 13 211 опер/сек |
+| difference (4 elements): object.difference(map) | 87.89 µs/итер | 11 378 опер/сек |
+| difference (4 elements): map.difference(object) | 73.65 µs/итер | 13 577 опер/сек |
+| difference (4 elements): object.difference(object) | 74.62 µs/итер | 13 402 опер/сек |
+| difference (1000 elements): set.difference(set) | 130.04 µs/итер | 7 690 опер/сек |
+| difference (1000 elements): array.difference(set) | 138.35 µs/итер | 7 228 опер/сек |
+| difference (1000 elements): set.difference(array) | 105.15 µs/итер | 9 510 опер/сек |
+| difference (1000 elements): array.difference(array) | 76.92 µs/итер | 13 000 опер/сек |
+| difference (1000 elements): map.difference(map) | 75.69 µs/итер | 13 211 опер/сек |
+| difference (1000 elements): object.difference(map) | 87.89 µs/итер | 11 378 опер/сек |
+| difference (1000 elements): map.difference(object) | 73.65 µs/итер | 13 577 опер/сек |
+| difference (1000 elements): object.difference(object) | 74.62 µs/итер | 13 402 опер/сек |
+| intersection (4 elements): set.difference(set) | 106.12 µs/итер | 9 423 опер/сек |
+| intersection (4 elements): array.difference(set) | 185.84 µs/итер | 5 381 опер/сек |
+| intersection (4 elements): set.difference(array) | 197.39 µs/итер | 5 066 опер/сек |
+| intersection (4 elements): array.difference(array) | 254.58 µs/итер | 3 928 опер/сек |
+| intersection (4 elements): map.difference(map) | 189.43 µs/итер | 5 279 опер/сек |
+| intersection (4 elements): object.difference(map) | 370.51 µs/итер | 2 699 опер/сек |
+| intersection (4 elements): map.difference(object) | 370.37 µs/итер | 2 700 опер/сек |
+| intersection (4 elements): object.difference(object) | 541.13 µs/итер | 1 848 опер/сек |
 
 ## Интеграция с Association
 

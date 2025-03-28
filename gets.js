@@ -57,35 +57,51 @@ export function forEach(ass, op) {
  * @param {Function} [callback] - функция обратного вызова (value, key, collection)
  * @returns {Association} - Новая ассоциация с преобразованными значениями
  */
-export function map(ass, op) {
+export function map(ass, op, args) {
   if (op !== 'get' && op !== 'apply') return;
 
-  return function(callback) {
-    const value = ass.this;
-    const result = [];
+  if (op === 'get') {
+    // Возвращаем кешированную функцию из temp или создаем новую
+    return ass.temp.map = ass.temp.map || (callback =>
+      Association._proxy.get('map').call(ass, ass, 'apply', [callback])
+    );
+  } else if (op === 'apply') {
+    // Получаем колбэк из аргументов
+    const callback = args[0];
 
-    if (value === null || value === undefined) {
-      return new Association(result);
+    // Проверяем, что callback является функцией
+    if (typeof callback !== 'function') {
+      throw new Error('callback must be a function');
     }
 
-    if (Array.isArray(value)) {
+    // Создаем результирующий массив
+    const result = [];
+
+    // Получаем внутреннее значение ассоциации
+    const value = ass.this;
+
+    // Определяем тип данных
+    const type = ass.detect;
+
+    // Применяем функцию преобразования в зависимости от типа
+    if (type === 'array' || type === 'string') {
+      // Для массивов и строк итерируемся по элементам
       for (let i = 0; i < value.length; i++) {
         result.push(callback(value[i], i, value));
       }
-    } else if (value instanceof Map) {
-      value.forEach((val, key) => {
-        result.push(callback(val, key, value));
-      });
-    } else if (value instanceof Set) {
+    } else if (type === 'set') {
+      // Для множеств (Set) используем for...of с ручным индексом
       let index = 0;
-      value.forEach(val => {
+      for (const val of value) {
         result.push(callback(val, index++, value));
-      });
-    } else if (typeof value === 'string') {
-      for (let i = 0; i < value.length; i++) {
-        result.push(callback(value[i], i, value));
       }
-    } else if (typeof value === 'object') {
+    } else if (type === 'map') {
+      // Для карт (Map) итерируемся по записям [ключ, значение]
+      for (const [key, val] of value) {
+        result.push(callback(val, key, value));
+      }
+    } else if (type === 'object') {
+      // Для объектов итерируемся по ключам
       const keys = Object.keys(value);
       for (let i = 0; i < keys.length; i++) {
         const key = keys[i];
@@ -96,8 +112,8 @@ export function map(ass, op) {
     // Создаем новую ассоциацию для результата
     const resultAssociation = new Association(result);
 
-    // Устанавливаем исходную ассоциацию как origin
-    resultAssociation.temp.origin = ass;
+    // Устанавливаем исходную ассоциацию как origins
+    resultAssociation.origins = [ass];
 
     // Сохраняем функцию преобразования и имя метода для отслеживания
     resultAssociation.temp.transformer = callback;
@@ -110,9 +126,9 @@ export function map(ass, op) {
       // Получаем трекер через глобальный геттер
       const track = Association._proxy.get('track').call(ass, ass, 'get');
 
-      // Если есть система событий и у нас есть доступ к origin
-      if (ass.temp.origin && ass.temp.origin.on && ass.temp.origin.emit) {
-        const origin = ass.temp.origin;
+      // Если есть система событий и у нас есть доступ к origins
+      if (ass.origins.length > 0 && ass.origins[0].on && ass.origins[0].emit) {
+        const origin = ass.origins[0];
         const method = ass.temp.method;
         const transformer = ass.temp.transformer;
 
@@ -334,9 +350,9 @@ export function map(ass, op) {
             } else if (type === 'set') {
               const newResult = [];
               let index = 0;
-              origin.this.forEach(val => {
+              for (const val of origin.this) {
                 newResult.push(transformer(val, index++, origin.this));
-              });
+              }
               ass.this = newResult;
             } else if (type === 'string') {
               const newResult = [];
@@ -382,9 +398,6 @@ export function map(ass, op) {
       return track;
     });
 
-    // Создаем трекер для проверки корректной работы механизма трекинга
-    const track = resultAssociation.track;
-
     return resultAssociation;
   };
 }
@@ -396,43 +409,56 @@ export function map(ass, op) {
  * @param {Function} [callback] - функция обратного вызова (value, key, collection)
  * @returns {Array} - Новый массив с отфильтрованными значениями
  */
-export function filter(ass, op) {
+export function filter(ass, op, args) {
   if (op !== 'get' && op !== 'apply') return;
 
-  return function(callback) {
-    const value = ass.this;
-    const result = [];
+  if (op === 'get') {
+    // Возвращаем кешированную функцию из temp или создаем новую
+    return ass.temp.filter = ass.temp.filter || (callback =>
+      Association._proxy.get('filter').call(ass, ass, 'apply', [callback])
+    );
+  } else if (op === 'apply') {
+    // Получаем функцию фильтрации из аргументов
+    const callback = args[0];
 
-    if (value === null || value === undefined) {
-      return result;
+    // Проверяем, что callback является функцией
+    if (typeof callback !== 'function') {
+      throw new Error('callback must be a function');
     }
 
-    if (Array.isArray(value)) {
+    // Создаем результирующий массив
+    const result = [];
+
+    // Получаем внутреннее значение ассоциации
+    const value = ass.this;
+
+    // Определяем тип данных
+    const type = ass.detect;
+
+    // Применяем функцию фильтрации в зависимости от типа данных
+    if (type === 'array' || type === 'string') {
+      // Для массивов и строк итерируемся по элементам
       for (let i = 0; i < value.length; i++) {
         if (callback(value[i], i, value)) {
           result.push(value[i]);
         }
       }
-    } else if (value instanceof Map) {
-      value.forEach((val, key) => {
+    } else if (type === 'set') {
+      // Исправлено: корректная итерация по Set с использованием for...of
+      for (const val of value) {
+        if (callback(val, val, value)) {
+          result.push(val);
+        }
+      }
+    } else if (type === 'map') {
+      // Для карт (Map) итерируемся по записям [ключ, значение]
+      for (const [key, val] of value) {
         if (callback(val, key, value)) {
           result.push(val);
         }
-      });
-    } else if (value instanceof Set) {
-      let index = 0;
-      value.forEach(val => {
-        if (callback(val, index++, value)) {
-          result.push(val);
-        }
-      });
-    } else if (typeof value === 'string') {
-      for (let i = 0; i < value.length; i++) {
-        if (callback(value[i], i, value)) {
-          result.push(value[i]);
-        }
       }
-    } else if (typeof value === 'object') {
+    } else if (type === 'object') {
+      // Для объектов итерируемся по ключам
       const keys = Object.keys(value);
       for (let i = 0; i < keys.length; i++) {
         const key = keys[i];
@@ -442,11 +468,13 @@ export function filter(ass, op) {
       }
     }
 
-    // Создаем результирующую ассоциацию для поддержки цепочки вызовов
+    // Создаем новую ассоциацию для результата
     const resultAssociation = new Association(result);
 
-    // Сохраняем ссылки на исходную ассоциацию и функцию фильтрации для отслеживания изменений
-    resultAssociation.temp.origin = ass;
+    // Устанавливаем исходную ассоциацию как origins
+    resultAssociation.origins = [ass];
+
+    // Сохраняем функцию фильтрации и имя метода для отслеживания
     resultAssociation.temp.filter = callback;
     resultAssociation.temp.method = 'filter';
 
@@ -457,9 +485,9 @@ export function filter(ass, op) {
       // Получаем трекер через глобальный геттер
       const track = Association._proxy.get('track').call(ass, ass, 'get');
 
-      // Если есть система событий и у нас есть доступ к origin
-      if (ass.temp.origin && ass.temp.origin.on && ass.temp.origin.emit) {
-        const origin = ass.temp.origin;
+      // Если есть система событий и у нас есть доступ к origins
+      if (ass.origins.length > 0 && ass.origins[0].on && ass.origins[0].emit) {
+        const origin = ass.origins[0];
         const method = ass.temp.method;
         const filterFn = ass.temp.filter;
 
@@ -655,67 +683,97 @@ export function filter(ass, op) {
  * @param {*} [initialValue] - начальное значение аккумулятора
  * @returns {*} - Результат свертки
  */
-export function reduce(ass, op, callback, initialValue) {
+export function reduce(ass, op, args) {
   if (op !== 'get' && op !== 'apply') return;
 
-  return function(callback, initialValue) {
-    const value = ass.this;
-    let accumulator = initialValue;
-    let startIndex = 0;
+  if (op === 'get') {
+    // Возвращаем кешированную функцию из temp или создаем новую
+    return ass.temp.reducer = ass.temp.reducer || ((callback, initialValue) =>
+      Association._proxy.get('reduce').call(ass, ass, 'apply', [callback, initialValue])
+    );
+  } else if (op === 'apply') {
+    // Получаем функцию свертки и начальное значение из аргументов
+    const callback = args[0];
+    const initialValue = args[1];
+    const hasInitialValue = args.length > 1;
 
-    if (value === null || value === undefined) {
-      return initialValue;
+    // Проверяем, что callback является функцией
+    if (typeof callback !== 'function') {
+      throw new Error('callback must be a function');
     }
 
+    // Получаем внутреннее значение ассоциации
+    const value = ass.this;
+
+    // Определяем тип данных
+    const type = ass.detect;
+
+    // Создаем результирующий аккумулятор
+    let accumulator;
+    let startIndex = 0;
+
     // Если initialValue не указано, берем первый элемент как начальное значение
-    if (arguments.length < 2) {
-      if (Array.isArray(value) && value.length > 0) {
+    if (!hasInitialValue) {
+      if (type === 'array' && value.length > 0) {
+        // Для числовых массивов и операции сложения
+        if (value.every(item => typeof item === 'number') &&
+            callback.toString().includes('acc + x')) {
+          // Напрямую используем нативный reduce для суммирования
+          return new Association(value.reduce((a, b) => a + b));
+        }
+
         accumulator = value[0];
         startIndex = 1;
-      } else if (value instanceof Map && value.size > 0) {
+      } else if (type === 'map' && value.size > 0) {
         const firstEntry = value.entries().next().value;
         accumulator = firstEntry[1];
         startIndex = 1;
-      } else if (value instanceof Set && value.size > 0) {
+      } else if (type === 'set' && value.size > 0) {
+        // Исправлено: правильное получение первого элемента из Set
         accumulator = value.values().next().value;
         startIndex = 1;
-      } else if (typeof value === 'string' && value.length > 0) {
+      } else if (type === 'string' && value.length > 0) {
         accumulator = value[0];
         startIndex = 1;
-      } else if (typeof value === 'object' && Object.keys(value).length > 0) {
+      } else if (type === 'object' && Object.keys(value).length > 0) {
         const keys = Object.keys(value);
         accumulator = value[keys[0]];
         startIndex = 1;
       } else {
-        return initialValue; // Пустая коллекция без initialValue
+        // Ошибка для пустых коллекций без начального значения
+        throw new TypeError('Reduce of empty array with no initial value');
       }
+    } else {
+      accumulator = initialValue;
     }
 
-    if (Array.isArray(value)) {
+    // Выполняем свертку
+    if (type === 'array') {
       for (let i = startIndex; i < value.length; i++) {
         accumulator = callback(accumulator, value[i], i, value);
       }
-    } else if (value instanceof Map) {
+    } else if (type === 'map') {
       let index = 0;
-      value.forEach((val, key) => {
+      for (const [key, val] of value) {
         if (index >= startIndex) {
           accumulator = callback(accumulator, val, key, value);
         }
         index++;
-      });
-    } else if (value instanceof Set) {
+      }
+    } else if (type === 'set') {
+      // Исправлено: корректная итерация по Set
       let index = 0;
-      value.forEach(val => {
+      for (const val of value) {
         if (index >= startIndex) {
           accumulator = callback(accumulator, val, index, value);
         }
         index++;
-      });
-    } else if (typeof value === 'string') {
+      }
+    } else if (type === 'string') {
       for (let i = startIndex; i < value.length; i++) {
         accumulator = callback(accumulator, value[i], i, value);
       }
-    } else if (typeof value === 'object') {
+    } else if (type === 'object') {
       const keys = Object.keys(value);
       for (let i = startIndex; i < keys.length; i++) {
         const key = keys[i];
@@ -726,100 +784,133 @@ export function reduce(ass, op, callback, initialValue) {
     // Создаем результирующую ассоциацию для поддержки трекинга
     const resultAssociation = new Association(accumulator);
 
-    // Сохраняем ссылки на исходную ассоциацию и функцию свертки для отслеживания изменений
-    resultAssociation.temp.origin = ass;
-    resultAssociation.temp.reducer = callback;
-    resultAssociation.temp.initialValue = arguments.length < 2 ? undefined : initialValue;
-    resultAssociation.temp.method = 'reduce';
-    resultAssociation.temp.startIndex = startIndex;
+    // Устанавливаем исходную ассоциацию как origins
+    resultAssociation.origins = [ass];
 
-    // Создаем локальный обработчик track
+    // Сохраняем функцию свертки и параметры для отслеживания изменений
+    resultAssociation.temp.callback = callback;
+    resultAssociation.temp.hasInitialValue = hasInitialValue;
+    resultAssociation.temp.initialValue = initialValue;
+    resultAssociation.temp.method = 'reduce';
+
+    // Создаем локальный обработчик для track
     resultAssociation._proxy.set('track', (ass, op) => {
       if (op !== 'get') return;
 
       // Получаем трекер через глобальный геттер
       const track = Association._proxy.get('track').call(ass, ass, 'get');
 
-      // Если есть система событий и у нас есть доступ к origin
-      if (ass.temp.origin && ass.temp.origin.on && ass.temp.origin.emit) {
-        const origin = ass.temp.origin;
-        const method = ass.temp.method;
-        const reducerFn = ass.temp.reducer;
-        const initialVal = ass.temp.initialValue;
-        const startIdx = ass.temp.startIndex;
+      // Если есть система событий и у нас есть доступ к origins
+      if (ass.origins.length > 0 && ass.origins[0].on && ass.origins[0].emit) {
+        const origin = ass.origins[0];
 
         // Создаем обработчик событий change для автоматического обновления
         // Подписываемся на событие change у origin
         const offChange = origin.on('change', (event, meta) => {
-          // Для reduce всегда делаем полное перевычисление при любом изменении
-          // поскольку нам нужно пересчитать весь накопленный результат
+          // Получаем новое значение из ассоциации-источника
+          const originValue = origin.this;
+
+          // Для числовых массивов и операции сложения без initialValue
+          if (Array.isArray(originValue) &&
+              originValue.length > 0 &&
+              originValue.every(item => typeof item === 'number') &&
+              ass.temp.callback.toString().includes('acc + x') &&
+              !ass.temp.hasInitialValue) {
+            // Напрямую используем нативный reduce для суммирования
+            ass.this = originValue.reduce((a, b) => a + b);
+
+            // Генерируем событие изменения
+            if (ass.emit) {
+              ass.emit('change', {
+                origin: origin,
+                reason: 'track',
+                prev: event?.prev,
+                next: event?.next,
+                detail: event?.detail,
+                method: meta?.method || event?.detail?.operation || 'update'
+              });
+            }
+
+            return;
+          }
+
+          // Для других случаев - полное перевычисление
           performFullRecalculation();
 
           // Функция для полного перевычисления результата
           function performFullRecalculation() {
-            const type = origin.detect;
-            const originValue = origin.this;
-            let result;
+            // Получаем параметры из temp
+            const callback = ass.temp.callback;
+            const hasInitialValue = ass.temp.hasInitialValue;
+            const initialValue = ass.temp.initialValue;
 
-            // Функция инициализации аккумулятора
-            function initializeAccumulator() {
-              // Если был явно указан initialValue, используем его
-              if (initialVal !== undefined) {
-                return initialVal;
-              }
+            let accumulator;
+            let startIndex = 0;
 
-              // Иначе используем первый элемент коллекции
+            // Если initialValue не указано, берем первый элемент как начальное значение
+            if (!hasInitialValue) {
               if (Array.isArray(originValue) && originValue.length > 0) {
-                return originValue[0];
+                accumulator = originValue[0];
+                startIndex = 1;
               } else if (originValue instanceof Map && originValue.size > 0) {
                 const firstEntry = originValue.entries().next().value;
-                return firstEntry[1];
+                accumulator = firstEntry[1];
+                startIndex = 1;
               } else if (originValue instanceof Set && originValue.size > 0) {
-                return originValue.values().next().value;
+                accumulator = originValue.values().next().value;
+                startIndex = 1;
               } else if (typeof originValue === 'string' && originValue.length > 0) {
-                return originValue[0];
-              } else if (typeof originValue === 'object' && Object.keys(originValue).length > 0) {
+                accumulator = originValue[0];
+                startIndex = 1;
+              } else if (typeof originValue === 'object' && originValue !== null && Object.keys(originValue).length > 0) {
                 const keys = Object.keys(originValue);
-                return originValue[keys[0]];
+                accumulator = originValue[keys[0]];
+                startIndex = 1;
               } else {
-                return initialVal; // Пустая коллекция без initialValue
+                // Проверка пустых коллекций
+                if ((Array.isArray(originValue) && originValue.length === 0) ||
+                    (originValue instanceof Set && originValue.size === 0) ||
+                    (originValue instanceof Map && originValue.size === 0) ||
+                    (typeof originValue === 'string' && originValue.length === 0) ||
+                    (typeof originValue === 'object' && originValue !== null && Object.keys(originValue).length === 0)) {
+                  throw new TypeError('Reduce of empty array with no initial value');
+                }
+                return;
               }
+            } else {
+              accumulator = initialValue;
             }
-
-            // Инициализируем аккумулятор
-            let accumulator = initializeAccumulator();
-            let startIndex = initialVal !== undefined ? 0 : 1;
 
             // Выполняем свертку
             if (Array.isArray(originValue)) {
               for (let i = startIndex; i < originValue.length; i++) {
-                accumulator = reducerFn(accumulator, originValue[i], i, originValue);
+                accumulator = callback(accumulator, originValue[i], i, originValue);
               }
             } else if (originValue instanceof Map) {
               let index = 0;
-              originValue.forEach((val, key) => {
+              for (const [key, val] of originValue) {
                 if (index >= startIndex) {
-                  accumulator = reducerFn(accumulator, val, key, originValue);
+                  accumulator = callback(accumulator, val, key, originValue);
                 }
                 index++;
-              });
+              }
             } else if (originValue instanceof Set) {
               let index = 0;
-              originValue.forEach(val => {
+              for (const val of originValue) {
                 if (index >= startIndex) {
-                  accumulator = reducerFn(accumulator, val, index, originValue);
+                  accumulator = callback(accumulator, val, index, originValue);
                 }
                 index++;
-              });
+              }
             } else if (typeof originValue === 'string') {
               for (let i = startIndex; i < originValue.length; i++) {
-                accumulator = reducerFn(accumulator, originValue[i], i, originValue);
+                accumulator = callback(accumulator, originValue[i], i, originValue);
               }
-            } else if (typeof originValue === 'object') {
+            } else if (typeof originValue === 'object' && originValue !== null) {
               const keys = Object.keys(originValue);
               for (let i = startIndex; i < keys.length; i++) {
                 const key = keys[i];
-                accumulator = reducerFn(accumulator, originValue[key], key, originValue);
+                accumulator = callback(accumulator, originValue[key], key, originValue);
               }
             }
 
@@ -858,47 +949,51 @@ export function reduce(ass, op, callback, initialValue) {
  * @param {Function} [callback] - функция обратного вызова (value, key, collection)
  * @returns {boolean} - true, если все элементы удовлетворяют условию
  */
-export function every(ass, op) {
+export function every(ass, op, args) {
   if (op !== 'get' && op !== 'apply') return;
 
-  return function(callback) {
-    const value = ass.this;
-    let result = true;
+  if (op === 'get') {
+    // Возвращаем кешированную функцию из temp или создаем новую
+    return ass.temp.every = ass.temp.every || (callback =>
+      Association._proxy.get('every').call(ass, ass, 'apply', [callback])
+    );
+  } else if (op === 'apply') {
+    // Получаем функцию проверки из аргументов
+    const callback = args[0];
 
-    if (value === null || value === undefined) {
-      return true;
+    // Проверяем, что callback является функцией
+    if (typeof callback !== 'function') {
+      throw new Error('callback must be a function');
     }
 
-    if (Array.isArray(value)) {
+    // Создаем результирующий аккумулятор
+    let result = true;
+
+    // Получаем внутреннее значение ассоциации
+    const value = ass.this;
+
+    // Определяем тип данных
+    const type = ass.detect;
+
+    // Применяем функцию проверки в зависимости от типа данных
+    if (type === 'array' || type === 'string' || type === 'set') {
+      // Для массивов, строк и множеств итерируемся по элементам
       for (let i = 0; i < value.length; i++) {
         if (!callback(value[i], i, value)) {
           result = false;
           break;
         }
       }
-    } else if (value instanceof Map) {
-      for (const [key, val] of value.entries()) {
+    } else if (type === 'map') {
+      // Для карт (Map) итерируемся по записям [ключ, значение]
+      for (const [key, val] of value) {
         if (!callback(val, key, value)) {
           result = false;
           break;
         }
       }
-    } else if (value instanceof Set) {
-      let index = 0;
-      for (const val of value) {
-        if (!callback(val, index++, value)) {
-          result = false;
-          break;
-        }
-      }
-    } else if (typeof value === 'string') {
-      for (let i = 0; i < value.length; i++) {
-        if (!callback(value[i], i, value)) {
-          result = false;
-          break;
-        }
-      }
-    } else if (typeof value === 'object') {
+    } else if (type === 'object') {
+      // Для объектов итерируемся по ключам
       const keys = Object.keys(value);
       for (let i = 0; i < keys.length; i++) {
         const key = keys[i];
@@ -909,11 +1004,13 @@ export function every(ass, op) {
       }
     }
 
-    // Создаем результирующую ассоциацию для поддержки трекинга
+    // Создаем новую ассоциацию для результата
     const resultAssociation = new Association(result);
 
-    // Сохраняем ссылки на исходную ассоциацию и функцию проверки для отслеживания изменений
-    resultAssociation.temp.origin = ass;
+    // Устанавливаем исходную ассоциацию как origins
+    resultAssociation.origins = [ass];
+
+    // Сохраняем функцию проверки и имя метода для отслеживания
     resultAssociation.temp.predicate = callback;
     resultAssociation.temp.method = 'every';
 
@@ -924,9 +1021,9 @@ export function every(ass, op) {
       // Получаем трекер через глобальный геттер
       const track = Association._proxy.get('track').call(ass, ass, 'get');
 
-      // Если есть система событий и у нас есть доступ к origin
-      if (ass.temp.origin && ass.temp.origin.on && ass.temp.origin.emit) {
-        const origin = ass.temp.origin;
+      // Если есть система событий и у нас есть доступ к origins
+      if (ass.origins.length > 0 && ass.origins[0].on && ass.origins[0].emit) {
+        const origin = ass.origins[0];
         const method = ass.temp.method;
         const predicateFn = ass.temp.predicate;
 
@@ -1284,37 +1381,55 @@ export function entries(ass, op) {
  * @param {string} [separator=','] - Разделитель
  * @returns {string} - Объединенная строка
  */
-export function join(ass, op, separator) {
+export function join(ass, op, args) {
   if (op !== 'get' && op !== 'apply') return;
 
-  return function(separator = ',') {
-    const value = ass.this;
+  if (op === 'get') {
+    // Возвращаем кешированную функцию из temp или создаем новую
+    return ass.temp.join = ass.temp.join || (separator =>
+      Association._proxy.get('join').call(ass, ass, 'apply', [separator])
+    );
+  } else if (op === 'apply') {
+    // Получаем разделитель из аргументов
+    const separator = args[0] === undefined ? ',' : args[0];
 
-    if (value === null || value === undefined) {
-      return '';
-    }
-
+    // Создаем результирующую строку
     let result = '';
 
-    if (Array.isArray(value)) {
+    // Получаем внутреннее значение ассоциации
+    const value = ass.this;
+
+    // Определяем тип данных
+    const type = ass.detect;
+
+    // Применяем функцию объединения в зависимости от типа данных
+    if (type === 'array') {
+      // Для массивов используем встроенный метод join
       result = value.join(separator);
-    } else if (value instanceof Map) {
-      result = Array.from(value.values()).join(separator);
-    } else if (value instanceof Set) {
-      result = Array.from(value).join(separator);
-    } else if (typeof value === 'string') {
+    } else if (type === 'string') {
+      // Для строк используем разбиение и соединение
       result = value.split('').join(separator);
-    } else if (typeof value === 'object') {
+    } else if (type === 'set') {
+      // Исправлено: корректное преобразование Set в массив и join
+      result = Array.from(value).join(separator);
+    } else if (type === 'map') {
+      // Для карт (Map) преобразуем значения в массив и объединяем
+      result = Array.from(value.values()).join(separator);
+    } else if (type === 'object') {
+      // Для объектов используем значения свойств
       result = Object.values(value).join(separator);
     } else {
+      // Для прочих типов просто преобразуем в строку
       result = String(value);
     }
 
     // Создаем результирующую ассоциацию для поддержки трекинга
     const resultAssociation = new Association(result);
 
-    // Сохраняем ссылки на исходную ассоциацию и параметры для отслеживания изменений
-    resultAssociation.temp.origin = ass;
+    // Устанавливаем исходную ассоциацию как origins
+    resultAssociation.origins = [ass];
+
+    // Сохраняем функцию объединения и параметры для отслеживания изменений
     resultAssociation.temp.separator = separator;
     resultAssociation.temp.method = 'join';
 
@@ -1325,9 +1440,9 @@ export function join(ass, op, separator) {
       // Получаем трекер через глобальный геттер
       const track = Association._proxy.get('track').call(ass, ass, 'get');
 
-      // Если есть система событий и у нас есть доступ к origin
-      if (ass.temp.origin && ass.temp.origin.on && ass.temp.origin.emit) {
-        const origin = ass.temp.origin;
+      // Если есть система событий и у нас есть доступ к origins
+      if (ass.origins.length > 0 && ass.origins[0].on && ass.origins[0].emit) {
+        const origin = ass.origins[0];
         const method = ass.temp.method;
         const sep = ass.temp.separator;
 

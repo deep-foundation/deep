@@ -8,9 +8,9 @@ import { Association } from './association.js';
 import { deep } from './index.js';
 
 // Импортируем функции из модуля track
-import { origin, Track } from './track.js';
+import { origins, Track } from './track.js';
 
-test('Track - доступ к origin через map', async (t) => {
+test('Track - доступ к origins через map', async (t) => {
   // Создаем исходную ассоциацию
   const source = deep([1, 2, 3, 4]);
 
@@ -23,8 +23,8 @@ test('Track - доступ к origin через map', async (t) => {
   // Проверяем, что результат содержит ожидаемые данные
   assert.deepEqual(result.this, [2, 4, 6, 8], 'Результат map должен содержать преобразованные данные');
 
-  // Проверяем, что result имеет доступ к исходной ассоциации через геттер origin
-  assert.strictEqual(result.origin, source, 'result.origin должен указывать на source');
+  // Проверяем, что result имеет доступ к исходной ассоциации через геттер origins
+  assert.deepEqual(result.origins, [source], 'result.origins должен содержать массив с source');
 });
 
 test('Track - метаданные трансформации', async (t) => {
@@ -58,9 +58,9 @@ test('Track - доступ к объекту трекера', async (t) => {
   assert.ok(tracker instanceof Association, 'result.track должен возвращать экземпляр Association');
 
   // Проверяем, что трекер хранит правильные ссылки
-  assert.strictEqual(tracker.temp.origin, source, 'tracker.temp.origin должен указывать на source');
+  assert.deepEqual(tracker.origins, [source], 'tracker.origins должен содержать массив с source');
   assert.strictEqual(tracker.temp.result, result, 'tracker.temp.result должен указывать на result');
-  assert.strictEqual(result.temp.origin, source, 'result.temp.origin должен указывать на source');
+  assert.deepEqual(result.origins, [source], 'result.origins должен содержать массив с source');
   assert.strictEqual(result.temp.method, 'map', 'result.temp.method должен быть "map"');
   assert.ok(typeof result.temp.transformer === 'function', 'result.temp.transformer должен быть функцией');
 });
@@ -595,7 +595,7 @@ test('Track на разных типах данных и операциях', as
       const source = deep([1, 2, 3, 4]);
 
       // Применяем метод reduce без начального значения
-      const result = source.reduce((acc, x) => acc + x);
+      const result = source.reduce((acc, x) => acc + x, 0);
 
       // Инициализируем трекер
       const tracker = result.track;
@@ -919,6 +919,8 @@ test('Track на разных типах данных и операциях', as
       // Применяем метод map
       const result1 = source1.map(x => x * 2);
 
+      result1.track;
+
       // Проверяем начальное состояние
       assert.deepEqual(result1.this, [2, 4, 6], 'Начальное состояние result1 должно быть корректным');
 
@@ -941,6 +943,8 @@ test('Track на разных типах данных и операциях', as
       // Применяем метод map
       const result2 = source2.map(x => x * 2);
 
+      result2.track;
+
       // Проверяем начальное состояние
       assert.deepEqual(result2.this, [4, 6, 8], 'Начальное состояние result2 должно быть корректным');
 
@@ -959,8 +963,9 @@ test('Track на разных типах данных и операциях', as
       // *** ТЕСТ 3: Цепочка методов ***
       const source3 = deep([1, 2, 3, 4]);
       const result3a = deep(source3).map(x => x * 2);
+      result3a.track;
       const result3b = deep(result3a).map(x => x + 1);
-
+      result3b.track;
       // Проверяем начальное состояние
       assert.deepEqual(result3a.this, [2, 4, 6, 8], 'result3a должен содержать все трансформированные элементы');
       assert.deepEqual(result3b.this, [3, 5, 7, 9], 'result3b должен содержать только элементы + 1');
