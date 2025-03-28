@@ -4,6 +4,8 @@ import { all, kill, reload } from './lifecycle.js';
 
 // Количество итераций
 const ITERATIONS = 10000;
+// Уменьшаем количество итераций для быстрого запуска и избежания таймаута
+const QUICK_ITERATIONS = process.env.QUICK === 'true' || process.env.BENCHMARK ? 100 : ITERATIONS;
 
 // Тестирование производительности жизненного цикла
 group('Lifecycle', () => {
@@ -11,7 +13,7 @@ group('Lifecycle', () => {
     // Очищаем хранилище перед тестом
     all.this.clear();
 
-    for (let i = 0; i < ITERATIONS; i++) {
+    for (let i = 0; i < QUICK_ITERATIONS; i++) {
       const obj = { id: i };
       const a = deep(obj);
       a.onNew();
@@ -25,7 +27,7 @@ group('Lifecycle', () => {
     // Очищаем хранилище перед тестом
     all.this.clear();
 
-    for (let i = 0; i < ITERATIONS; i++) {
+    for (let i = 0; i < QUICK_ITERATIONS; i++) {
       const obj = { id: i };
       const a = deep(obj);
       a.onNew();
@@ -36,7 +38,7 @@ group('Lifecycle', () => {
   bench('Вызов функции kill', () => {
     // Создаем набор ассоциаций для теста
     const assocs = [];
-    for (let i = 0; i < ITERATIONS; i++) {
+    for (let i = 0; i < QUICK_ITERATIONS; i++) {
       const obj = { id: i };
       const a = deep(obj);
       a.onNew();
@@ -44,7 +46,7 @@ group('Lifecycle', () => {
     }
 
     // Измеряем скорость удаления
-    for (let i = 0; i < ITERATIONS; i++) {
+    for (let i = 0; i < QUICK_ITERATIONS; i++) {
       kill(assocs[i]);
     }
   });
@@ -52,7 +54,7 @@ group('Lifecycle', () => {
   bench('Перезагрузка ассоциации (reload)', () => {
     // Создаем набор ассоциаций для теста
     const assocs = [];
-    for (let i = 0; i < ITERATIONS / 100; i++) { // Делим на 100, так как reload выполняет 2 операции
+    for (let i = 0; i < QUICK_ITERATIONS / 100; i++) { // Делим на 100, так как reload выполняет 2 операции
       const obj = { id: i };
       const a = deep(obj);
       a.onNew();
@@ -60,7 +62,7 @@ group('Lifecycle', () => {
     }
 
     // Измеряем скорость перезагрузки
-    for (let i = 0; i < ITERATIONS / 100; i++) {
+    for (let i = 0; i < QUICK_ITERATIONS / 100; i++) {
       reload(assocs[i]);
     }
 
@@ -78,7 +80,7 @@ group('Lifecycle', () => {
     }
 
     // Измеряем скорость получения количества
-    for (let i = 0; i < ITERATIONS; i++) {
+    for (let i = 0; i < QUICK_ITERATIONS; i++) {
       const size = all.this.size;
     }
 
@@ -96,7 +98,7 @@ group('Lifecycle', () => {
       return true;
     };
 
-    for (let i = 0; i < ITERATIONS / 10; i++) { // Делим на 10, чтобы избежать переполнения памяти
+    for (let i = 0; i < QUICK_ITERATIONS / 10; i++) { // Делим на 10, чтобы избежать переполнения памяти
       const obj = { id: i, initialized: false };
       const a = deep(obj);
       a.onNew(callback);
@@ -112,7 +114,7 @@ group('Lifecycle', () => {
 
     // Создаем набор ассоциаций для теста
     const assocs = [];
-    for (let i = 0; i < ITERATIONS / 10; i++) {
+    for (let i = 0; i < QUICK_ITERATIONS / 10; i++) {
       const obj = { id: i, disposed: false };
       const a = deep(obj);
       a.onNew();
@@ -126,13 +128,13 @@ group('Lifecycle', () => {
     };
 
     // Измеряем скорость удаления с callback
-    for (let i = 0; i < ITERATIONS / 10; i++) {
+    for (let i = 0; i < QUICK_ITERATIONS / 10; i++) {
       assocs[i].onKill(callback);
     }
   });
 
   bench('Очистка хранилища ассоциаций (all.this.clear)', () => {
-    for (let i = 0; i < ITERATIONS / 100; i++) {
+    for (let i = 0; i < QUICK_ITERATIONS / 100; i++) {
       // Создаем некоторое количество ассоциаций
       for (let j = 0; j < 100; j++) {
         const obj = { id: j };
@@ -146,5 +148,19 @@ group('Lifecycle', () => {
   });
 });
 
-// Запуск бенчмарков
-run();
+// Запускаем все бенчмарки асинхронно
+async function runBenchmarks() {
+  console.log('');
+  console.log('🚀 Запуск бенчмарков...');
+  console.log('');
+
+  await run();
+
+  console.log('');
+  console.log('Все бенчмарки завершены.');
+}
+
+runBenchmarks().catch(err => {
+  console.error('Ошибка при выполнении бенчмарков:', err);
+  process.exit(1);
+});

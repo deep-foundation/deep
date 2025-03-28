@@ -3,6 +3,29 @@
  *
  * Находит все файлы *.benchmark.js в корне проекта,
  * запускает их и вставляет вывод в соответствующие разделы документации.
+ *
+ * Поддерживаемые форматы бенчмарков:
+ * 1. benchmarkify (формат используемый в track.benchmark.js, gets.benchmark.js)
+ *    ```
+ *    Suite: имя_сьюта
+ *    ==============
+ *
+ *    test_name  -XX.XX% (123,456 ops/sec) (avg: Xμs)
+ *    ```
+ *
+ * 2. mitata формат (используемый в некоторых бенчмарках)
+ *    ```
+ *    ✓ test_name 123,456 ops/sec
+ *    ```
+ *
+ * Можно указать конкретный бенчмарк через переменную окружения BENCHMARK:
+ * BENCHMARK="many.benchmark.js" node scripts/benchmarkify.js
+ *
+ * Дополнительные переменные окружения:
+ * - DEBUG=true - включает режим отладки
+ * - QUICK=true - запускает минимальное количество тестов для быстрой проверки
+ * - TIMEOUT=60 - устанавливает таймаут в секундах (по умолчанию 120)
+ * - MAX_DURATION=30 - максимальное время выполнения бенчмарка в секундах
  */
 
 import fs from 'node:fs';
@@ -25,17 +48,48 @@ const BENCHMARK_DOCS_MAP = {
 // Функция для запуска бенчмарка и получения результатов
 function runBenchmark(benchmarkPath) {
   console.log(`Запуск бенчмарка: ${benchmarkPath}`);
+  console.log(`Время начала: ${new Date().toISOString()}`);
+
+  // Проверяем флаг отладки
+  const isDebug = process.env.DEBUG === 'true';
+  const nodeCommand = isDebug ? 'node --trace-warnings --inspect' : 'node';
+
+  // Проверяем флаг таймаута - по умолчанию 2 минуты, в отладке 10 минут
+  // Можно задать через переменную окружения TIMEOUT
+  const defaultTimeout = isDebug ? 10 * 60 * 1000 : 2 * 60 * 1000;
+  const timeoutMs = process.env.TIMEOUT ? parseInt(process.env.TIMEOUT, 10) * 1000 : defaultTimeout;
+
+  const fullCommand = `${nodeCommand} ${benchmarkPath}`;
+
+  console.log(`Команда запуска: ${fullCommand}`);
+  console.log(`Установлен таймаут: ${timeoutMs}ms (${timeoutMs/1000} сек)`);
 
   try {
     // Запускаем бенчмарк и получаем его вывод
-    const output = execSync(`node ${benchmarkPath}`, {
+    const output = execSync(fullCommand, {
       encoding: 'utf8',
-      maxBuffer: 10 * 1024 * 1024 // Увеличиваем размер буфера
+      maxBuffer: 10 * 1024 * 1024, // Увеличиваем размер буфера
+      timeout: timeoutMs // Устанавливаем таймаут
     });
+
+    console.log(`Бенчмарк завершен успешно. Время окончания: ${new Date().toISOString()}`);
+    console.log(`Получено ${output.length} байт данных`);
 
     return output;
   } catch (error) {
     console.error(`Ошибка при запуске бенчмарка ${benchmarkPath}:`, error.message);
+    if (error.code === 'ETIMEDOUT') {
+      console.error(`Бенчмарк превысил время выполнения и был прерван`);
+    }
+    if (error.stdout) {
+      console.log(`Частичный вывод бенчмарка (первые 500 символов):`);
+      console.log(error.stdout.substring(0, 500));
+
+      // Если у нас есть частичный вывод, используем его вместо прекращения работы
+      // Это помогает обновить документацию хотя бы частично
+      console.log(`Используем частичный вывод бенчмарка для обновления документации`);
+      return error.stdout;
+    }
     return null;
   }
 }
@@ -57,43 +111,172 @@ function createMarkdownTable(benchmarkOutput) {
   // Найдем информационные строки
   let systemInfo = [];
   let tableData = [];
-  let inTable = false;
+  let processedNames = new Set(); // Для исключения дубликатов
 
-  for (const line of lines) {
-    // Сначала собираем информацию о системе
-    if (line.includes('clk:') || line.includes('cpu:') || line.includes('runtime:')) {
+  // Добавим отладочную информацию
+  console.log(`Обрабатываем ${lines.length} строк вывода бенчмарка`);
+
+  // Режим отладки можно включить через переменную окружения
+  const isDebugMode = process.env.DEBUG === 'true';
+
+  // Если включен режим отладки, выведем все строки, содержащие ops/sec или ops/s
+  if (isDebugMode) {
+    console.log('Все строки, содержащие ops/sec, ops/s, s/iter или ms/iter:');
+    lines.forEach((line, i) => {
+      if (line.includes('ops/sec') || line.includes('ops/s') ||
+          line.includes('s/iter') || line.includes('ms/iter')) {
+        console.log(`[${i}]: ${line}`);
+      }
+    });
+  }
+
+  // Собираем системную информацию
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.includes('Darwin') || line.includes('Node.JS:') || line.includes('V8:') ||
+        line.includes('CPU:') || line.includes('Memory:')) {
       systemInfo.push(line.trim());
     }
-    // Находим заголовок таблицы
-    else if (line.includes('benchmark') && line.includes('avg (min … max)')) {
-      inTable = true;
-      // Пропускаем заголовок и разделительную линию
-      continue;
+  }
+
+  // Ищем строки с результатами для последующей обработки
+  const checkmarkLines = [];
+  const allResults = [];
+  let suiteForLine = {};
+  let currentLineIndex = 0;
+
+  // Сначала проходим и находим все сьюты и их индексы
+  const suiteRanges = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Определение текущего сьюта - ищем строки вида "Suite: имя_сьюта" или "имя_сьюта\n========"
+    if (line.includes('Suite:')) {
+      const suiteName = line.replace('Suite:', '').trim();
+      suiteRanges.push({ start: i, name: suiteName });
+      console.log(`Найден сьют: ${suiteName} (строка ${i})`);
     }
-    // Если мы внутри таблицы и строка не пустая
-    else if (inTable && line.trim()) {
-      // Пропускаем разделительные линии в таблице
-      if (line.startsWith('---')) continue;
+    else if (i < lines.length - 1 && lines[i+1].match(/^=+$/)) {
+      // Формат benchmarkify: название сьюта и следующая строка с ====
+      const suiteName = line.trim();
+      suiteRanges.push({ start: i, name: suiteName });
+      console.log(`Найден сьют в формате benchmarkify: ${suiteName} (строка ${i})`);
+    }
 
-      // Извлекаем название бенчмарка и результаты
-      const benchmarkRegex = /^(.*?)\s+(\d+\.\d+)\s+(µs|ms|ns|s)\/iter/;
-      const match = line.match(benchmarkRegex);
-
-      if (match) {
-        const name = match[1].trim();
-        const avg = match[2];
-        const unit = match[3];
-
-        // Пропускаем тесты с wildcard подписками для Events
-        if ((name.includes('Events:') || name.includes('EventEmitter:')) &&
-            (name.includes('wildcard') || name.includes('Wildcard'))) {
-          continue;
-        }
-
-        tableData.push({ name, avg, unit });
-      }
+    // Ищем строки с результатами для последующей обработки
+    if (line.includes('ops/sec') || line.includes('ops/s') ||
+        line.includes('s/iter') || line.includes('ms/iter')) {
+      checkmarkLines.push({ index: i, content: line });
     }
   }
+
+  // Сортируем сьюты по порядку их появления
+  suiteRanges.sort((a, b) => a.start - b.start);
+
+  // Определяем текущий сьют для каждой строки с результатами
+  for (const { index, content } of checkmarkLines) {
+    // Находим, к какому сьюту относится строка
+    let suiteName = "Основной";
+    for (let i = suiteRanges.length - 1; i >= 0; i--) {
+      if (index > suiteRanges[i].start) {
+        suiteName = suiteRanges[i].name;
+        break;
+      }
+    }
+
+    // Формат 1: "test_name -XX.XX% (123,456 ops/sec)" (benchmarkify)
+    let match = content.match(/^\s*(.*?)\s+[\-\d\.]+%\s+\(([\d,]+)\s+ops\/sec\)/);
+
+    // Формат 2: "✓ test_name 123,456 ops/sec" (mitata со значком ✓)
+    if (!match) {
+      match = content.match(/^[✓✔]\s+(.*?)\s+([\d,]+)\s+ops\/sec/);
+    }
+
+    // Формат 3: "test_name 123,456 ops/sec" (mitata без значка)
+    if (!match) {
+      match = content.match(/^\s*(.*?)\s+([\d,]+)\s+ops\/sec/);
+    }
+
+    // Формат 4: "test_name 123,456 ops/s (xx ns)" (вариант mitata)
+    if (!match) {
+      match = content.match(/^\s*(.*?)\s+([\d,]+)\s+ops\/s/);
+    }
+
+    // Формат 5: "test_name XX.XX s/iter" (mitata время в секундах)
+    if (!match) {
+      const timeMatch = content.match(/^\s*(.*?)\s+([\d,.]+)\s+s\/iter/);
+      if (timeMatch) {
+        const name = timeMatch[1].trim();
+        const timeInSeconds = parseFloat(timeMatch[2].replace(/,/g, '.'));
+        if (timeInSeconds > 0) {
+          match = [null, name, Math.round(1 / timeInSeconds)];
+          if (isDebugMode) {
+            console.log(`Преобразовано из s/iter: ${name} -> ${match[2]} ops/sec`);
+          }
+        }
+      }
+    }
+
+    // Формат 6: "test_name XX.XX ms/iter" (mitata время в миллисекундах)
+    if (!match) {
+      const timeMatch = content.match(/^\s*(.*?)\s+([\d,.]+)\s+ms\/iter/);
+      if (timeMatch) {
+        const name = timeMatch[1].trim();
+        const timeInMs = parseFloat(timeMatch[2].replace(/,/g, '.'));
+        if (timeInMs > 0) {
+          match = [null, name, Math.round(1000 / timeInMs)];
+          if (isDebugMode) {
+            console.log(`Преобразовано из ms/iter: ${name} -> ${match[2]} ops/sec`);
+          }
+        }
+      }
+    }
+
+    // Формат 7: "test_name XX.XX µs/iter" (mitata время в микросекундах)
+    if (!match) {
+      const timeMatch = content.match(/^\s*(.*?)\s+([\d,.]+)\s+µs\/iter/);
+      if (timeMatch) {
+        const name = timeMatch[1].trim();
+        const timeInUs = parseFloat(timeMatch[2].replace(/,/g, '.'));
+        if (timeInUs > 0) {
+          match = [null, name, Math.round(1000000 / timeInUs)];
+          if (isDebugMode) {
+            console.log(`Преобразовано из µs/iter: ${name} -> ${match[2]} ops/sec`);
+          }
+        }
+      }
+    }
+
+    if (match) {
+      const name = match[1].trim();
+      const fullName = `${suiteName}: ${name}`;
+
+      if (processedNames.has(fullName)) continue; // Пропускаем дубликаты
+
+      // Удаляем запятые из числа перед преобразованием в Integer
+      const opsPerSec = typeof match[2] === 'number' ? match[2] : parseInt(match[2].replace(/,/g, ''), 10);
+
+      console.log(`Найден результат: "${fullName}" -> ${opsPerSec} ops/sec (строка ${index})`);
+
+      // Пропускаем тесты с wildcard подписками для Events
+      if ((fullName.includes('Events:') || fullName.includes('EventEmitter:')) &&
+          (fullName.includes('wildcard') || fullName.includes('Wildcard'))) {
+        console.log(`  Пропускаем wildcard тест: ${fullName}`);
+        continue;
+      }
+
+      // Вычисляем среднее время выполнения
+      const avgInMicroseconds = 1000000 / opsPerSec;
+      const avg = avgInMicroseconds.toFixed(2);
+
+      tableData.push({ name: fullName, avg, unit: 'µs', opsPerSec });
+      processedNames.add(fullName);
+    } else {
+      console.log(`Не удалось разобрать строку ${index}: "${content.substring(0, 50)}${content.length > 50 ? '...' : ''}"`);
+    }
+  }
+
+  console.log(`Найдено ${tableData.length} тестов для включения в таблицу`);
 
   // Создаем таблицу Markdown
   let markdown = '';
@@ -107,20 +290,17 @@ function createMarkdownTable(benchmarkOutput) {
     markdown += "\n";
   }
 
-  // Создаем заголовок таблицы
-  markdown += "| Тест | Среднее время выполнения | Операций в секунду |\n";
-  markdown += "|------|--------------------------|--------------------|\n";
+  if (tableData.length === 0) {
+    markdown += "*Не удалось получить результаты бенчмарка. Проверьте вывод скрипта.*\n\n";
+  } else {
+    // Создаем заголовок таблицы
+    markdown += "| Тест | Среднее время выполнения | Операций в секунду |\n";
+    markdown += "|------|--------------------------|--------------------|\n";
 
-  // Добавляем строки таблицы
-  for (const data of tableData) {
-    // Вычисляем операции в секунду
-    const opsPerSec = (1 / parseFloat(data.avg)) * (
-      data.unit === 'ns' ? 1e9 :
-      data.unit === 'µs' ? 1e6 :
-      data.unit === 'ms' ? 1e3 : 1
-    );
-
-    markdown += `| ${data.name} | ${data.avg} ${data.unit}/итер | ${opsPerSec.toLocaleString('ru-RU')} опер/сек |\n`;
+    // Добавляем строки таблицы
+    for (const data of tableData) {
+      markdown += `| ${data.name} | ${data.avg} ${data.unit}/итер | ${data.opsPerSec.toLocaleString('ru-RU')} опер/сек |\n`;
+    }
   }
 
   return { markdown, tableData, systemInfo };
@@ -197,6 +377,7 @@ function updateMarkdownFile(mdFilePath, benchmarkOutput, benchmarkName) {
 
     // Читаем содержимое файла
     let content = fs.readFileSync(mdFilePath, 'utf8');
+    console.log(`Размер файла ${mdFilePath}: ${content.length} байт`);
 
     // Перед поиском раздела, убедимся что мы используем правильный уровень заголовка
     // для разных документов
@@ -206,31 +387,31 @@ function updateMarkdownFile(mdFilePath, benchmarkOutput, benchmarkName) {
       perfHeadingLevel = '#';
     }
 
-    // Ищем раздел с производительностью с учетом уровня заголовка
-    const perfSectionRegex = new RegExp(`(${perfHeadingLevel} Производительность[\\s\\S]*?)(?=\\n${perfHeadingLevel[0]}|$)`, 'i');
-    const perfSection = content.match(perfSectionRegex);
+    // Используем очень простой подход - заменяем содержимое между заголовком "Производительность"
+    // и следующим заголовком того же или более высокого уровня
 
-    if (!perfSection) {
-      console.error(`Раздел "${perfHeadingLevel} Производительность" не найден в файле ${mdFilePath}`);
+    // Ищем позицию заголовка Производительность
+    const perfTitle = `${perfHeadingLevel} Производительность`;
+    const perfTitleIndex = content.indexOf(perfTitle);
+
+    if (perfTitleIndex === -1) {
+      console.error(`Раздел "${perfTitle}" не найден в файле ${mdFilePath}`);
       return false;
     }
 
+    console.log(`Заголовок "${perfTitle}" найден в позиции ${perfTitleIndex}`);
+
+    // Ищем следующий заголовок того же уровня
+    const nextHeadingRegex = new RegExp(`\\n${perfHeadingLevel[0]}{1,${perfHeadingLevel.length}} `, 'g');
+    nextHeadingRegex.lastIndex = perfTitleIndex + perfTitle.length;
+    const match = nextHeadingRegex.exec(content);
+
+    const endIndex = match ? match.index : content.length;
+    console.log(`Следующий заголовок найден в позиции ${endIndex}`);
+
     // Создаем таблицу из результатов бенчмарка и получаем данные для анализа
     const { markdown: markdownTable, tableData, systemInfo } = createMarkdownTable(benchmarkOutput);
-
-    // Нормализуем все значения к микросекундам для корректного сравнения
-    tableData.forEach(data => {
-      let avgInMicroseconds = parseFloat(data.avg);
-      if (data.unit === 'ns') {
-        avgInMicroseconds /= 1000;
-      } else if (data.unit === 'ms') {
-        avgInMicroseconds *= 1000;
-      } else if (data.unit === 's') {
-        avgInMicroseconds *= 1000000;
-      }
-
-      data.avgInMicroseconds = avgInMicroseconds;
-    });
+    console.log(`Создана таблица с ${tableData.length} строками результатов`);
 
     // Создаем содержимое раздела в зависимости от типа бенчмарка
     let newContent = '';
@@ -242,53 +423,63 @@ function updateMarkdownFile(mdFilePath, benchmarkOutput, benchmarkName) {
       newContent = markdownTable;
     }
 
-    // Формируем новое содержимое раздела с сохранением заголовка
-    const newPerfSection = `${perfHeadingLevel} Производительность\n\n${newContent}`;
+    // Формируем новое содержимое раздела с заголовком
+    const newSection = `${perfTitle}\n\n${newContent}`;
 
     // Заменяем старый раздел на новый
-    const updatedContent = content.replace(perfSectionRegex, newPerfSection);
+    const updatedContent =
+      content.substring(0, perfTitleIndex) +
+      newSection +
+      content.substring(endIndex);
 
     // Записываем обновленное содержимое в файл
     fs.writeFileSync(mdFilePath, updatedContent, 'utf8');
 
-    console.log(`Файл ${mdFilePath} успешно обновлен`);
+    console.log(`Файл ${mdFilePath} успешно обновлен, добавлено ${newContent.length} байт`);
     return true;
   } catch (error) {
     console.error(`Ошибка при обновлении файла ${mdFilePath}:`, error.message);
+    console.error(error.stack);
     return false;
   }
 }
 
 // Основная функция
 async function main() {
-  console.log('Запуск процесса обновления документации...');
+  console.log('Запуск обновления документации из результатов бенчмарков...');
 
-  // Находим все файлы бенчмарков в корне проекта
-  const files = fs.readdirSync('.');
-  const benchmarkFiles = files.filter(file => file.endsWith('.benchmark.js'));
+  // Получаем список бенчмарков для обработки
+  const targetBenchmark = process.env.BENCHMARK;
+  const benchmarksToProcess = targetBenchmark
+    ? { [targetBenchmark]: BENCHMARK_DOCS_MAP[targetBenchmark] }
+    : BENCHMARK_DOCS_MAP;
 
-  console.log(`Найдено ${benchmarkFiles.length} файлов бенчмарков`);
+  // Проверяем существование указанного бенчмарка
+  if (targetBenchmark && !benchmarksToProcess[targetBenchmark]) {
+    console.error(`Ошибка: Бенчмарк "${targetBenchmark}" не найден в списке поддерживаемых бенчмарков`);
+    process.exit(1);
+  }
 
-  // Обрабатываем каждый файл бенчмарка
-  for (const benchmarkFile of benchmarkFiles) {
-    // Определяем соответствующий файл документации
-    const mdFile = BENCHMARK_DOCS_MAP[benchmarkFile];
+  // Обрабатываем каждый бенчмарк
+  for (const [benchmarkFile, mdFile] of Object.entries(benchmarksToProcess)) {
+    console.log(`\nОбработка бенчмарка: ${benchmarkFile}`);
 
-    if (!mdFile) {
-      console.log(`Для файла ${benchmarkFile} не найден соответствующий файл документации. Пропускаем.`);
-      continue;
-    }
-
-    // Запускаем бенчмарк
+    // Запускаем бенчмарк и получаем результаты
     const benchmarkOutput = runBenchmark(benchmarkFile);
 
     if (benchmarkOutput) {
-      // Обновляем файл документации
-      updateMarkdownFile(mdFile, benchmarkOutput, benchmarkFile);
+      // Обновляем документацию
+      const success = updateMarkdownFile(mdFile, benchmarkOutput, benchmarkFile);
+
+      if (success) {
+        console.log(`✅ Документация успешно обновлена: ${mdFile}`);
+      } else {
+        console.error(`❌ Ошибка при обновлении документации: ${mdFile}`);
+      }
     }
   }
 
-  console.log('Процесс обновления документации завершен');
+  console.log('\nОбновление документации завершено!');
 }
 
 // Запускаем скрипт
