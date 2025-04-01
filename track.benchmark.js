@@ -1,9 +1,13 @@
 /**
- * Бенчмарки для модуля track.js
+ * Performance tests for track.js
  */
 
 import { deep } from './index.js';
 import Benchmarkify from 'benchmarkify';
+import path from 'node:path';
+import fs from 'node:fs';
+import { saveBenchmarkToMarkdown, generateMarkdownReport } from './utils/benchmark-to-markdown.js';
+import { performance } from 'node:perf_hooks';
 
 // Включаем режим отладки, если установлен флаг DEBUG
 const isDebug = process.env.DEBUG === 'true';
@@ -11,14 +15,61 @@ if (isDebug) {
   console.log('🔍 Включен режим отладки');
 }
 
-// Создаем бенчмарк с правильными настройками для единообразного вывода
+// Создаем бенчмарк
 const benchmark = new Benchmarkify('Track.js Benchmarks', {
-  minTimes: isDebug ? 10 : 1000,  // Уменьшаем количество запусков для отладки
-  reporter: 'console'  // Использовать консольный репортер
-});
+  description: 'Тесты производительности для track.js - отслеживание зависимостей'
+}).printHeader();
 
-// Печатаем заголовок
-benchmark.printHeader();
+// Максимальное время выполнения бенчмарка (в секундах)
+const MAX_EXECUTION_TIME = 40;
+console.log(`Установлено максимальное время выполнения: ${MAX_EXECUTION_TIME} сек`);
+
+// Функция для проверки времени выполнения сюита
+function setupTimeLimit(suite) {
+  const startTime = performance.now();
+  let lastCheck = startTime;
+  let checkInterval;
+
+  // Проверка времени каждые 5 секунд
+  checkInterval = setInterval(() => {
+    const currentTime = performance.now();
+    const elapsed = (currentTime - startTime) / 1000;
+
+    if (elapsed > MAX_EXECUTION_TIME) {
+      clearInterval(checkInterval);
+      console.warn(`⚠️ Превышено максимальное время выполнения. Принудительное завершение.`);
+      console.log(`Прошло ${elapsed.toFixed(3)} сек из ${MAX_EXECUTION_TIME} сек`);
+
+      // Генерируем отчет перед выходом
+      try {
+        console.log(`🔄 Генерация Markdown отчета для: ${benchmark.name}`);
+        const markdownReport = generateMarkdownReport(benchmark);
+        const reportPath = path.join(process.cwd(), 'TRACK.benchmark.md');
+        fs.writeFileSync(reportPath, markdownReport, 'utf8');
+        console.log(`✅ Markdown отчет сохранен в: ${reportPath}`);
+      } catch (error) {
+        console.error('❌ Ошибка при создании отчета:', error);
+      }
+
+      // Принудительно останавливаем выполнение, так как в библиотеке нет метода cancel
+      process.exit(0);
+    }
+
+    lastCheck = currentTime;
+  }, 5000);
+
+  // Перезаписываем метод run сюита, чтобы очистить интервал после завершения
+  const originalRun = suite.run;
+  suite.run = async function(...args) {
+    try {
+      return await originalRun.apply(this, args);
+    } finally {
+      clearInterval(checkInterval);
+    }
+  };
+
+  return suite;
+}
 
 // Подготавливаем данные для тестов
 const smallArray = Array.from({ length: 100 }, (_, i) => i);
@@ -108,28 +159,29 @@ const dataTypes = [
   }
 ];
 
+// Добавляем тесты с логированием
+const addTestWithLogging = (suite, testName, testFn) => {
+  const wrappedFn = () => {
+    if (isDebug) console.log(`Выполнение теста: ${testName}`);
+    try {
+      const result = testFn();
+      if (isDebug) console.log(`Тест ${testName} завершен успешно`);
+      return result;
+    } catch (err) {
+      console.error(`❌ Ошибка в тесте ${testName}:`, err);
+      throw err;
+    }
+  };
+  return suite.add(testName, wrappedFn);
+};
+
 // Создаем бенчмарки для каждого типа данных
 dataTypes.forEach(({ name, source, create, modify, check }) => {
   // Бенчмарк для параллельных зависимостей
   const parallelSuite = benchmark.createSuite(`parallel dependencies (${name})`, {
-    spinner: false  // Отключаем spinner для лучшей совместимости
+    description: `Параллельные зависимости от одного источника данных типа ${name}`
   });
-
-  // Добавляем тесты с логированием
-  const addTestWithLogging = (suite, testName, testFn) => {
-    const wrappedFn = () => {
-      if (isDebug) console.log(`Выполнение теста: ${testName}`);
-      try {
-        const result = testFn();
-        if (isDebug) console.log(`Тест ${testName} завершен успешно`);
-        return result;
-      } catch (err) {
-        console.error(`❌ Ошибка в тесте ${testName}:`, err);
-        throw err;
-      }
-    };
-    return suite.add(testName, wrappedFn);
-  };
+  setupTimeLimit(parallelSuite);
 
   // Добавляем тесты с параллельными зависимостями
   addTestWithLogging(parallelSuite, '1 dependency', () => {
@@ -183,8 +235,9 @@ dataTypes.forEach(({ name, source, create, modify, check }) => {
 
   // Бенчмарк для цепочек зависимостей
   const chainSuite = benchmark.createSuite(`chain dependencies (${name})`, {
-    spinner: false  // Отключаем spinner для лучшей совместимости
+    description: `Цепочки зависимостей (каждая зависимость создается из предыдущей) для типа данных ${name}`
   });
+  setupTimeLimit(chainSuite);
 
   // Добавляем тесты с цепочками зависимостей
   addTestWithLogging(chainSuite, 'chain length 1', () => {
@@ -221,100 +274,32 @@ dataTypes.forEach(({ name, source, create, modify, check }) => {
     modify(src);
     return check(chain[5]);
   });
-
-  addTestWithLogging(chainSuite, 'chain length 6', () => {
-    const src = create(source);
-    const chain = createChain(src, 6);
-    modify(src);
-    return check(chain[6]);
-  });
-
-  addTestWithLogging(chainSuite, 'chain length 7', () => {
-    const src = create(source);
-    const chain = createChain(src, 7);
-    modify(src);
-    return check(chain[7]);
-  });
 });
 
-// Запускаем все бенчмарки
+// Асинхронная функция для запуска бенчмарков
 async function runBenchmarks() {
-  console.log('');  // Пустая строка перед запуском для единообразия
-  console.log('🚀 Запуск бенчмарков...');
-  console.log('');  // Еще одна пустая строка для формата
-
-  // Логируем начало запуска
-  console.log(`Начало запуска бенчмарков: ${new Date().toISOString()}`);
-  console.log(`Количество сьютов: ${benchmark.suites.length}`);
-
-  // Ограничиваем количество сьютов для быстрого выполнения, когда задан флаг QUICK=true
-  if (process.env.QUICK === 'true') {
-    console.log('⚡ Быстрый режим: ограничиваем количество сьютов до 2');
-
-    // Оставляем только первые 2 сьюта для быстрого тестирования
-    if (benchmark.suites.length > 2) {
-      benchmark.suites = benchmark.suites.slice(0, 2);
-      console.log(`Оставшиеся сьюты: ${benchmark.suites.map(s => s.name).join(', ')}`);
-    }
-  }
-
-  // Переопределяем метод запуска сьюта для добавления логов
-  const originalRunSuite = benchmark.runSuite;
-  benchmark.runSuite = async function(suite) {
-    console.log(`Запуск сьюта: ${suite.name} - ${new Date().toISOString()}`);
-    console.log(`Количество тестов в сьюте: ${suite.tests.length}`);
-
-    // Ограничиваем количество тестов для быстрого режима
-    if (process.env.QUICK === 'true' && suite.tests.length > 2) {
-      console.log(`⚡ Быстрый режим: ограничиваем количество тестов до 2`);
-      suite.tests = suite.tests.slice(0, 2);
-      console.log(`Оставшиеся тесты: ${suite.tests.map(t => t.name).join(', ')}`);
-    }
-
-    try {
-      const result = await originalRunSuite.call(this, suite);
-      console.log(`Сьют ${suite.name} завершен - ${new Date().toISOString()}`);
-      return result;
-    } catch (err) {
-      console.error(`Ошибка в сьюте ${suite.name}:`, err);
-      throw err;
-    }
-  };
+  console.log('🏁 Запуск бенчмарков для track.js...');
+  const startTime = performance.now();
 
   try {
-    // Для более быстрого получения хоть каких-то результатов
-    // устанавливаем максимальное время выполнения бенчмарков
-    const startTime = Date.now();
-    const maxDuration = process.env.MAX_DURATION
-      ? parseInt(process.env.MAX_DURATION, 10) * 1000
-      : (process.env.QUICK === 'true' ? 20 * 1000 : 60 * 1000);
-
-    console.log(`Установлено максимальное время выполнения: ${maxDuration / 1000} сек`);
-
-    // Запускаем таймер для прерывания бенчмарков после maxDuration
-    const timeoutId = setTimeout(() => {
-      console.log(`⚠️ Превышено максимальное время выполнения. Принудительное завершение.`);
-      console.log(`Прошло ${(Date.now() - startTime) / 1000} сек из ${maxDuration / 1000} сек`);
-      process.exit(0); // Выходим с кодом 0, чтобы обновить документацию с частичными результатами
-    }, maxDuration);
-
+    // Запускаем все сюиты последовательно
     await benchmark.run();
 
-    // Отменяем таймер, если бенчмарки успешно завершились
-    clearTimeout(timeoutId);
+    const endTime = performance.now();
+    const duration = ((endTime - startTime) / 1000).toFixed(2);
+    console.log(`✅ Бенчмарки завершены за ${duration} секунд`);
 
-    console.log(`Все сьюты завершены: ${new Date().toISOString()}`);
-    console.log(`Общее время выполнения: ${(Date.now() - startTime) / 1000} сек`);
-  } catch (err) {
-    console.error(`Ошибка при запуске бенчмарка: ${err.message}`);
-    console.error(err.stack);
+    // Генерируем отчет в формате Markdown
+    console.log(`🔄 Генерация Markdown отчета для: ${benchmark.name}`);
+    const markdownReport = saveBenchmarkToMarkdown(benchmark);
+    const reportPath = path.join(process.cwd(), 'TRACK.benchmark.md');
+    await fs.promises.writeFile(reportPath, markdownReport, 'utf8');
+    console.log(`✅ Markdown отчет сохранен в: ${reportPath}`);
+  } catch (error) {
+    console.error('❌ Ошибка при выполнении бенчмарков:', error);
+    process.exit(1);
   }
-
-  console.log('');  // Пустая строка после выполнения
-  console.log('Все бенчмарки завершены.');
 }
 
-runBenchmarks().catch(err => {
-  console.error('Ошибка при выполнении бенчмарков:', err);
-  process.exit(1);
-});
+// Запускаем бенчмарки
+runBenchmarks();

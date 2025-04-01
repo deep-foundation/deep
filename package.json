@@ -6,17 +6,18 @@
   "type": "module",
   "scripts": {
     "test": "node --test",
-    "benchmark": "for file in *.benchmark.js; do node \"$file\"; done",
-    "benchmark:events": "node events.benchmark.js",
-    "benchmark:memory": "node memory.benchmark.js",
-    "benchmark:association": "node association.benchmark.js",
-    "benchmark:lifecycle": "node lifecycle.benchmark.js",
-    "benchmark:is": "node is.benchmark.js",
-    "benchmark:gets": "node gets.benchmark.js",
-    "benchmark:sets": "node sets.benchmark.js",
-    "benchmark:track": "node track.benchmark.js",
-    "benchmarkify": "node scripts/benchmarkify.js",
-    "benchmark:many": "node many.benchmark.js"
+    "benchmark": "for file in *.benchmark.js; do NODE_OPTIONS='--no-inspect' node \"$file\"; done",
+    "benchmark:events": "NODE_OPTIONS='--no-inspect' node events.benchmark.js",
+    "benchmark:memory": "NODE_OPTIONS='--no-inspect' node memory.benchmark.js",
+    "benchmark:association": "NODE_OPTIONS='--no-inspect' node association.benchmark.js",
+    "benchmark:lifecycle": "NODE_OPTIONS='--no-inspect' node lifecycle.benchmark.js",
+    "benchmark:is": "NODE_OPTIONS='--no-inspect' node is.benchmark.js",
+    "benchmark:gets": "NODE_OPTIONS='--no-inspect' node gets.benchmark.js",
+    "benchmark:sets": "NODE_OPTIONS='--no-inspect' node sets.benchmark.js",
+    "benchmark:track": "NODE_OPTIONS='--no-inspect' node track.benchmark.js",
+    "benchmark:relations": "NODE_OPTIONS='--no-inspect' node relations.benchmark.js",
+    "benchmark:many": "NODE_OPTIONS='--no-inspect' node many.benchmark.js",
+    "benchmark:reports": "NODE_OPTIONS='--no-inspect' node generate-benchmark-reports.js"
   },
   "keywords": [
     "deep"
@@ -30,6 +31,7 @@
     "mitata": "^1.0.34"
   },
   "dependencies": {
-    "benchmarkify": "^4.0.0"
+    "benchmarkify": "^4.0.0",
+    "markdown-table": "^3.0.4"
   }
 }

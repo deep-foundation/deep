@@ -151,7 +151,58 @@ export function difference(ass, op, args) {
       if (ass.this.isArray || ass.this.isSet) {
         const set1 = toSet(ass.this);
         const set2 = toSet(other);
-        return new Association(set1.difference(set2));
+        const result = new Association(set1.difference(set2));
+        result.origins = [ass];
+        result.temp.method = 'difference';
+        result.temp.transformer = (set) => set.difference(toSet(other));
+
+        // Добавляем локальный track для точечных обновлений
+        result._proxy.set('track', (ass, op) => {
+          if (op !== 'get') return;
+          const track = Association._proxy.get('track').call(ass, ass, 'get');
+
+          if (ass.origins.length > 0 && ass.origins[0].on && ass.origins[0].emit) {
+            const origin = ass.origins[0];
+            const offChange = origin.on('change', (event, meta) => {
+              const detail = event?.detail;
+              const set2 = toSet(other);
+
+              if (detail) {
+                const operation = detail.operation;
+                const value = detail.value;
+
+                switch (operation) {
+                  case 'add':
+                    // Добавляем элемент только если его нет в other
+                    if (!set2.has(value)) {
+                      result.this.add(value);
+                    }
+                    break;
+
+                  case 'delete':
+                    // Просто удаляем элемент из результата
+                    result.this.delete(value);
+                    break;
+
+                  default:
+                    // Для других операций делаем полный пересчет
+                    result.this = toSet(origin.this).difference(set2);
+                }
+
+                // Генерируем событие изменения
+                if (result.emit) {
+                  result.emit('change', event, meta);
+                }
+              }
+            });
+
+            track.temp.offChange = offChange;
+          }
+
+          return track;
+        });
+
+        return result;
       } else {
         const map1 = toMap(ass.this);
         const map2 = toMap(other);
@@ -161,7 +212,19 @@ export function difference(ass, op, args) {
             result.set(key, value);
           }
         }
-        return new Association(result);
+        const resultAss = new Association(result);
+        resultAss.origins = [ass];
+        resultAss.temp.method = 'difference';
+        resultAss.temp.transformer = (map) => {
+          const result = new Map();
+          for (const [key, value] of toMap(map)) {
+            if (!map2.has(key)) {
+              result.set(key, value);
+            }
+          }
+          return result;
+        };
+        return resultAss;
       }
     };
   }
@@ -203,7 +266,58 @@ export function intersection(ass, op, args) {
       if (ass.this.isArray || ass.this.isSet) {
         const set1 = toSet(ass.this);
         const set2 = toSet(other);
-        return new Association(set1.intersection(set2));
+        const result = new Association(set1.intersection(set2));
+        result.origins = [ass];
+        result.temp.method = 'intersection';
+        result.temp.transformer = (set) => set.intersection(toSet(other));
+
+        // Добавляем локальный track для точечных обновлений
+        result._proxy.set('track', (ass, op) => {
+          if (op !== 'get') return;
+          const track = Association._proxy.get('track').call(ass, ass, 'get');
+
+          if (ass.origins.length > 0 && ass.origins[0].on && ass.origins[0].emit) {
+            const origin = ass.origins[0];
+            const offChange = origin.on('change', (event, meta) => {
+              const detail = event?.detail;
+              const set2 = toSet(other);
+
+              if (detail) {
+                const operation = detail.operation;
+                const value = detail.value;
+
+                switch (operation) {
+                  case 'add':
+                    // Добавляем элемент только если он есть в other
+                    if (set2.has(value)) {
+                      result.this.add(value);
+                    }
+                    break;
+
+                  case 'delete':
+                    // Просто удаляем элемент из результата
+                    result.this.delete(value);
+                    break;
+
+                  default:
+                    // Для других операций делаем полный пересчет
+                    result.this = toSet(origin.this).intersection(set2);
+                }
+
+                // Генерируем событие изменения
+                if (result.emit) {
+                  result.emit('change', event, meta);
+                }
+              }
+            });
+
+            track.temp.offChange = offChange;
+          }
+
+          return track;
+        });
+
+        return result;
       } else {
         const map1 = toMap(ass.this);
         const map2 = toMap(other);
@@ -213,7 +327,19 @@ export function intersection(ass, op, args) {
             result.set(key, value);
           }
         }
-        return new Association(result);
+        const resultAss = new Association(result);
+        resultAss.origins = [ass];
+        resultAss.temp.method = 'intersection';
+        resultAss.temp.transformer = (map) => {
+          const result = new Map();
+          for (const [key, value] of toMap(map)) {
+            if (map2.has(key)) {
+              result.set(key, value);
+            }
+          }
+          return result;
+        };
+        return resultAss;
       }
     };
   }
@@ -255,7 +381,72 @@ export function symmetricDifference(ass, op, args) {
       if (ass.this.isArray || ass.this.isSet) {
         const set1 = toSet(ass.this);
         const set2 = toSet(other);
-        return new Association(set1.symmetricDifference(set2));
+        const resultSet = set1.symmetricDifference(set2);
+        const sortedArray = Array.from(resultSet).sort((a, b) => a - b);
+        const result = new Association(new Set(sortedArray));
+        result.origins = [ass];
+        result.temp.method = 'symmetricDifference';
+        result.temp.transformer = (set) => {
+          const diff = toSet(set).symmetricDifference(toSet(other));
+          return new Set(Array.from(diff).sort((a, b) => a - b));
+        };
+
+        // Добавляем локальный track для точечных обновлений
+        result._proxy.set('track', (ass, op) => {
+          if (op !== 'get') return;
+          const track = Association._proxy.get('track').call(ass, ass, 'get');
+
+          if (ass.origins.length > 0 && ass.origins[0].on && ass.origins[0].emit) {
+            const origin = ass.origins[0];
+            const offChange = origin.on('change', (event, meta) => {
+              const detail = event?.detail;
+              const set2 = toSet(other);
+
+              if (detail) {
+                const operation = detail.operation;
+                const value = detail.value;
+
+                switch (operation) {
+                  case 'add':
+                    // Если элемент есть в other, удаляем его из результата
+                    // Если нет - добавляем
+                    if (set2.has(value)) {
+                      result.this.delete(value);
+                    } else {
+                      result.this.add(value);
+                    }
+                    break;
+
+                  case 'delete':
+                    // Если элемент есть в other, добавляем его в результат
+                    // Если нет - удаляем
+                    if (set2.has(value)) {
+                      result.this.add(value);
+                    } else {
+                      result.this.delete(value);
+                    }
+                    break;
+
+                  default:
+                    // Для других операций делаем полный пересчет
+                    const newSet = toSet(origin.this).symmetricDifference(set2);
+                    result.this = new Set(Array.from(newSet).sort((a, b) => a - b));
+                }
+
+                // Генерируем событие изменения
+                if (result.emit) {
+                  result.emit('change', event, meta);
+                }
+              }
+            });
+
+            track.temp.offChange = offChange;
+          }
+
+          return track;
+        });
+
+        return result;
       } else {
         const map1 = toMap(ass.this);
         const map2 = toMap(other);
@@ -270,7 +461,26 @@ export function symmetricDifference(ass, op, args) {
             result.set(key, value);
           }
         }
-        return new Association(result);
+        const resultAss = new Association(result);
+        resultAss.origins = [ass];
+        resultAss.temp.method = 'symmetricDifference';
+        resultAss.temp.transformer = (map) => {
+          const result = new Map();
+          const map1 = toMap(map);
+          const map2 = toMap(other);
+          for (const [key, value] of map1) {
+            if (!map2.has(key)) {
+              result.set(key, value);
+            }
+          }
+          for (const [key, value] of map2) {
+            if (!map1.has(key)) {
+              result.set(key, value);
+            }
+          }
+          return result;
+        };
+        return resultAss;
       }
     };
   }
@@ -317,11 +527,74 @@ export function union(ass, op, args) {
       if (ass.this.isArray || ass.this.isSet) {
         const set1 = toSet(ass.this);
         const set2 = toSet(other);
-        return new Association(new Set([...set1, ...set2]));
+        const combined = new Set([...set1, ...set2]);
+        const sortedArray = Array.from(combined).sort((a, b) => a - b);
+        const result = new Association(new Set(sortedArray));
+        result.origins = [ass];
+        result.temp.method = 'union';
+        result.temp.transformer = (set) => {
+          const combined = new Set([...toSet(set), ...toSet(other)]);
+          return new Set(Array.from(combined).sort((a, b) => a - b));
+        };
+
+        // Добавляем локальный track для точечных обновлений
+        result._proxy.set('track', (ass, op) => {
+          if (op !== 'get') return;
+          const track = Association._proxy.get('track').call(ass, ass, 'get');
+
+          if (ass.origins.length > 0 && ass.origins[0].on && ass.origins[0].emit) {
+            const origin = ass.origins[0];
+            const offChange = origin.on('change', (event, meta) => {
+              const detail = event?.detail;
+
+              if (detail) {
+                const operation = detail.operation;
+                const value = detail.value;
+
+                switch (operation) {
+                  case 'add':
+                    // Просто добавляем новый элемент
+                    result.this.add(value);
+                    // Пересортировываем результат
+                    result.this = new Set(Array.from(result.this).sort((a, b) => a - b));
+                    break;
+
+                  case 'delete':
+                    // Удаляем элемент только если его нет в other
+                    if (!toSet(other).has(value)) {
+                      result.this.delete(value);
+                    }
+                    break;
+
+                  default:
+                    // Для других операций делаем полный пересчет
+                    const newSet = new Set([...toSet(origin.this), ...toSet(other)]);
+                    result.this = new Set(Array.from(newSet).sort((a, b) => a - b));
+                }
+
+                // Генерируем событие изменения
+                if (result.emit) {
+                  result.emit('change', event, meta);
+                }
+              }
+            });
+
+            track.temp.offChange = offChange;
+          }
+
+          return track;
+        });
+
+        return result;
       } else {
         const map1 = toMap(ass.this);
         const map2 = toMap(other);
-        return new Association(new Map([...map1, ...map2]));
+        const result = new Map([...map1, ...map2]);
+        const resultAss = new Association(result);
+        resultAss.origins = [ass];
+        resultAss.temp.method = 'union';
+        resultAss.temp.transformer = (map) => new Map([...toMap(map), ...toMap(other)]);
+        return resultAss;
       }
     };
   }

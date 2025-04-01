@@ -1,12 +1,20 @@
 /**
- * Бенчмарки для модуля relations, реализующего ассоциативные связи.
+ * Тесты производительности для relations.js
  */
+
+import { deep } from './index.js';
+import { type, typed, types } from './relations.js';
 import Benchmarkify from 'benchmarkify';
+import fs from 'node:fs';
+import path from 'node:path';
+import { performance } from 'node:perf_hooks';
+import { saveBenchmarkToMarkdown } from './utils/benchmark-to-markdown.js';
 import { Association } from './association.js';
-import { types } from './relations.js';
 
 // Создаем бенчмарк
-const benchmark = new Benchmarkify('Relations Benchmark').printHeader();
+const benchmark = new Benchmarkify('Relations Benchmark', {
+  description: 'Тесты производительности для работы с отношениями между объектами'
+}).printHeader();
 
 // Вспомогательная функция для создания большого количества ассоциаций с типами
 function createAssociations(count, typeCount) {
@@ -207,13 +215,30 @@ compareBench.add('Map для обратного поиска значений (~
   }
 });
 
-// Запускаем бенчмарки
+// Запускаем все бенчмарки
 async function runBenchmarks() {
-  await typeBench.run();
-  await typedBench.run();
-  await eventsBench.run();
-  await scaleBench.run();
-  await compareBench.run();
+  console.log('🏁 Запуск бенчмарков для relations.js...');
+
+  const startTime = performance.now();
+
+  try {
+    // Запускаем бенчмаркинг и получаем результаты
+    const results = await benchmark.run();
+
+    // Записываем время выполнения
+    const elapsedMs = performance.now() - startTime;
+    results.elapsedMs = elapsedMs;
+
+    console.log(`✅ Бенчмарки завершены за ${(elapsedMs / 1000).toFixed(2)} секунд`);
+
+    // Создаем отчет в формате Markdown
+    const markdownPath = path.join(process.cwd(), 'RELATIONS.benchmark.md');
+    saveBenchmarkToMarkdown(results, markdownPath);
+
+  } catch (error) {
+    console.error('❌ Ошибка при выполнении бенчмарков:', error);
+  }
 }
 
-runBenchmarks().catch(console.error);
+// Запускаем бенчмарки
+runBenchmarks();

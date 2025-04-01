@@ -1,228 +1,534 @@
-/**
- * Тесты производительности для методов доступа к данным gets.js
- */
-
-import { deep } from './index.js';
 import Benchmarkify from 'benchmarkify';
+import { performance } from 'node:perf_hooks';
+import fs from 'node:fs';
+import path from 'node:path';
+import { saveBenchmarkToMarkdown } from './utils/benchmark-to-markdown.js';
 
-// Создаем бенчмарк
-const benchmark = new Benchmarkify('Gets.js Benchmarks');
+// Импортируем только те функции, которые реально экспортируются из gets.js
+import { forEach, map, filter, reduce, find, every, some, keys, values, entries } from './gets.js';
+import { deep } from './index.js';
+
+// Инициализируем бенчмарк
+const benchmark = new Benchmarkify('Бенчмарк методов доступа данных в gets.js', {
+  // Устанавливаем максимальную продолжительность бенчмарка (в секундах)
+  maxTime: 60,
+  description: 'Бенчмарк различных методов доступа к данным из различных структур данных (массивы, объекты, Map, Set)'
+});
+
+// Печатаем заголовок
 benchmark.printHeader();
 
-// Подготавливаем тестовые данные
-const testArray = Array.from({ length: 1000 }, (_, i) => i);
-const testObject = Object.fromEntries(testArray.slice(0, 100).map(i => [`key${i}`, i]));
-const testString = 'a'.repeat(100);
-const testMap = new Map(testArray.slice(0, 100).map(i => [`key${i}`, i]));
-const testSet = new Set(testArray.slice(0, 100));
+// Создаем тестовые данные
+const maxItems = 1000;
+const array = Array.from({ length: maxItems }, (_, i) => ({ id: i, value: `value${i}` }));
+const object = {};
+const mapData = new Map();
+const setData = new Set();
+array.forEach(item => {
+  object[item.id] = item;
+  mapData.set(item.id, item);
+  setData.add(item);
+});
 
-// Упаковываем тестовые данные в deep
-const deepArray = deep(testArray);
-const deepObject = deep(testObject);
-const deepString = deep(testString);
-const deepMap = deep(testMap);
-const deepSet = deep(testSet);
+// Глубокий объект для тестирования deep методов
+const deepObject = {
+  a: { value: 1 },
+  b: { value: 2 },
+  c: { value: 3 },
+  d: { value: 4 },
+  e: { value: 5 },
+  nested: {
+    a: { value: 10 },
+    b: { value: 20 },
+    c: { value: 30 }
+  }
+};
 
-// Создаем сьют для методов forEach
+// Сьют: forEach
 const forEachSuite = benchmark.createSuite('forEach', {
-  spinner: false
+  description: 'Тесты производительности для перебора элементов различных структур данных'
 });
 
-forEachSuite
-  .add('Array.forEach (нативный)', () => {
+// Добавляем тесты
+forEachSuite.add('Array.forEach', () => {
+  let sum = 0;
+  array.forEach(item => sum += item.id);
+  return sum;
+});
+
+forEachSuite.add('deep(Array).forEach', () => {
+  let sum = 0;
+  deep(array).forEach(item => sum += item.id);
+  return sum;
+});
+
+forEachSuite.add('Object.values + forEach', () => {
+  let sum = 0;
+  Object.values(object).forEach(item => sum += item.id);
+  return sum;
+});
+
+forEachSuite.add('deep(Object).forEach', () => {
+  let sum = 0;
+  deep(object).forEach(item => sum += item.id);
+  return sum;
+});
+
+forEachSuite.add('Map.forEach', () => {
     let sum = 0;
-    testArray.forEach(i => sum += i);
+  mapData.forEach(item => sum += item.id);
     return sum;
-  })
-  .add('deep(Array).forEach', () => {
+});
+
+forEachSuite.add('deep(Map).forEach', () => {
     let sum = 0;
-    deepArray.forEach(i => sum += i);
+  deep(mapData).forEach(item => sum += item.id);
     return sum;
-  })
-  .add('Object.values + forEach (нативный)', () => {
+});
+
+forEachSuite.add('Set.forEach', () => {
     let sum = 0;
-    Object.values(testObject).forEach(i => sum += i);
+  setData.forEach(item => sum += item.id);
     return sum;
-  })
-  .add('deep(Object).forEach', () => {
+});
+
+forEachSuite.add('deep(Set).forEach', () => {
     let sum = 0;
-    deepObject.forEach(i => sum += i);
+  deep(setData).forEach(item => sum += item.id);
     return sum;
-  })
-  .add('String[Symbol.iterator] (нативный)', () => {
-    let result = '';
-    for (const char of testString) {
-      result += char;
-    }
-    return result;
-  })
-  .add('deep(String).forEach', () => {
-    let result = '';
-    deepString.forEach(char => {
-      result += char;
-    });
-    return result;
-  })
-  .add('Map.forEach (нативный)', () => {
+});
+
+forEachSuite.add('Array forEach (универсальный метод)', () => {
     let sum = 0;
-    testMap.forEach(i => sum += i);
+  forEach(array, item => sum += item.id);
     return sum;
-  })
-  .add('deep(Map).forEach', () => {
+});
+
+forEachSuite.add('Object forEach (универсальный метод)', () => {
     let sum = 0;
-    deepMap.forEach(i => sum += i);
+  forEach(object, item => sum += item.id);
     return sum;
-  })
-  .add('Set.forEach (нативный)', () => {
+});
+
+forEachSuite.add('Map forEach (универсальный метод)', () => {
     let sum = 0;
-    testSet.forEach(i => sum += i);
+  forEach(mapData, item => sum += item.id);
     return sum;
-  })
-  .add('deep(Set).forEach', () => {
+});
+
+forEachSuite.add('Set forEach (универсальный метод)', () => {
     let sum = 0;
-    deepSet.forEach(i => sum += i);
+  forEach(setData, item => sum += item.id);
     return sum;
   });
 
-// Создаем сьют для методов map
+// Сьют: map
 const mapSuite = benchmark.createSuite('map', {
-  spinner: false
+  description: 'Тесты производительности для маппинга элементов из разных структур данных'
 });
 
-mapSuite
-  .add('Array.map (нативный)', () => {
-    return testArray.map(i => i * 2);
-  })
-  .add('deep(Array).map', () => {
-    return deepArray.map(i => i * 2);
-  })
-  .add('Object.values + map (нативный)', () => {
-    return Object.values(testObject).map(i => i * 2);
-  })
-  .add('deep(Object).map', () => {
-    return deepObject.map(i => i * 2);
-  })
-  .add('String.split + map + join (нативный)', () => {
-    return testString.split('').map(c => c.toUpperCase()).join('');
-  })
-  .add('deep(String).map', () => {
-    return deepString.map(c => c.toUpperCase());
-  });
+mapSuite.add('Array.map', () => {
+  return array.map(item => item.id * 2);
+});
 
-// Создаем сьют для методов filter
+mapSuite.add('deep(Array).map', () => {
+  return deep(array).map(item => item.id * 2);
+});
+
+mapSuite.add('Object.values + map', () => {
+  return Object.values(object).map(item => item.id * 2);
+});
+
+mapSuite.add('deep(Object).map', () => {
+  return deep(object).map(item => item.id * 2);
+});
+
+// Универсальный map для разных типов
+mapSuite.add('Array map (универсальный метод)', () => {
+  return map(array, item => item.id * 2);
+});
+
+mapSuite.add('Object map (универсальный метод)', () => {
+  return map(object, item => item.id * 2);
+});
+
+mapSuite.add('Map map (универсальный метод)', () => {
+  return map(mapData, item => item.id * 2);
+});
+
+// Сьют: filter
 const filterSuite = benchmark.createSuite('filter', {
-  spinner: false
+  description: 'Тесты производительности для фильтрации элементов из разных структур данных'
 });
 
-filterSuite
-  .add('Array.filter (нативный)', () => {
-    return testArray.filter(i => i % 2 === 0);
-  })
-  .add('deep(Array).filter', () => {
-    return deepArray.filter(i => i % 2 === 0);
-  })
-  .add('Object.values + filter (нативный)', () => {
-    return Object.values(testObject).filter(i => i % 2 === 0);
-  })
-  .add('deep(Object).filter', () => {
-    return deepObject.filter(i => i % 2 === 0);
-  });
+// Функция фильтрации для всех тестов
+const filterFn = item => item.id % 2 === 0;
 
-// Создаем сьют для методов reduce
+filterSuite.add('Array.filter', () => {
+  return array.filter(filterFn);
+});
+
+filterSuite.add('deep(Array).filter', () => {
+  return deep(array).filter(filterFn);
+});
+
+filterSuite.add('Object.values + filter', () => {
+  return Object.values(object).filter(filterFn);
+});
+
+filterSuite.add('deep(Object).filter', () => {
+  return deep(object).filter(filterFn);
+});
+
+filterSuite.add('Set + filter', () => {
+  const result = [];
+  setData.forEach(item => {
+    if (filterFn(item)) result.push(item);
+  });
+  return result;
+});
+
+filterSuite.add('deep(Set).filter', () => {
+  return deep(setData).filter(filterFn);
+});
+
+filterSuite.add('Map + filter', () => {
+  const result = [];
+  mapData.forEach((value) => {
+    if (filterFn(value)) result.push(value);
+  });
+  return result;
+});
+
+filterSuite.add('deep(Map).filter', () => {
+  return deep(mapData).filter(filterFn);
+});
+
+// Универсальный фильтр
+filterSuite.add('Array filter (универсальный метод)', () => {
+  return filter(array, filterFn);
+});
+
+filterSuite.add('Object filter (универсальный метод)', () => {
+  return filter(object, filterFn);
+});
+
+filterSuite.add('Map filter (универсальный метод)', () => {
+  return filter(mapData, filterFn);
+});
+
+filterSuite.add('Set filter (универсальный метод)', () => {
+  return filter(setData, filterFn);
+});
+
+// Сьют: reduce
 const reduceSuite = benchmark.createSuite('reduce', {
-  spinner: false
+  description: 'Тесты производительности для свертки элементов из разных структур данных'
 });
 
-reduceSuite
-  .add('Array.reduce (нативный)', () => {
-    return testArray.reduce((acc, i) => acc + i, 0);
-  })
-  .add('deep(Array).reduce', () => {
-    return deepArray.reduce((acc, i) => acc + i, 0);
-  })
-  .add('Object.values + reduce (нативный)', () => {
-    return Object.values(testObject).reduce((acc, i) => acc + i, 0);
-  })
-  .add('deep(Object).reduce', () => {
-    return deepObject.reduce((acc, i) => acc + i, 0);
-  });
+const reduceFn = (acc, item) => acc + item.id;
 
-// Создаем сьют для методов find
+reduceSuite.add('Array.reduce', () => {
+  return array.reduce(reduceFn, 0);
+});
+
+reduceSuite.add('deep(Array).reduce', () => {
+  return deep(array).reduce(reduceFn, 0);
+});
+
+reduceSuite.add('Object.values + reduce', () => {
+  return Object.values(object).reduce(reduceFn, 0);
+});
+
+reduceSuite.add('deep(Object).reduce', () => {
+  return deep(object).reduce(reduceFn, 0);
+});
+
+// Универсальный reduce
+reduceSuite.add('Array reduce (универсальный метод)', () => {
+  return reduce(array, reduceFn, 0);
+});
+
+reduceSuite.add('Object reduce (универсальный метод)', () => {
+  return reduce(object, reduceFn, 0);
+});
+
+reduceSuite.add('Map reduce (универсальный метод)', () => {
+  return reduce(mapData, reduceFn, 0);
+});
+
+reduceSuite.add('Set reduce (универсальный метод)', () => {
+  return reduce(setData, reduceFn, 0);
+});
+
+// Сьют: find
 const findSuite = benchmark.createSuite('find', {
-  spinner: false
+  description: 'Тесты производительности для поиска элементов в разных структурах данных'
 });
 
-findSuite
-  .add('Array.find (нативный)', () => {
-    return testArray.find(i => i === 500);
-  })
-  .add('deep(Array).find', () => {
-    return deepArray.find(i => i === 500);
-  })
-  .add('Object.values + find (нативный)', () => {
-    return Object.values(testObject).find(i => i === 50);
-  })
-  .add('deep(Object).find', () => {
-    return deepObject.find(i => i === 50);
-  });
+const findFn = item => item.id === maxItems / 2;
 
-// Создаем сьют для методов every/some
+findSuite.add('Array.find', () => {
+  return array.find(findFn);
+});
+
+findSuite.add('deep(Array).find', () => {
+  return deep(array).find(findFn);
+});
+
+findSuite.add('Object.values + find', () => {
+  return Object.values(object).find(findFn);
+});
+
+findSuite.add('deep(Object).find', () => {
+  return deep(object).find(findFn);
+});
+
+findSuite.add('Map + find', () => {
+  let result = null;
+  mapData.forEach(value => {
+    if (result) return;
+    if (findFn(value)) result = value;
+  });
+  return result;
+});
+
+findSuite.add('deep(Map).find', () => {
+  return deep(mapData).find(findFn);
+});
+
+findSuite.add('Set + find', () => {
+  let result = null;
+  setData.forEach(item => {
+    if (result) return;
+    if (findFn(item)) result = item;
+  });
+  return result;
+});
+
+findSuite.add('deep(Set).find', () => {
+  return deep(setData).find(findFn);
+});
+
+// Универсальный find
+findSuite.add('Array find (универсальный метод)', () => {
+  return find(array, findFn);
+});
+
+findSuite.add('Object find (универсальный метод)', () => {
+  return find(object, findFn);
+});
+
+findSuite.add('Map find (универсальный метод)', () => {
+  return find(mapData, findFn);
+});
+
+findSuite.add('Set find (универсальный метод)', () => {
+  return find(setData, findFn);
+});
+
+// Сьют: every/some
 const everySomeSuite = benchmark.createSuite('every/some', {
-  spinner: false
+  description: 'Тесты производительности для проверки условий every/some для разных структур данных'
 });
 
-everySomeSuite
-  .add('Array.every (нативный)', () => {
-    return testArray.every(i => i >= 0);
-  })
-  .add('deep(Array).every', () => {
-    return deepArray.every(i => i >= 0);
-  })
-  .add('Array.some (нативный)', () => {
-    return testArray.some(i => i === 500);
-  })
-  .add('deep(Array).some', () => {
-    return deepArray.some(i => i === 500);
-  });
+const everyFn = item => item.id !== -1;
+const someFn = item => item.id === maxItems / 2;
 
-// Создаем сьют для методов keys/values/entries
-const keysSuite = benchmark.createSuite('keys/values/entries', {
-  spinner: false
+everySomeSuite.add('Array.every', () => {
+  return array.every(everyFn);
 });
 
-keysSuite
-  .add('Object.keys (нативный)', () => {
-    return Object.keys(testObject);
-  })
-  .add('deep(Object).keys', () => {
-    return deepObject.keys();
-  })
-  .add('Object.values (нативный)', () => {
-    return Object.values(testObject);
-  })
-  .add('deep(Object).values', () => {
-    return deepObject.values();
-  })
-  .add('Object.entries (нативный)', () => {
-    return Object.entries(testObject);
-  })
-  .add('deep(Object).entries', () => {
-    return deepObject.entries();
-  });
+everySomeSuite.add('deep(Array).every', () => {
+  return deep(array).every(everyFn);
+});
 
-// Запускаем все бенчмарки
+everySomeSuite.add('Object.values + every', () => {
+  return Object.values(object).every(everyFn);
+});
+
+everySomeSuite.add('deep(Object).every', () => {
+  return deep(object).every(everyFn);
+});
+
+everySomeSuite.add('Array.some', () => {
+  return array.some(someFn);
+});
+
+everySomeSuite.add('deep(Array).some', () => {
+  return deep(array).some(someFn);
+});
+
+everySomeSuite.add('Object.values + some', () => {
+  return Object.values(object).some(someFn);
+});
+
+everySomeSuite.add('deep(Object).some', () => {
+  return deep(object).some(someFn);
+});
+
+// Универсальные методы every/some
+everySomeSuite.add('Array every (универсальный метод)', () => {
+  return every(array, everyFn);
+});
+
+everySomeSuite.add('Object every (универсальный метод)', () => {
+  return every(object, everyFn);
+});
+
+everySomeSuite.add('Map every (универсальный метод)', () => {
+  return every(mapData, everyFn);
+});
+
+everySomeSuite.add('Set every (универсальный метод)', () => {
+  return every(setData, everyFn);
+});
+
+everySomeSuite.add('Array some (универсальный метод)', () => {
+  return some(array, someFn);
+});
+
+everySomeSuite.add('Object some (универсальный метод)', () => {
+  return some(object, someFn);
+});
+
+everySomeSuite.add('Map some (универсальный метод)', () => {
+  return some(mapData, someFn);
+});
+
+everySomeSuite.add('Set some (универсальный метод)', () => {
+  return some(setData, someFn);
+});
+
+// Сьют: keys/values/entries
+const keysValuesSuite = benchmark.createSuite('keys/values/entries', {
+  description: 'Тесты производительности для получения ключей, значений и пар ключ-значение для разных структур данных'
+});
+
+keysValuesSuite.add('Object.keys', () => {
+  return Object.keys(object);
+});
+
+keysValuesSuite.add('deep(Object).keys', () => {
+  return deep(object).keys();
+});
+
+keysValuesSuite.add('Object.values', () => {
+  return Object.values(object);
+});
+
+keysValuesSuite.add('deep(Object).values', () => {
+  return deep(object).values();
+});
+
+keysValuesSuite.add('Object.entries', () => {
+  return Object.entries(object);
+});
+
+keysValuesSuite.add('deep(Object).entries', () => {
+  return deep(object).entries();
+});
+
+// Тесты для глубоких объектов
+keysValuesSuite.add('Object.keys (глубокий объект)', () => {
+  return Object.keys(deepObject);
+});
+
+keysValuesSuite.add('deep(Object).keys (глубокий объект)', () => {
+  return deep(deepObject).keys();
+});
+
+keysValuesSuite.add('Object.values (глубокий объект)', () => {
+  return Object.values(deepObject);
+});
+
+keysValuesSuite.add('deep(Object).values (глубокий объект)', () => {
+  return deep(deepObject).values();
+});
+
+keysValuesSuite.add('Object.entries (глубокий объект)', () => {
+  return Object.entries(deepObject);
+});
+
+keysValuesSuite.add('deep(Object).entries (глубокий объект)', () => {
+  return deep(deepObject).entries();
+});
+
+// Универсальные методы keys/values/entries
+keysValuesSuite.add('Array keys (универсальный метод)', () => {
+  return keys(array);
+});
+
+keysValuesSuite.add('Object keys (универсальный метод)', () => {
+  return keys(object);
+});
+
+keysValuesSuite.add('Map keys (универсальный метод)', () => {
+  return keys(mapData);
+});
+
+keysValuesSuite.add('Set keys (универсальный метод)', () => {
+  return keys(setData);
+});
+
+keysValuesSuite.add('Array values (универсальный метод)', () => {
+  return values(array);
+});
+
+keysValuesSuite.add('Object values (универсальный метод)', () => {
+  return values(object);
+});
+
+keysValuesSuite.add('Map values (универсальный метод)', () => {
+  return values(mapData);
+});
+
+keysValuesSuite.add('Set values (универсальный метод)', () => {
+  return values(setData);
+});
+
+keysValuesSuite.add('Array entries (универсальный метод)', () => {
+  return entries(array);
+});
+
+keysValuesSuite.add('Object entries (универсальный метод)', () => {
+  return entries(object);
+});
+
+keysValuesSuite.add('Map entries (универсальный метод)', () => {
+  return entries(mapData);
+});
+
+keysValuesSuite.add('Set entries (универсальный метод)', () => {
+  return entries(setData);
+});
+
+/**
+ * Запускает все бенчмарки и логирует результаты
+ */
 async function runBenchmarks() {
-  console.log('');
-  console.log('🚀 Запуск бенчмарков...');
-  console.log('');
+  console.log('🏁 Запуск бенчмарков для методов gets.js...');
 
-  await benchmark.run();
+  const startTime = performance.now();
 
-  console.log('');
-  console.log('Все бенчмарки завершены.');
+  try {
+    // Запускаем бенчмаркинг и получаем результаты
+    const results = await benchmark.run();
+
+    // Записываем время выполнения
+    const elapsedMs = performance.now() - startTime;
+    results.elapsedMs = elapsedMs;
+
+    console.log(`✅ Бенчмарки завершены за ${(elapsedMs / 1000).toFixed(2)} секунд`);
+
+    // Создаем отчет в формате Markdown
+    const markdownPath = path.join(process.cwd(), 'GETS.benchmark.md');
+    saveBenchmarkToMarkdown(results, markdownPath);
+
+  } catch (error) {
+    console.error('❌ Ошибка при выполнении бенчмарков:', error);
+  }
 }
 
-runBenchmarks().catch(err => {
-  console.error('Ошибка при выполнении бенчмарков:', err);
-  process.exit(1);
-});
+// Запускаем бенчмарки
+runBenchmarks();

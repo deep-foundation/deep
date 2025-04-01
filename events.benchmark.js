@@ -1,12 +1,18 @@
 /**
- * Бенчмарки для сравнения Events с нативным Node.js EventEmitter
+ * Тесты производительности для events.js
  */
-import { Events } from './events.js';
-import { EventEmitter } from 'node:events';
+
 import Benchmarkify from 'benchmarkify';
+import path from 'node:path';
+import { performance } from 'node:perf_hooks';
+import { saveBenchmarkToMarkdown } from './utils/benchmark-to-markdown.js';
+import { Events } from './events.js';
+import EventEmitter from 'node:events';
 
 // Создаем бенчмарк
-const benchmark = new Benchmarkify('Events Benchmarks');
+const benchmark = new Benchmarkify('Events Benchmarks', {
+  description: 'Тесты производительности для системы событий'
+});
 benchmark.printHeader();
 
 // Бенчмарк 1: Подписка большого количества обработчиков
@@ -132,5 +138,30 @@ setupSubscriptionBenchmarks();
 setupEmissionBenchmarks();
 setupSubscriptionUnsubscriptionBenchmarks();
 
-// Запуск бенчмарков
-benchmark.run();
+// Запускаем все бенчмарки
+async function runBenchmarks() {
+  console.log('🏁 Запуск бенчмарков для events...');
+
+  const startTime = performance.now();
+
+  try {
+    // Запускаем бенчмаркинг и получаем результаты
+    const results = await benchmark.run();
+
+    // Записываем время выполнения
+    const elapsedMs = performance.now() - startTime;
+    results.elapsedMs = elapsedMs;
+
+    console.log(`✅ Бенчмарки завершены за ${(elapsedMs / 1000).toFixed(2)} секунд`);
+
+    // Создаем отчет в формате Markdown
+    const markdownPath = path.join(process.cwd(), 'EVENTS.benchmark.md');
+    saveBenchmarkToMarkdown(results, markdownPath);
+
+  } catch (error) {
+    console.error('❌ Ошибка при выполнении бенчмарков:', error);
+  }
+}
+
+// Запускаем бенчмарки
+runBenchmarks();

@@ -984,4 +984,138 @@ test('Track на разных типах данных и операциях', as
       assert.deepEqual(result3b.this, [21, 5, 7, 9, 11], 'После set result3b должен обновиться с новым элементом 20');
     });
   });
+
+  await t.test('Track - операции many', async (st) => {
+    await st.test('Track difference', async (st) => {
+      await st.test('Set с операциями add/delete', async () => {
+        // Создаем исходные множества
+        const source = deep(new Set([1, 2, 3, 4]));
+        const other = deep(new Set([3, 4, 5]));
+
+        // Применяем метод difference
+        const result = source.difference(other.this);
+
+        // Инициализируем трекер
+        const tracker = result.track;
+
+        // Проверяем начальное состояние
+        assert.deepEqual(Array.from(result.this), [1, 2], 'Начальное состояние result должно быть корректным');
+
+        // 1. Тестируем добавление элемента, которого нет в other
+        source.add(6);
+        assert.deepEqual(Array.from(result.this), [1, 2, 6], 'После source.add(6) элемент должен быть добавлен в результат');
+
+        // 2. Тестируем добавление элемента, который есть в other
+        source.add(5);
+        assert.deepEqual(Array.from(result.this), [1, 2, 6], 'После source.add(5) результат не должен измениться');
+
+        // 3. Тестируем удаление элемента из разности
+        source.delete(1);
+        assert.deepEqual(Array.from(result.this), [2, 6], 'После source.delete(1) элемент должен быть удален из результата');
+
+        // 4. Тестируем удаление элемента, которого нет в разности
+        source.delete(3);
+        assert.deepEqual(Array.from(result.this), [2, 6], 'После source.delete(3) результат не должен измениться');
+      });
+    });
+
+    await st.test('Track intersection', async (st) => {
+      await st.test('Set с операциями add/delete', async () => {
+        // Создаем исходные множества
+        const source = deep(new Set([1, 2, 3, 4]));
+        const other = deep(new Set([3, 4, 5]));
+
+        // Применяем метод intersection
+        const result = source.intersection(other.this);
+
+        // Инициализируем трекер
+        const tracker = result.track;
+
+        // Проверяем начальное состояние
+        assert.deepEqual(Array.from(result.this), [3, 4], 'Начальное состояние result должно быть корректным');
+
+        // 1. Тестируем добавление элемента, который есть в other
+        source.add(5);
+        assert.deepEqual(Array.from(result.this), [3, 4, 5], 'После source.add(5) элемент должен быть добавлен в результат');
+
+        // 2. Тестируем добавление элемента, которого нет в other
+        source.add(6);
+        assert.deepEqual(Array.from(result.this), [3, 4, 5], 'После source.add(6) результат не должен измениться');
+
+        // 3. Тестируем удаление элемента из пересечения
+        source.delete(3);
+        assert.deepEqual(Array.from(result.this), [4, 5], 'После source.delete(3) элемент должен быть удален из результата');
+
+        // 4. Тестируем удаление элемента, которого нет в пересечении
+        source.delete(1);
+        assert.deepEqual(Array.from(result.this), [4, 5], 'После source.delete(1) результат не должен измениться');
+      });
+    });
+
+    await st.test('Track symmetricDifference', async (st) => {
+      await st.test('Set с операциями add/delete', async () => {
+        // Создаем исходные множества
+        const source = deep(new Set([1, 2, 3]));
+        const other = deep(new Set([3, 4, 5]));
+
+        // Применяем метод symmetricDifference
+        const result = source.symmetricDifference(other.this);
+
+        // Инициализируем трекер
+        const tracker = result.track;
+
+        // Проверяем начальное состояние
+        assert.deepEqual(Array.from(result.this), [1, 2, 4, 5], 'Начальное состояние result должно быть корректным');
+
+        // 1. Тестируем добавление элемента, которого нет в other
+        source.add(6);
+        assert.deepEqual(Array.from(result.this), [1, 2, 4, 5, 6], 'После source.add(6) элемент должен быть добавлен в результат');
+
+        // 2. Тестируем добавление элемента, который есть в other
+        source.add(4);
+        assert.deepEqual(Array.from(result.this), [1, 2, 5, 6], 'После source.add(4) элемент должен быть удален из результата');
+
+        // 3. Тестируем удаление элемента из source, который есть в other
+        source.delete(4);
+        assert.deepEqual(Array.from(result.this), [1, 2, 4, 5, 6], 'После source.delete(4) элемент должен быть добавлен обратно в результат');
+
+        // 4. Тестируем удаление элемента из source, которого нет в other
+        source.delete(1);
+        assert.deepEqual(Array.from(result.this), [2, 4, 5, 6], 'После source.delete(1) элемент должен быть удален из результата');
+      });
+    });
+
+    await st.test('Track union', async (st) => {
+      await st.test('Set с операциями add/delete', async () => {
+        // Создаем исходные множества
+        const source = deep(new Set([1, 2, 3]));
+        const other = deep(new Set([3, 4, 5]));
+
+        // Применяем метод union
+        const result = source.union(other.this);
+
+        // Инициализируем трекер
+        const tracker = result.track;
+
+        // Проверяем начальное состояние
+        assert.deepEqual(Array.from(result.this), [1, 2, 3, 4, 5], 'Начальное состояние result должно быть корректным');
+
+        // 1. Тестируем добавление нового элемента
+        source.add(6);
+        assert.deepEqual(Array.from(result.this), [1, 2, 3, 4, 5, 6], 'После source.add(6) элемент должен быть добавлен в результат');
+
+        // 2. Тестируем добавление существующего элемента
+        source.add(4);
+        assert.deepEqual(Array.from(result.this), [1, 2, 3, 4, 5, 6], 'После source.add(4) результат не должен измениться');
+
+        // 3. Тестируем удаление элемента, который есть только в source
+        source.delete(1);
+        assert.deepEqual(Array.from(result.this), [2, 3, 4, 5, 6], 'После source.delete(1) элемент должен быть удален из результата');
+
+        // 4. Тестируем удаление элемента, который есть в обоих множествах
+        source.delete(3);
+        assert.deepEqual(Array.from(result.this), [2, 3, 4, 5, 6], 'После source.delete(3) результат не должен измениться, так как элемент есть в other');
+      });
+    });
+  });
 });

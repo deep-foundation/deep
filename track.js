@@ -78,6 +78,47 @@ export function track(ass, op) {
     // Если есть origins, создаем трекер
     if (context.origins.length > 0) {
       context.temp.track = context.temp.track || Track(context.origins, context);
+
+      // Создаем массив для хранения функций отписки
+      const offChanges = [];
+
+      // Добавляем обработчики событий для всех истоков
+      for (const origin of context.origins) {
+        if (origin.on && origin.emit) {
+          // Обработчик для событий изменения
+          const offChange = origin.on('change', (event, meta) => {
+            const result = context.temp.track.temp.result;
+            const method = result.temp.method;
+            const transformer = result.temp.transformer;
+
+            // Если есть трансформер, применяем его
+            if (transformer) {
+              const newValue = transformer(origin.this);
+              result.this = newValue;
+
+              // Генерируем событие изменения
+              if (result.emit) {
+                result.emit('change', {
+                  prev: event.prev,
+                  next: newValue,
+                  detail: event.detail
+                }, meta);
+              }
+            }
+          });
+
+          // Добавляем функцию отписки в массив
+          offChanges.push(offChange);
+        }
+      }
+
+      // Создаем общую функцию отписки
+      context.temp.track.temp.offChange = () => {
+        for (const off of offChanges) {
+          off();
+        }
+      };
+
       return context.temp.track;
     }
 

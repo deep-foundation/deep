@@ -2,25 +2,7 @@
 
 Система отслеживания изменений, которая позволяет автоматически синхронизировать связанные ассоциации и распространять изменения по цепочке преобразований. Отслеживание обеспечивает реактивное поведение для объектов, массивов и других структур данных.
 
-## Производительность
-
-**Информация о системе:**
-
-- Darwin 23.2.0 x64
-- Node.JS: 23.4.0
-- V8: 12.9.202.28-node.11
-- CPU: Intel(R) Core(TM) i9-9880H CPU @ 2.30GHz × 6
-- Memory: 16 GB
-
-| Тест | Среднее время выполнения | Операций в секунду |
-|------|--------------------------|--------------------|
-| parallel dependencies (Array): 1 dependency | 258.13 µs/итер | 3 874 опер/сек |
-| parallel dependencies (Array): 2 dependencies | 1122.33 µs/итер | 891 опер/сек |
-| parallel dependencies (Array): 3 dependencies | 2100.84 µs/итер | 476 опер/сек |
-| parallel dependencies (Array): 4 dependencies | 2785.52 µs/итер | 359 опер/сек |
-| parallel dependencies (Array): 5 dependencies | 5076.14 µs/итер | 197 опер/сек |
-| parallel dependencies (Array): 6 dependencies | 5050.51 µs/итер | 198 опер/сек |
-| parallel dependencies (Array): 7 dependencies | 5025.13 µs/итер | 199 опер/сек |
+[Результаты бенчмарков →](./TRACK.benchmark.md)
 
 ## Основные особенности
 

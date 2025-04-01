@@ -5,16 +5,24 @@
 import { Association } from './association.js';
 import { deep } from './index.js';
 import Benchmarkify from 'benchmarkify';
+import fs from 'node:fs';
+import path from 'node:path';
+import { performance } from 'node:perf_hooks';
+import { saveBenchmarkToMarkdown } from './utils/benchmark-to-markdown.js';
 
 // Создаем бенчмарк
-const benchmark = new Benchmarkify('Association Benchmarks');
+const benchmark = new Benchmarkify('Association Benchmarks', {
+  description: 'Тесты производительности для ассоциаций и сравнение с обычными объектами и Map'
+});
 benchmark.printHeader();
 
 // Количество итераций
 const ITERATIONS = 10000;
 
 // Основной сьют тестов
-const suite = benchmark.createSuite('Association');
+const suite = benchmark.createSuite('Association', {
+  description: 'Операции с экземплярами Association'
+});
 
 // Тестирование производительности Association
 suite.add('Создание экземпляра с методами', () => {
@@ -181,4 +189,29 @@ mapSuite.add('Получение свойств из Map', () => {
 });
 
 // Запускаем все бенчмарки
-benchmark.run();
+async function runBenchmarks() {
+  console.log('🏁 Запуск бенчмарков для Association...');
+
+  const startTime = performance.now();
+
+  try {
+    // Запускаем бенчмаркинг и получаем результаты
+    const results = await benchmark.run();
+
+    // Записываем время выполнения
+    const elapsedMs = performance.now() - startTime;
+    results.elapsedMs = elapsedMs;
+
+    console.log(`✅ Бенчмарки завершены за ${(elapsedMs / 1000).toFixed(2)} секунд`);
+
+    // Создаем отчет в формате Markdown
+    const markdownPath = path.join(process.cwd(), 'ASSOCIATION.benchmark.md');
+    saveBenchmarkToMarkdown(results, markdownPath);
+
+  } catch (error) {
+    console.error('❌ Ошибка при выполнении бенчмарков:', error);
+  }
+}
+
+// Запускаем бенчмарки
+runBenchmarks();

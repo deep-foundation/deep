@@ -1,12 +1,17 @@
 /**
- * Бенчмарки для модуля many.js
+ * Тесты производительности для many.js
  */
 
-import { deep } from './index.js';
 import Benchmarkify from 'benchmarkify';
+import path from 'node:path';
+import { performance } from 'node:perf_hooks';
+import { deep } from './index.js';
+import { saveBenchmarkToMarkdown } from './utils/benchmark-to-markdown.js';
 
 // Создаем бенчмарк
-const benchmark = new Benchmarkify('Many.js Benchmarks').printHeader();
+const benchmark = new Benchmarkify('Many.js Benchmarks', {
+  description: 'Тесты производительности для работы с множественными структурами данных'
+}).printHeader();
 
 // Подготавливаем данные для тестов
 const smallSet1 = new Set([1, 2, 3, 4]);
@@ -245,17 +250,30 @@ benchmark.createSuite('Объединение множеств (большие �
 
 // Запускаем все бенчмарки
 async function runBenchmarks() {
-  console.log('🚀 Запуск бенчмарков...\n');
+  console.log('🏁 Запуск бенчмарков для many.js...');
 
-  await benchmark.run();
+  const startTime = performance.now();
 
-  console.log('\n✅ Бенчмарки завершены');
+  try {
+    // Запускаем бенчмаркинг и получаем результаты
+    const results = await benchmark.run();
+
+    // Записываем время выполнения
+    const elapsedMs = performance.now() - startTime;
+    results.elapsedMs = elapsedMs;
+
+    console.log(`✅ Бенчмарки завершены за ${(elapsedMs / 1000).toFixed(2)} секунд`);
+
+    // Создаем отчет в формате Markdown
+    const markdownPath = path.join(process.cwd(), 'MANY.benchmark.md');
+    saveBenchmarkToMarkdown(results, markdownPath);
+
+  } catch (error) {
+    console.error('❌ Ошибка при выполнении бенчмарков:', error);
+  }
 }
 
-runBenchmarks().catch(console.error);
-
-
-
-runBenchmarks().catch(console.error);
+// Запускаем бенчмарки
+runBenchmarks();
 
 
