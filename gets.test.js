@@ -287,3 +287,106 @@ test('join для разных типов данных', async (t) => {
     assert.strictEqual(deep('abc').join('-').this, 'a-b-c');
   });
 });
+
+test('get - доступ к элементам разных типов данных', async (t) => {
+  await t.test('доступ к элементам массива по индексу', () => {
+    const arr = [1, 2, 3, 4, 5];
+    const a = deep(arr);
+
+    assert.strictEqual(a.get(0), 1);
+    assert.strictEqual(a.get(2), 3);
+    assert.strictEqual(a.get(4), 5);
+    assert.strictEqual(a.get(-1), undefined); // Отрицательный индекс
+    assert.strictEqual(a.get(10), undefined); // Индекс за пределами массива
+  });
+
+  await t.test('доступ к символам строки по индексу', () => {
+    const str = 'hello';
+    const a = deep(str);
+
+    assert.strictEqual(a.get(0), 'h');
+    assert.strictEqual(a.get(2), 'l');
+    assert.strictEqual(a.get(4), 'o');
+    assert.strictEqual(a.get(-1), undefined); // Отрицательный индекс
+    assert.strictEqual(a.get(10), undefined); // Индекс за пределами строки
+  });
+
+  await t.test('доступ к элементам Map по ключу', () => {
+    const map = new Map([
+      ['a', 1],
+      ['b', 2],
+      ['c', 3]
+    ]);
+    const a = deep(map);
+
+    assert.strictEqual(a.get('a'), 1);
+    assert.strictEqual(a.get('b'), 2);
+    assert.strictEqual(a.get('c'), 3);
+    assert.strictEqual(a.get('d'), undefined); // Несуществующий ключ
+  });
+
+  await t.test('доступ к элементам Set по индексу', () => {
+    const set = new Set([5, 6, 7, 8]);
+    const a = deep(set);
+
+    assert.strictEqual(a.get(0), 5);
+    assert.strictEqual(a.get(1), 6);
+    assert.strictEqual(a.get(2), 7);
+    assert.strictEqual(a.get(3), 8);
+    assert.strictEqual(a.get(4), undefined); // Индекс за пределами Set
+    assert.strictEqual(a.get(-1), undefined); // Отрицательный индекс
+  });
+
+  await t.test('доступ к свойствам объекта по ключу', () => {
+    const obj = { name: 'John', age: 30, city: 'New York' };
+    const a = deep(obj);
+
+    assert.strictEqual(a.get('name'), 'John');
+    assert.strictEqual(a.get('age'), 30);
+    assert.strictEqual(a.get('city'), 'New York');
+    assert.strictEqual(a.get('country'), undefined); // Несуществующее свойство
+  });
+
+  await t.test('доступ к цифрам числа по индексу', () => {
+    const num = 12345;
+    const a = deep(num);
+
+    assert.strictEqual(a.get(0), 1);
+    assert.strictEqual(a.get(2), 3);
+    assert.strictEqual(a.get(4), 5);
+    assert.strictEqual(a.get(5), undefined); // Индекс за пределами числа
+    assert.strictEqual(a.get(-1), undefined); // Отрицательный индекс
+  });
+
+  await t.test('работа с null и undefined', () => {
+    const nullValue = deep(null);
+    const undefinedValue = deep(undefined);
+
+    assert.strictEqual(nullValue.get(0), undefined);
+    assert.strictEqual(undefinedValue.get('key'), undefined);
+  });
+
+  await t.test('проверка кеширования функции', () => {
+    const arr = [1, 2, 3];
+    const a = deep(arr);
+
+    // Получаем ссылки на функцию get
+    const get1 = a.get;
+    const get2 = a.get;
+
+    // Проверяем, что это одна и та же функция (благодаря кешированию)
+    assert.strictEqual(get1, get2);
+  });
+
+  await t.test('метод не изменяет исходные данные', () => {
+    const arr = [1, 2, 3];
+    const a = deep(arr);
+
+    // Получаем значение
+    const value = a.get(1);
+
+    // Проверяем, что метод не меняет данные
+    assert.deepStrictEqual(arr, [1, 2, 3]);
+    assert.strictEqual(value, 2);
+  });
+});

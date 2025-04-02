@@ -5,7 +5,7 @@ import path from 'node:path';
 import { saveBenchmarkToMarkdown } from './utils/benchmark-to-markdown.js';
 
 // Импортируем только те функции, которые реально экспортируются из gets.js
-import { forEach, map, filter, reduce, find, every, some, keys, values, entries } from './gets.js';
+import { forEach, map, filter, reduce, find, every, some, keys, values, entries, get } from './gets.js';
 import { deep } from './index.js';
 
 // Инициализируем бенчмарк
@@ -501,6 +501,144 @@ keysValuesSuite.add('Map entries (универсальный метод)', () =>
 
 keysValuesSuite.add('Set entries (универсальный метод)', () => {
   return entries(setData);
+});
+
+// Сьют: get
+const getSuite = benchmark.createSuite('get', {
+  description: 'Тесты производительности для доступа к элементам по ключу/индексу'
+});
+
+// Подготовка данных для тестов
+const smallArray = [1, 2, 3, 4, 5];
+const largeArray = Array.from({ length: 1000 }, (_, i) => i);
+const smallString = 'hello';
+const largeString = 'a'.repeat(1000);
+const smallObject = { a: 1, b: 2, c: 3 };
+const largeObject = {};
+for (let i = 0; i < 1000; i++) {
+  largeObject[`key${i}`] = i;
+}
+const smallMap = new Map([
+  ['a', 1],
+  ['b', 2],
+  ['c', 3]
+]);
+const largeMap = new Map();
+for (let i = 0; i < 1000; i++) {
+  largeMap.set(`key${i}`, i);
+}
+const smallSet = new Set([1, 2, 3, 4, 5]);
+const largeSet = new Set();
+for (let i = 0; i < 1000; i++) {
+  largeSet.add(i);
+}
+const number = 12345;
+
+// Оборачиваем данные в deep
+const deepSmallArray = deep(smallArray);
+const deepLargeArray = deep(largeArray);
+const deepSmallString = deep(smallString);
+const deepLargeString = deep(largeString);
+const deepSmallObject = deep(smallObject);
+const deepLargeObject = deep(largeObject);
+const deepSmallMap = deep(smallMap);
+const deepLargeMap = deep(largeMap);
+const deepSmallSet = deep(smallSet);
+const deepLargeSet = deep(largeSet);
+const deepNumber = deep(number);
+
+// Тесты для массивов
+getSuite.add('Малый массив - прямой доступ', () => {
+  const val = smallArray[2];
+});
+
+getSuite.add('Малый массив - ass.get', () => {
+  const val = deepSmallArray.get(2);
+});
+
+getSuite.add('Большой массив - прямой доступ', () => {
+  const val = largeArray[500];
+});
+
+getSuite.add('Большой массив - ass.get', () => {
+  const val = deepLargeArray.get(500);
+});
+
+// Тесты для строк
+getSuite.add('Малая строка - прямой доступ', () => {
+  const val = smallString[2];
+});
+
+getSuite.add('Малая строка - ass.get', () => {
+  const val = deepSmallString.get(2);
+});
+
+getSuite.add('Большая строка - прямой доступ', () => {
+  const val = largeString[500];
+});
+
+getSuite.add('Большая строка - ass.get', () => {
+  const val = deepLargeString.get(500);
+});
+
+// Тесты для объектов
+getSuite.add('Малый объект - прямой доступ', () => {
+  const val = smallObject['b'];
+});
+
+getSuite.add('Малый объект - ass.get', () => {
+  const val = deepSmallObject.get('b');
+});
+
+getSuite.add('Большой объект - прямой доступ', () => {
+  const val = largeObject['key500'];
+});
+
+getSuite.add('Большой объект - ass.get', () => {
+  const val = deepLargeObject.get('key500');
+});
+
+// Тесты для Map
+getSuite.add('Малая Map - прямой доступ', () => {
+  const val = smallMap.get('b');
+});
+
+getSuite.add('Малая Map - ass.get', () => {
+  const val = deepSmallMap.get('b');
+});
+
+getSuite.add('Большая Map - прямой доступ', () => {
+  const val = largeMap.get('key500');
+});
+
+getSuite.add('Большая Map - ass.get', () => {
+  const val = deepLargeMap.get('key500');
+});
+
+// Тесты для Set
+getSuite.add('Малый Set - прямой доступ (Array.from)', () => {
+  const val = Array.from(smallSet)[2];
+});
+
+getSuite.add('Малый Set - ass.get', () => {
+  const val = deepSmallSet.get(2);
+});
+
+getSuite.add('Большой Set - прямой доступ (Array.from)', () => {
+  const val = Array.from(largeSet)[500];
+});
+
+getSuite.add('Большой Set - ass.get', () => {
+  const val = deepLargeSet.get(500);
+});
+
+// Тесты для числа
+getSuite.add('Число - прямой доступ через строку', () => {
+  const val = number.toString()[2];
+});
+
+getSuite.add('Число - ass.get', () => {
+  const val = deepNumber.get(2);
 });
 
 /**

@@ -9,6 +9,72 @@
 import { Association } from "./association.js";
 
 /**
+ * Универсальный метод для получения элемента по ключу
+ * Поддерживает работу с массивами, строками, объектами, Map, Set и другими коллекциями
+ *
+ * @param {Association} ass - Экземпляр Association
+ * @param {string} op - Операция ('get', 'apply')
+ * @param {Array} args - Аргументы вызова (ключ или индекс)
+ * @returns {any} - Значение по указанному ключу или индексу
+ */
+export function get(ass, op, args) {
+  if (op !== 'get' && op !== 'apply') return;
+
+  if (op === 'get') {
+    // Возвращаем кешированную функцию из temp или создаем новую
+    return ass.temp.get = ass.temp.get || ((key) =>
+      get(ass, 'apply', [key])
+    );
+  } else if (op === 'apply') {
+    // Получаем ключ из аргументов
+    const key = args[0];
+
+    // Получаем внутреннее значение ассоциации
+    const value = ass.this;
+
+    // Проверяем на null и undefined
+    if (value === null || value === undefined) {
+      return undefined;
+    }
+
+    // Обработка разных типов данных
+    if (Array.isArray(value) || typeof value === 'string') {
+      // Для массивов и строк используем индекс
+      return value[key];
+    } else if (value instanceof Map) {
+      // Для Map используем метод get
+      return value.get(key);
+    } else if (value instanceof Set) {
+      // Для Set преобразуем в массив и получаем значение по индексу
+      if (typeof key === 'number' && Number.isInteger(key) && key >= 0) {
+        let index = 0;
+        for (const item of value) {
+          if (index === key) {
+            return item;
+          }
+          index++;
+        }
+      }
+      return undefined;
+    } else if (typeof value === 'object') {
+      // Для объектов получаем свойство по ключу
+      return value[key];
+    } else if (typeof value === 'number' && typeof key === 'number' && Number.isInteger(key) && key >= 0) {
+      // Для чисел преобразуем в строку и получаем цифру по индексу
+      const strValue = value.toString();
+      // Проверяем, что индекс не выходит за пределы числа
+      if (key < strValue.length) {
+        return parseInt(strValue[key], 10);
+      }
+      return undefined;
+    }
+
+    // Для остальных типов данных возвращаем undefined
+    return undefined;
+  }
+}
+
+/**
  * Выполняет перебор элементов коллекции или свойств объекта
  * @param {Association} ass - Экземпляр Association
  * @param {string} op - Операция ('get', 'apply')
@@ -1521,3 +1587,6 @@ export const all = {
 for (const name in all) {
   Association._proxy.set(name, all[name]);
 }
+
+// Добавляем методы в прокси
+Association._proxy.set('get', get);
