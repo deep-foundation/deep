@@ -293,9 +293,10 @@ test('get - доступ к элементам разных типов данн�
     const arr = [1, 2, 3, 4, 5];
     const a = deep(arr);
 
-    assert.strictEqual(a.get(0), 1);
-    assert.strictEqual(a.get(2), 3);
-    assert.strictEqual(a.get(4), 5);
+    assert.ok(a.get(0) instanceof Association, 'Результат должен быть Association');
+    assert.strictEqual(a.get(0).this, 1);
+    assert.strictEqual(a.get(2).this, 3);
+    assert.strictEqual(a.get(4).this, 5);
     assert.strictEqual(a.get(-1), undefined); // Отрицательный индекс
     assert.strictEqual(a.get(10), undefined); // Индекс за пределами массива
   });
@@ -304,9 +305,10 @@ test('get - доступ к элементам разных типов данн�
     const str = 'hello';
     const a = deep(str);
 
-    assert.strictEqual(a.get(0), 'h');
-    assert.strictEqual(a.get(2), 'l');
-    assert.strictEqual(a.get(4), 'o');
+    assert.ok(a.get(0) instanceof Association, 'Результат должен быть Association');
+    assert.strictEqual(a.get(0).this, 'h');
+    assert.strictEqual(a.get(2).this, 'l');
+    assert.strictEqual(a.get(4).this, 'o');
     assert.strictEqual(a.get(-1), undefined); // Отрицательный индекс
     assert.strictEqual(a.get(10), undefined); // Индекс за пределами строки
   });
@@ -319,9 +321,10 @@ test('get - доступ к элементам разных типов данн�
     ]);
     const a = deep(map);
 
-    assert.strictEqual(a.get('a'), 1);
-    assert.strictEqual(a.get('b'), 2);
-    assert.strictEqual(a.get('c'), 3);
+    assert.ok(a.get('a') instanceof Association, 'Результат должен быть Association');
+    assert.strictEqual(a.get('a').this, 1);
+    assert.strictEqual(a.get('b').this, 2);
+    assert.strictEqual(a.get('c').this, 3);
     assert.strictEqual(a.get('d'), undefined); // Несуществующий ключ
   });
 
@@ -329,10 +332,11 @@ test('get - доступ к элементам разных типов данн�
     const set = new Set([5, 6, 7, 8]);
     const a = deep(set);
 
-    assert.strictEqual(a.get(0), 5);
-    assert.strictEqual(a.get(1), 6);
-    assert.strictEqual(a.get(2), 7);
-    assert.strictEqual(a.get(3), 8);
+    assert.ok(a.get(0) instanceof Association, 'Результат должен быть Association');
+    assert.strictEqual(a.get(0).this, 5);
+    assert.strictEqual(a.get(1).this, 6);
+    assert.strictEqual(a.get(2).this, 7);
+    assert.strictEqual(a.get(3).this, 8);
     assert.strictEqual(a.get(4), undefined); // Индекс за пределами Set
     assert.strictEqual(a.get(-1), undefined); // Отрицательный индекс
   });
@@ -341,9 +345,10 @@ test('get - доступ к элементам разных типов данн�
     const obj = { name: 'John', age: 30, city: 'New York' };
     const a = deep(obj);
 
-    assert.strictEqual(a.get('name'), 'John');
-    assert.strictEqual(a.get('age'), 30);
-    assert.strictEqual(a.get('city'), 'New York');
+    assert.ok(a.get('name') instanceof Association, 'Результат должен быть Association');
+    assert.strictEqual(a.get('name').this, 'John');
+    assert.strictEqual(a.get('age').this, 30);
+    assert.strictEqual(a.get('city').this, 'New York');
     assert.strictEqual(a.get('country'), undefined); // Несуществующее свойство
   });
 
@@ -351,9 +356,10 @@ test('get - доступ к элементам разных типов данн�
     const num = 12345;
     const a = deep(num);
 
-    assert.strictEqual(a.get(0), 1);
-    assert.strictEqual(a.get(2), 3);
-    assert.strictEqual(a.get(4), 5);
+    assert.ok(a.get(0) instanceof Association, 'Результат должен быть Association');
+    assert.strictEqual(a.get(0).this, 1);
+    assert.strictEqual(a.get(2).this, 3);
+    assert.strictEqual(a.get(4).this, 5);
     assert.strictEqual(a.get(5), undefined); // Индекс за пределами числа
     assert.strictEqual(a.get(-1), undefined); // Отрицательный индекс
   });
@@ -387,6 +393,17 @@ test('get - доступ к элементам разных типов данн�
 
     // Проверяем, что метод не меняет данные
     assert.deepStrictEqual(arr, [1, 2, 3]);
-    assert.strictEqual(value, 2);
+    assert.strictEqual(value.this, 2);
+    assert.ok(value instanceof Association, 'Результат должен быть Association');
+  });
+
+  await t.test('unwrap применяется к ключу', () => {
+    const arr = [1, 2, 3, 4, 5];
+    const a = deep(arr);
+    const wrappedKey = deep(2);
+
+    // Ключ должен быть автоматически развернут
+    assert.ok(a.get(wrappedKey) instanceof Association, 'Результат должен быть Association');
+    assert.strictEqual(a.get(wrappedKey).this, 3);
   });
 });

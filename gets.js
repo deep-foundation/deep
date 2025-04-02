@@ -15,7 +15,7 @@ import { Association } from "./association.js";
  * @param {Association} ass - Экземпляр Association
  * @param {string} op - Операция ('get', 'apply')
  * @param {Array} args - Аргументы вызова (ключ или индекс)
- * @returns {any} - Значение по указанному ключу или индексу
+ * @returns {any} - Значение по указанному ключу или индексу, обернутое в Association
  */
 export function get(ass, op, args) {
   if (op !== 'get' && op !== 'apply') return;
@@ -26,8 +26,8 @@ export function get(ass, op, args) {
       get(ass, 'apply', [key])
     );
   } else if (op === 'apply') {
-    // Получаем ключ из аргументов
-    const key = args[0];
+    // Получаем ключ из аргументов и применяем unwrap
+    const key = Association._proxy.get('unwrap').call(ass, ass, 'apply', [args[0]]);
 
     // Получаем внутреннее значение ассоциации
     const value = ass.this;
@@ -37,40 +37,46 @@ export function get(ass, op, args) {
       return undefined;
     }
 
-    // Обработка разных типов данных
+    // Обработка разных типов данных и результат
+    let result;
+
     if (Array.isArray(value) || typeof value === 'string') {
       // Для массивов и строк используем индекс
-      return value[key];
+      result = value[key];
     } else if (value instanceof Map) {
       // Для Map используем метод get
-      return value.get(key);
+      result = value.get(key);
     } else if (value instanceof Set) {
       // Для Set преобразуем в массив и получаем значение по индексу
       if (typeof key === 'number' && Number.isInteger(key) && key >= 0) {
         let index = 0;
         for (const item of value) {
           if (index === key) {
-            return item;
+            result = item;
+            break;
           }
           index++;
         }
       }
-      return undefined;
     } else if (typeof value === 'object') {
       // Для объектов получаем свойство по ключу
-      return value[key];
+      result = value[key];
     } else if (typeof value === 'number' && typeof key === 'number' && Number.isInteger(key) && key >= 0) {
       // Для чисел преобразуем в строку и получаем цифру по индексу
       const strValue = value.toString();
       // Проверяем, что индекс не выходит за пределы числа
       if (key < strValue.length) {
-        return parseInt(strValue[key], 10);
+        result = parseInt(strValue[key], 10);
       }
+    }
+
+    // Если результат undefined, возвращаем undefined
+    if (result === undefined) {
       return undefined;
     }
 
-    // Для остальных типов данных возвращаем undefined
-    return undefined;
+    // Оборачиваем результат в Association с помощью wrap и возвращаем
+    return Association._proxy.get('wrap').call(ass, ass, 'apply', [result]);
   }
 }
 
