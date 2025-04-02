@@ -1,26 +1,43 @@
 # Relations
 
-Модуль `Relations` предоставляет механизмы для установки и получения ассоциативных связей между объектами. Ключевой особенностью этого модуля является реализация релейшенов `type` и `typed`, которые позволяют устанавливать тип ассоциации и получать все ассоциации указанного типа.
+Модуль `Relations` предоставляет механизмы для установки и получения ассоциативных связей между объектами. Ключевой особенностью этого модуля является реализация отношений `type`/`typed`, `from`/`out` и `to`/`in`, которые позволяют устанавливать различные типы связей между ассоциациями и получать коллекции связанных объектов.
 
 [Результаты бенчмарков →](./RELATIONS.benchmark.md)
 
 ## Компоненты модуля
 
-### Memory для хранения типов
+### Memory для хранения связей
 
-Центральным компонентом модуля является экземпляр Memory, который используется для хранения отношений между ассоциациями и их типами:
+Центральным компонентом модуля являются экземпляры Memory, которые используются для хранения различных типов отношений между ассоциациями:
 
 ```javascript
+// Хранилище для типов ассоциаций
 export const types = new Memory({
   childSetFactory: (type) => {
     // Создает ассоциативное множество при вызове types.many(type)
   }
 });
+
+// Хранилище для исходящих связей
+export const froms = new Memory({
+  childSetFactory: (source) => {
+    // Создает ассоциативное множество при вызове froms.many(source)
+  }
+});
+
+// Хранилище для входящих связей
+export const tos = new Memory({
+  childSetFactory: (target) => {
+    // Создает ассоциативное множество при вызове tos.many(target)
+  }
+});
 ```
 
-Особенностью реализации является использование `childSetFactory`, который создает ассоциативные множества при обратном доступе через `types.many()`. Это позволяет множествам, возвращаемым через `typed`, генерировать события при изменениях состава множества.
+Особенностью реализации является использование `childSetFactory`, который создает ассоциативные множества при обратном доступе. Это позволяет множествам, возвращаемым через `typed`, `out` и `in`, генерировать события при изменениях состава множества.
 
-### Релейшен type
+### Отношения типов (type/typed)
+
+#### Релейшен type
 
 Релейшен `type` позволяет устанавливать и получать тип ассоциации:
 
@@ -36,7 +53,7 @@ myAssociation.type = typeAssociation;
 - `type` - с аргументами (prevType, newType)
 - `change` - с аргументами ({ prevType, newType }, { method: 'type', arguments: [newType] })
 
-### Релейшен typed
+#### Релейшен typed
 
 Релейшен `typed` позволяет получить множество всех ассоциаций указанного типа:
 
@@ -51,7 +68,73 @@ for (const associationThis of typeAssociation.typed) {
 }
 ```
 
-Множество, возвращаемое через `typed`, является ассоциативным и поддерживает события. При изменении состава множества (когда ассоциации добавляются или удаляются из типа) генерируются события:
+### Отношения исходящих связей (from/out)
+
+#### Релейшен from
+
+Релейшен `from` позволяет устанавливать и получать исходящую связь ассоциации:
+
+```javascript
+// Получение исходящей связи ассоциации
+const mySource = myAssociation.from;
+
+// Установка исходящей связи ассоциации
+myAssociation.from = sourceAssociation;
+```
+
+При установке исходящей связи генерируются следующие события:
+- `from` - с аргументами (prevFrom, newFrom)
+- `change` - с аргументами ({ prevFrom, newFrom }, { method: 'from', arguments: [newFrom] })
+
+#### Релейшен out
+
+Релейшен `out` позволяет получить множество всех ассоциаций, имеющих указанную исходящую связь:
+
+```javascript
+// Получение множества ассоциаций, исходящих из sourceAssociation
+const outgoingAssociations = sourceAssociation.out;
+
+// Итерация по ассоциациям с указанным источником
+for (const associationThis of sourceAssociation.out) {
+  // associationThis - это ass.this, а не сама ассоциация
+  console.log(associationThis);
+}
+```
+
+### Отношения входящих связей (to/in)
+
+#### Релейшен to
+
+Релейшен `to` позволяет устанавливать и получать входящую связь ассоциации:
+
+```javascript
+// Получение входящей связи ассоциации
+const myTarget = myAssociation.to;
+
+// Установка входящей связи ассоциации
+myAssociation.to = targetAssociation;
+```
+
+При установке входящей связи генерируются следующие события:
+- `to` - с аргументами (prevTo, newTo)
+- `change` - с аргументами ({ prevTo, newTo }, { method: 'to', arguments: [newTo] })
+
+#### Релейшен in
+
+Релейшен `in` позволяет получить множество всех ассоциаций, имеющих указанную входящую связь:
+
+```javascript
+// Получение множества ассоциаций, входящих в targetAssociation
+const incomingAssociations = targetAssociation.in;
+
+// Итерация по ассоциациям с указанной целью
+for (const associationThis of targetAssociation.in) {
+  // associationThis - это ass.this, а не сама ассоциация
+  console.log(associationThis);
+}
+```
+
+Множества, возвращаемые через `typed`, `out` и `in`, являются ассоциативными и поддерживают события. При изменении состава множества (когда ассоциации добавляются или удаляются) генерируются события:
 - `change` - с аргументами (prevValue, newValue)
 
 ## Автоматическая установка типа в конструкторе
@@ -68,7 +151,7 @@ const myAssociation = new Association(typeAssociation);
 
 ## Примеры использования
 
-### Базовое использование
+### Базовое использование типов
 
 ```javascript
 import { Association } from 'deep7';
@@ -95,6 +178,93 @@ for (const personData of people) {
 }
 ```
 
+### Использование from/out и to/in для моделирования графов
+
+```javascript
+import { Association } from 'deep7';
+
+// Создаем узлы графа
+const nodeA = new Association({ name: 'A' });
+const nodeB = new Association({ name: 'B' });
+const nodeC = new Association({ name: 'C' });
+
+// Создаем связи (рёбра) между узлами
+const edgeAB = new Association();
+edgeAB.from = nodeA;  // Исходящий узел
+edgeAB.to = nodeB;    // Входящий узел
+edgeAB.weight = 5;    // Вес ребра
+
+const edgeBC = new Association();
+edgeBC.from = nodeB;
+edgeBC.to = nodeC;
+edgeBC.weight = 3;
+
+const edgeAC = new Association();
+edgeAC.from = nodeA;
+edgeAC.to = nodeC;
+edgeAC.weight = 7;
+
+// Получаем все исходящие связи из узла A
+console.log(`Исходящих связей из A: ${nodeA.out.size}`); // 2
+
+// Получаем все входящие связи в узел C
+console.log(`Входящих связей в C: ${nodeC.in.size}`); // 2
+
+// Находим все узлы, связанные с A
+console.log("Узлы, связанные с A:");
+for (const edge of nodeA.out) {
+  console.log(`A -> ${edge.to.name} (вес: ${edge.weight})`);
+}
+```
+
+### Комбинирование разных типов отношений
+
+```javascript
+import { Association } from 'deep7';
+
+// Создаем тип для задач
+const Task = new Association({ name: 'Task' });
+
+// Создаем пользователей
+const alice = new Association({ name: 'Alice' });
+const bob = new Association({ name: 'Bob' });
+
+// Создаем проекты
+const projectX = new Association({ name: 'Project X' });
+const projectY = new Association({ name: 'Project Y' });
+
+// Создаем задачи с типом, автором и проектом
+const task1 = new Association(Task);
+task1.title = "Разработать API";
+task1.from = alice; // Автор задачи
+task1.to = projectX; // Проект, к которому относится задача
+
+const task2 = new Association(Task);
+task2.title = "Написать тесты";
+task2.from = bob;
+task2.to = projectX;
+
+const task3 = new Association(Task);
+task3.title = "Обновить документацию";
+task3.from = alice;
+task3.to = projectY;
+
+// Получаем все задачи
+console.log(`Всего задач: ${Task.typed.size}`); // 3
+
+// Получаем задачи, созданные Alice
+console.log(`Задачи от Alice: ${alice.out.size}`); // 2
+for (const taskThis of alice.out) {
+  console.log(`- ${taskThis.title} в проекте ${taskThis.to.name}`);
+}
+
+// Получаем задачи по проекту X
+console.log(`Задачи в проекте X: ${projectX.in.size}`); // 2
+for (const taskThis of projectX.in) {
+  console.log(`- ${taskThis.title} от ${taskThis.from.name}`);
+}
+```
+
 ### Использование событий
 
 ```javascript
@@ -102,69 +272,26 @@ import { Association } from 'deep7';
 
 // Создаем тип ассоциации
 const Task = new Association({ name: 'Task' });
+const user = new Association({ name: 'User' });
 
 // Подписываемся на изменения в множестве задач
-Task.typed.on('change', (event, prevValue, newValue) => {
-  if (prevValue === null && newValue !== null) {
-    console.log(`Добавлена новая задача: ${newValue.title}`);
-  } else if (prevValue !== null && newValue === null) {
-    console.log(`Удалена задача: ${prevValue.title}`);
-  }
+Task.typed.on('change', (event) => {
+  console.log(`Изменение в типе задачи: ${event.prev} -> ${event.next}`);
 });
 
-// Создаем новую задачу (сгенерирует событие)
+// Подписываемся на изменения в исходящих задачах
+user.out.on('change', (event) => {
+  console.log(`Изменение в задачах пользователя: ${event.reason}`);
+});
+
+// Создаем новую задачу и связываем с пользователем
 const task1 = new Association(Task);
 task1.title = 'Изучить релейшены';
-task1.completed = false;
+task1.from = user; // Сгенерирует событие в user.out
 
-// Создаем еще одну задачу
-const task2 = new Association(Task);
-task2.title = 'Написать тесты';
-task2.completed = false;
-
-// Изменяем тип задачи (сгенерирует событие удаления из typed)
-const CompletedTask = new Association({ name: 'CompletedTask' });
-task1.type = CompletedTask;
-```
-
-### Комбинирование с другими компонентами Deep
-
-```javascript
-import { Association, types } from 'deep7';
-
-// Создаем типы для нашей системы
-const User = new Association({ name: 'User' });
-const Role = new Association({ name: 'Role' });
-const Permission = new Association({ name: 'Permission' });
-
-// Создаем роли
-const adminRole = new Association(Role);
-adminRole.name = 'Admin';
-
-const editorRole = new Association(Role);
-editorRole.name = 'Editor';
-
-// Создаем пользователей
-const user1 = new Association(User);
-user1.name = 'John';
-user1.role = adminRole;
-
-const user2 = new Association(User);
-user2.name = 'Mary';
-user2.role = editorRole;
-
-// Получаем всех пользователей и всех админов
-const allUsers = User.typed;
-const admins = [];
-
-for (const userData of allUsers) {
-  if (userData.role === adminRole) {
-    admins.push(userData);
-  }
-}
-
-console.log(`Всего пользователей: ${allUsers.size}`);
-console.log(`Админов: ${admins.length}`);
+// Изменяем автора задачи
+const anotherUser = new Association({ name: 'AnotherUser' });
+task1.from = anotherUser; // Сгенерирует событие в user.out (удаление)
 ```
 
 ## Интеграция с Memory
@@ -175,23 +302,43 @@ console.log(`Админов: ${admins.length}`);
 // Получение данных непосредственно через Memory
 const typeOfAssociation = types.one(myAssociation.this);
 const associationsOfType = types.many(myType);
+
+const sourceOfAssociation = froms.one(myAssociation.this);
+const associationsFromSource = froms.many(mySource);
+
+const targetOfAssociation = tos.one(myAssociation.this);
+const associationsToTarget = tos.many(myTarget);
 ```
 
-Memory использует childSetFactory для создания ассоциативных множеств при обратном доступе, что позволяет интегрировать события в типизированные множества.
+Memory использует childSetFactory для создания ассоциативных множеств при обратном доступе, что позволяет интегрировать события в множества.
 
 ## Взаимодействие с событиями
 
 Модуль глубоко интегрирован с системой событий Deep:
 
-1. При изменении типа ассоциации генерируются события `type` и `change`
-2. Множества, возвращаемые через `typed`, генерируют события `change` при изменении состава
+1. При изменении типа или связей ассоциации генерируются события `type`, `from`, `to` и `change`
+2. Множества, возвращаемые через `typed`, `out` и `in`, генерируют события `change` при изменении состава
 3. События распространяются через всю цепочку зависимостей
 
-Это позволяет строить реактивные системы, которые автоматически реагируют на изменения в типизации объектов.
+Это позволяет строить реактивные системы, которые автоматически реагируют на изменения в связях между объектами.
+
+## Поддержка TRACK
+
+Все типы отношений (`typed`, `out` и `in`) поддерживают механизм TRACK, который позволяет автоматически отслеживать изменения в множествах:
+
+```javascript
+// Получаем множество и его трекер
+const typedAss = myType.typed;
+const track = typedAss.track;
+
+// Множество будет автоматически обновляться при изменении типов ассоциаций
+```
 
 ## Советы по использованию
 
 1. Используйте автоматическую установку типа через конструктор для упрощения кода
-2. Подписывайтесь на события `change` у множеств `typed` для реагирования на изменения состава
-3. Помните, что множества `typed` содержат `ass.this`, а не сами ассоциации
-4. Для сложных отношений комбинируйте различные релейшены в последовательные цепочки
+2. Подписывайтесь на события `change` у множеств для реагирования на изменения состава
+3. Помните, что множества содержат `ass.this`, а не сами ассоциации
+4. Для графовых структур данных используйте комбинацию `from`/`out` и `to`/`in`
+5. Для моделирования иерархических отношений можно использовать `from` как родительскую связь и `out` для получения дочерних элементов
+6. Комбинируйте различные типы отношений для построения сложных моделей данных
