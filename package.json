@@ -17,7 +17,8 @@
     "benchmark:track": "NODE_OPTIONS='--no-inspect' node track.benchmark.js",
     "benchmark:relations": "NODE_OPTIONS='--no-inspect' node relations.benchmark.js",
     "benchmark:many": "NODE_OPTIONS='--no-inspect' node many.benchmark.js",
-    "benchmark:reports": "NODE_OPTIONS='--no-inspect' node generate-benchmark-reports.js"
+    "benchmark:reports": "NODE_OPTIONS='--no-inspect' node generate-benchmark-reports.js",
+    "limits:relations": "NODE_OPTIONS='--no-inspect --expose-gc --max-old-space-size=2048' node relations.limits.js"
   },
   "keywords": [
     "deep"
