@@ -83,6 +83,9 @@ export function map(ass, op, args) {
     // Определяем тип данных
     const type = ass.detect;
 
+    // Проверяем, является ли значение множественным (is.many)
+    const isMany = ass.isMany;
+
     // Применяем функцию преобразования в зависимости от типа
     if (type === 'array' || type === 'string') {
       // Для массивов и строк итерируемся по элементам
@@ -107,7 +110,12 @@ export function map(ass, op, args) {
         const key = keys[i];
         result.push(callback(value[key], key, value));
       }
+    } else if (!isMany && value !== null && value !== undefined) {
+      // Для примитивов и других не-множественных типов
+      // рассматриваем их как один элемент
+      result.push(callback(value, 0, [value]));
     }
+    // Для null и undefined результат будет пустым массивом
 
     // Создаем новую ассоциацию для результата
     const resultAssociation = new Association(result);

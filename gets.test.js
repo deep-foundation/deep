@@ -118,6 +118,42 @@ test('map для разных типов данных', async (t) => {
     const result = deep(set).map(x => x * 2);
     assert.deepStrictEqual(result.this, [2, 4, 6]);
   });
+
+  // Тесты для примитивов
+  await t.test('Для числа', () => {
+    const num = 123;
+    const result = deep(num).map(x => x * 2);
+    assert.deepStrictEqual(result.this, [246], 'Число должно быть преобразовано в массив с одним элементом');
+  });
+
+  await t.test('Для boolean', () => {
+    const bool = true;
+    const result = deep(bool).map(x => !x);
+    assert.deepStrictEqual(result.this, [false], 'Boolean должен быть преобразован в массив с одним элементом');
+  });
+
+  await t.test('Для null и undefined', () => {
+    const nullResult = deep(null).map(x => x);
+    assert.deepStrictEqual(nullResult.this, [], 'null должен быть преобразован в пустой массив');
+
+    const undefinedResult = deep(undefined).map(x => x);
+    assert.deepStrictEqual(undefinedResult.this, [], 'undefined должен быть преобразован в пустой массив');
+  });
+
+  // Тесты для примитивов с константным возвратом
+  await t.test('Для примитивов с константным возвратом', () => {
+    const numResult = deep(123).map(() => 2);
+    assert.deepStrictEqual(numResult.this, [2], 'Число с константным возвратом должно работать корректно');
+
+    const boolResult = deep(true).map(() => 2);
+    assert.deepStrictEqual(boolResult.this, [2], 'Boolean с константным возвратом должен работать корректно');
+
+    const symbolResult = deep(Symbol('test')).map(() => 2);
+    assert.deepStrictEqual(symbolResult.this, [2], 'Symbol с константным возвратом должен работать корректно');
+
+    const bigintResult = deep(BigInt(123)).map(() => 2);
+    assert.deepStrictEqual(bigintResult.this, [2], 'BigInt с константным возвратом должен работать корректно');
+  });
 });
 
 test('filter для разных типов данных', async (t) => {
