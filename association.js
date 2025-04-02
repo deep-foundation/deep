@@ -201,5 +201,67 @@ export class Association extends Function {
   }
 }
 
+/**
+ * Оборачивает значение в Association, если оно не является Association
+ * Если значение уже является Association, возвращает его как есть
+ * @param {any} value - Значение для оборачивания
+ * @returns {Association} - Значение, обернутое в Association
+ */
+function wrap(ass, op, args) {
+  if (op !== 'get' && op !== 'apply') return;
+
+  if (op === 'get') {
+    // Возвращаем кешированную функцию из temp или создаем новую
+    return ass.temp.wrap = ass.temp.wrap || ((value) =>
+      Association._proxy.get('wrap').call(ass, ass, 'apply', [value])
+    );
+  } else if (op === 'apply') {
+    // Получаем значение из аргументов
+    const value = args[0];
+
+    // Проверяем, является ли значение экземпляром Association
+    if (value instanceof Association) {
+      // Если да, возвращаем его как есть
+      return value;
+    } else {
+      // Иначе создаем новый экземпляр Association с этим значением
+      return new Association(value);
+    }
+  }
+}
+
+/**
+ * Разворачивает Association и возвращает внутреннее значение
+ * Если значение не является Association, возвращает его как есть
+ * @param {any} value - Значение для разворачивания
+ * @returns {any} - Развернутое значение
+ */
+function unwrap(ass, op, args) {
+  if (op !== 'get' && op !== 'apply') return;
+
+  if (op === 'get') {
+    // Возвращаем кешированную функцию из temp или создаем новую
+    return ass.temp.unwrap = ass.temp.unwrap || ((value) =>
+      Association._proxy.get('unwrap').call(ass, ass, 'apply', [value])
+    );
+  } else if (op === 'apply') {
+    // Получаем значение из аргументов
+    const value = args[0];
+
+    // Проверяем, является ли значение экземпляром Association
+    if (value instanceof Association) {
+      // Если да, возвращаем внутреннее значение this
+      return value.this;
+    } else {
+      // Иначе возвращаем значение как есть
+      return value;
+    }
+  }
+}
+
+// Регистрируем методы в статическом хранилище
+Association._proxy.set('wrap', wrap);
+Association._proxy.set('unwrap', unwrap);
+
 // Добавляем ссылку на себя в статический _proxy
 Association._proxy.set('_proxy', Association._proxy);

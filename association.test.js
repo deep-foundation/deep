@@ -208,3 +208,104 @@ test('Association - символы разных экземпляров уник�
   assert.ok(filePathRegex.test(a1.temp.symbol.toString()), 'Первый символ должен содержать только адрес файла и позицию');
   assert.ok(filePathRegex.test(a2.temp.symbol.toString()), 'Второй символ должен содержать только адрес файла и позицию');
 });
+
+test('wrap - оборачивание различных значений в Association', () => {
+  // Создаем экземпляр Association
+  const a = deep();
+
+  // 1. Проверка обычных значений
+  const wrappedNumber = a.wrap(42);
+  assert.ok(wrappedNumber instanceof Association, 'Число должно быть обернуто в Association');
+  assert.strictEqual(wrappedNumber.this, 42, 'this обернутого числа должен быть 42');
+
+  const wrappedString = a.wrap('test');
+  assert.ok(wrappedString instanceof Association, 'Строка должна быть обернута в Association');
+  assert.strictEqual(wrappedString.this, 'test', 'this обернутой строки должен быть "test"');
+
+  const obj = { name: 'object' };
+  const wrappedObject = a.wrap(obj);
+  assert.ok(wrappedObject instanceof Association, 'Объект должен быть обернут в Association');
+  assert.strictEqual(wrappedObject.this, obj, 'this обернутого объекта должен быть исходным объектом');
+
+  // 2. Проверка значения null
+  const wrappedNull = a.wrap(null);
+  assert.ok(wrappedNull instanceof Association, 'null должен быть обернут в Association');
+  assert.strictEqual(wrappedNull.this, null, 'this обернутого null должен быть null');
+
+  // 3. Проверка значения undefined
+  const wrappedUndefined = a.wrap(undefined);
+  assert.ok(wrappedUndefined instanceof Association, 'undefined должен быть обернут в Association');
+  assert.strictEqual(wrappedUndefined.this, undefined, 'this обернутого undefined должен быть undefined');
+
+  // 4. Проверка на работу с уже обернутым значением
+  const alreadyWrapped = deep('already wrapped');
+  const reWrapped = a.wrap(alreadyWrapped);
+  assert.strictEqual(reWrapped, alreadyWrapped, 'Повторное оборачивание должно вернуть исходный экземпляр Association');
+});
+
+test('unwrap - разворачивание Association в исходное значение', () => {
+  // Создаем экземпляр Association
+  const a = deep();
+
+  // 1. Разворачивание обернутых значений
+  const wrappedNumber = a.wrap(42);
+  const unwrappedNumber = a.unwrap(wrappedNumber);
+  assert.strictEqual(unwrappedNumber, 42, 'Развернутое число должно быть 42');
+
+  const wrappedString = a.wrap('test');
+  const unwrappedString = a.unwrap(wrappedString);
+  assert.strictEqual(unwrappedString, 'test', 'Развернутая строка должна быть "test"');
+
+  const obj = { name: 'object' };
+  const wrappedObject = a.wrap(obj);
+  const unwrappedObject = a.unwrap(wrappedObject);
+  assert.strictEqual(unwrappedObject, obj, 'Развернутый объект должен быть исходным объектом');
+
+  // 2. Проверка на возврат необернутых значений как есть
+  assert.strictEqual(a.unwrap(123), 123, 'Необернутое число должно быть возвращено как есть');
+  assert.strictEqual(a.unwrap('plain string'), 'plain string', 'Необернутая строка должна быть возвращена как есть');
+
+  const plainObj = { plain: true };
+  assert.strictEqual(a.unwrap(plainObj), plainObj, 'Необернутый объект должен быть возвращен как есть');
+
+  // 3. Проверка на null и undefined
+  assert.strictEqual(a.unwrap(null), null, 'null должен быть возвращен как есть');
+  assert.strictEqual(a.unwrap(undefined), undefined, 'undefined должен быть возвращен как есть');
+});
+
+test('wrap и unwrap - проверка кеширования функций', () => {
+  const a = deep();
+
+  // Получаем ссылки на функции
+  const wrap1 = a.wrap;
+  const wrap2 = a.wrap;
+  const unwrap1 = a.unwrap;
+  const unwrap2 = a.unwrap;
+
+  // Проверяем, что функции кешируются
+  assert.strictEqual(wrap1, wrap2, 'wrap должен кешировать функцию');
+  assert.strictEqual(unwrap1, unwrap2, 'unwrap должен кешировать функцию');
+});
+
+test('wrap и unwrap - проверка сложных сценариев использования', () => {
+  const a = deep();
+
+  // 1. Цепочка оборачивания и разворачивания
+  const originalValue = { nested: { value: 42 } };
+  const wrapped = a.wrap(originalValue);
+  const rewrapped = a.wrap(wrapped);
+  const unwrapped = a.unwrap(rewrapped);
+
+  assert.strictEqual(rewrapped, wrapped, 'Повторное оборачивание должно вернуть тот же объект');
+  assert.strictEqual(unwrapped, originalValue, 'Разворачивание должно вернуть исходное значение');
+
+  // 2. Проверка на сохранение ссылок
+  const obj = { value: 10 };
+  const wrapped2 = a.wrap(obj);
+
+  // Изменяем оригинальный объект
+  obj.value = 20;
+
+  // Проверяем, что изменения отражаются в обернутом объекте
+  assert.strictEqual(wrapped2.this.value, 20, 'Изменения в оригинальном объекте должны отражаться в обернутом');
+});

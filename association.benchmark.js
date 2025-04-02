@@ -121,6 +121,58 @@ suite.add('Вызов прокси как функции', () => {
   return a(5, 10);
 });
 
+// Бенчмарки для метода wrap
+suite.add('wrap - оборачивание примитива', () => {
+  const a = deep();
+  return a.wrap(42);
+});
+
+suite.add('wrap - оборачивание объекта', () => {
+  const a = deep();
+  const obj = { test: 'value' };
+  return a.wrap(obj);
+});
+
+suite.add('wrap - оборачивание уже обернутого значения', () => {
+  const a = deep();
+  const wrapped = deep('test');
+  return a.wrap(wrapped);
+});
+
+// Бенчмарки для метода unwrap
+suite.add('unwrap - разворачивание обернутого примитива', () => {
+  const a = deep();
+  const wrapped = a.wrap(42);
+  return a.unwrap(wrapped);
+});
+
+suite.add('unwrap - разворачивание обернутого объекта', () => {
+  const a = deep();
+  const obj = { test: 'value' };
+  const wrapped = a.wrap(obj);
+  return a.unwrap(wrapped);
+});
+
+suite.add('unwrap - передача необернутого значения', () => {
+  const a = deep();
+  return a.unwrap({ test: 'value' });
+});
+
+// Бенчмарки для повторных вызовов с кешированием функций
+suite.add('wrap - повторное использование кешированной функции', () => {
+  const a = deep();
+  // Получаем кешированную функцию
+  const wrapFn = a.wrap;
+  return wrapFn(42);
+});
+
+suite.add('unwrap - повторное использование кешированной функции', () => {
+  const a = deep();
+  // Получаем кешированную функцию
+  const unwrapFn = a.unwrap;
+  return unwrapFn(deep(42));
+});
+
 // Создаем сьют для обычных объектов для сравнения
 const objectSuite = benchmark.createSuite('Object');
 
