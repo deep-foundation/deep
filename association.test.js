@@ -309,3 +309,84 @@ test('wrap и unwrap - проверка сложных сценариев исп
   // Проверяем, что изменения отражаются в обернутом объекте
   assert.strictEqual(wrapped2.this.value, 20, 'Изменения в оригинальном объекте должны отражаться в обернутом');
 });
+
+test('Association - автоматическая распаковка через valueOf', () => {
+  const a = deep(5);
+  const b = deep(3);
+
+  // Проверка числовых операций
+  assert.equal(a + 10, 15, 'valueOf должен автоматически распаковать значение в числовой операции');
+  assert.equal(a * 2, 10, 'valueOf должен работать с умножением');
+  assert.equal(a - b, 2, 'valueOf должен работать при операциях между двумя Association');
+
+  // Проверка сравнений
+  assert.equal(a > 3, true, 'valueOf должен работать при сравнении');
+  assert.equal(a < b, false, 'valueOf должен работать при сравнении между двумя Association');
+
+  // Проверка с другими типами данных
+  const obj = deep([1, 2, 3]);
+  assert.equal(obj.length, 3, 'свойства объекта должны быть доступны');
+});
+
+test('Association - автоматическая распаковка через toString', () => {
+  const a = deep(42);
+  const str = deep('hello');
+  const obj = deep({name: 'test'});
+
+  // Проверка строковых операций
+  assert.equal(String(a), '42', 'toString должен преобразовать число в строку');
+  assert.equal('' + a, '42', 'toString должен работать при конкатенации строк');
+  assert.equal(`Value: ${a}`, 'Value: 42', 'toString должен работать в шаблонных строках');
+  assert.equal(str + ' world', 'hello world', 'toString должен работать со строковыми значениями');
+
+  // Проверка с объектами
+  assert.equal(String(obj).includes('name'), true, 'toString должен корректно работать с объектами');
+});
+
+test('Association - автоматическая распаковка в функциях map и forEach', () => {
+  const arr = deep([1, 2, 3]);
+
+  // Проверка в map
+  const mapped = arr.map(x => x * 2);
+  assert.deepEqual(mapped.this, [2, 4, 6], 'map должен работать с автоматической распаковкой');
+
+  // Проверка в forEach
+  const result = [];
+  arr.forEach(x => result.push(x * 2));
+  assert.deepEqual(result, [2, 4, 6], 'forEach должен работать с автоматической распаковкой');
+});
+
+test('Association - сохранение типа при операциях с примитивами', () => {
+  const a = deep(5);
+
+  assert.equal(typeof a, 'function', 'Association должен сохранять тип функции');
+  assert.ok(a instanceof Association, 'Association должен сохранять свой инстанс');
+
+  // При этом должны работать примитивные операции
+  const result = a + 5;
+  assert.equal(result, 10, 'Примитивные операции должны работать');
+  assert.equal(typeof result, 'number', 'Результат должен быть примитивом');
+});
+
+test('Association - wrap и unwrap', () => {
+  const a = deep();
+  const originalValue = { test: 'example' };
+
+  const wrapped = a.wrap(originalValue);
+  const rewrapped = a.wrap(wrapped);
+  const unwrapped = a.unwrap(rewrapped);
+
+  assert.strictEqual(rewrapped, wrapped, 'Повторное оборачивание должно вернуть тот же объект');
+  assert.strictEqual(unwrapped, originalValue, 'Разворачивание должно вернуть исходное значение');
+
+  // Проверка, что unwrap работает с undefined
+  assert.strictEqual(a.unwrap(undefined), undefined);
+  assert.strictEqual(a.unwrap(null), null);
+
+  // Проверка сохранения ссылок
+  const obj = { value: 10 };
+  const wrapped2 = deep(obj);
+  obj.value = 20;
+
+  assert.strictEqual(wrapped2.this.value, 20, 'Изменения в оригинальном объекте должны отражаться в обернутом');
+});

@@ -79,7 +79,7 @@ test('Track на разных типах данных и операциях', as
       const source = deep([1, 2, 3, 4]);
 
       // Применяем метод map
-      const result = source.map(x => x * 2);
+      const result = source.map(x => x.this * 2);
 
       // Инициализируем трекер
       const tracker = result.track;
@@ -105,7 +105,7 @@ test('Track на разных типах данных и операциях', as
       const source = deep({ a: 1, b: 2, c: 3 });
 
       // Применяем метод map
-      const result = source.map((value, key) => ({ [key]: value * 2 }));
+      const result = source.map((value, key) => ({ [key]: value.this * 2 }));
 
       // Инициализируем трекер
       const tracker = result.track;
@@ -172,7 +172,7 @@ test('Track на разных типах данных и операциях', as
       const source = deep(new Set([1, 2, 3]));
 
       // Применяем метод map
-      const result = source.map(x => x * 2);
+      const result = source.map(x => x.this * 2);
 
       // Инициализируем трекер
       const tracker = result.track;
@@ -198,7 +198,7 @@ test('Track на разных типах данных и операциях', as
       ]));
 
       // Применяем метод map
-      const result = source.map((value, key) => [key, value * 2]);
+      const result = source.map((value, key) => [key, value.this * 2]);
 
       // Инициализируем трекер
       const tracker = result.track;
@@ -244,7 +244,7 @@ test('Track на разных типах данных и операциях', as
       const source = deep('hello');
 
       // Применяем метод map
-      const result = source.map(char => char.toUpperCase());
+      const result = source.map(char => char.this.toUpperCase());
 
       // Инициализируем трекер
       const tracker = result.track;

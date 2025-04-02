@@ -31,6 +31,73 @@ export class Association extends Function {
   this;
 
   /**
+   * Метод для автоматического преобразования в примитив
+   * Позволяет использовать объект Association в арифметических операциях и сравнениях
+   * @param {string} hint - Подсказка о типе преобразования ('number', 'string', 'default')
+   * @returns {any} - Примитивное значение
+   */
+  [Symbol.toPrimitive](hint) {
+    // Для числовых операций и операций по умолчанию - возвращаем значение
+    if (hint === 'number' || hint === 'default') {
+      return this.valueOf();
+    }
+    // Для строковых операций - возвращаем строковое представление
+    return this.toString();
+  }
+
+  /**
+   * Метод для преобразования в примитивное значение
+   * Вызывается автоматически при использовании объекта в числовых операциях
+   * @returns {any} - Примитивное значение this.this
+   */
+  valueOf() {
+    const value = this.this;
+    if (value === null || value === undefined) return 0;
+
+    // Если value имеет собственный valueOf, используем его
+    if (typeof value === 'object' &&
+        value !== null &&
+        typeof value.valueOf === 'function' &&
+        value.valueOf !== Object.prototype.valueOf) {
+      return value.valueOf();
+    }
+
+    return value;
+  }
+
+  /**
+   * Метод для преобразования в строку
+   * Вызывается автоматически при использовании объекта в строковых операциях
+   * @returns {string} - Строковое представление this.this
+   */
+  toString() {
+    const value = this.this;
+    if (value === null) return 'null';
+    if (value === undefined) return 'undefined';
+
+    // Если value имеет собственный toString, используем его
+    if (typeof value === 'object' &&
+        value !== null &&
+        typeof value.toString === 'function' &&
+        value.toString !== Object.prototype.toString) {
+      return value.toString();
+    }
+
+    if (typeof value === 'string') return value;
+    if (typeof value === 'object') {
+      try {
+        // Для объектов пытаемся использовать JSON.stringify
+        return JSON.stringify(value);
+      } catch {
+        // В случае ошибки (циклические ссылки) используем стандартное преобразование
+        return String(value);
+      }
+    }
+
+    return String(value);
+  }
+
+  /**
    * Получение проксированной версии экземпляра Association
    * @returns {Proxy<Association>} Проксированная версия экземпляра
    */
@@ -57,8 +124,13 @@ export class Association extends Function {
         if (key === 'proxy') return receiver; // Возвращаем текущий прокси
         if (key === Symbol.toStringTag) return 'Association';
 
+        // Поддержка преобразования в примитивы
+        if (key === Symbol.toPrimitive) return target[Symbol.toPrimitive].bind(target);
+        if (key === 'valueOf') return target.valueOf.bind(target);
+        if (key === 'toString') return target.toString.bind(target);
+
         // Для интеграции с отладчиками и утилитами печати
-        if (key === 'inspect' || key === 'toString' || key === Symbol.for('nodejs.util.inspect.custom')) {
+        if (key === 'inspect' || key === Symbol.for('nodejs.util.inspect.custom')) {
           return function() {
             const entries = Array.from(target._proxy.entries());
             const props = Object.fromEntries(entries);
@@ -83,6 +155,23 @@ export class Association extends Function {
         // Обработка функций
         if (typeof value === 'function') {
           return value.call(receiver, receiver, 'get');
+        }
+
+        // Если значения нет в прокси, пробуем получить его из обернутого объекта
+        const thisValue = target.this;
+        if (thisValue !== null && thisValue !== undefined &&
+            (typeof thisValue === 'object' || typeof thisValue === 'function')) {
+          // Если это свойство или метод обернутого объекта
+          if (key in thisValue || (typeof thisValue === 'object' && thisValue[key] !== undefined)) {
+            const propValue = thisValue[key];
+            // Если это метод, сохраняем привязку к this
+            if (typeof propValue === 'function') {
+              return function(...args) {
+                return propValue.apply(thisValue, args);
+              };
+            }
+            return propValue;
+          }
         }
 
         // Если значения нет - возвращаем undefined

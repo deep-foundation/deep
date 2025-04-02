@@ -139,7 +139,7 @@ export function forEach(ass, op, args) {
  * Преобразует элементы коллекции или свойства объекта
  * @param {Association} ass - Экземпляр Association
  * @param {string} op - Операция ('get', 'apply')
- * @param {Function} [callback] - функция обратного вызова (value, key, collection)
+ * @param {Array} args - Аргументы вызова (callback)
  * @returns {Association} - Новая ассоциация с преобразованными значениями
  */
 export function map(ass, op, args) {
@@ -148,11 +148,11 @@ export function map(ass, op, args) {
   if (op === 'get') {
     // Возвращаем кешированную функцию из temp или создаем новую
     return ass.temp.map = ass.temp.map || (callback =>
-      Association._proxy.get('map').call(ass, ass, 'apply', [callback])
+      map(ass, 'apply', [callback])
     );
   } else if (op === 'apply') {
-    // Получаем колбэк из аргументов
-    const callback = args[0];
+    // Получаем колбэк из аргументов и применяем unwrap
+    const callback = ass.unwrap(args[0]);
 
     // Проверяем, что callback является функцией
     if (typeof callback !== 'function') {
@@ -175,30 +175,36 @@ export function map(ass, op, args) {
     if (type === 'array' || type === 'string') {
       // Для массивов и строк итерируемся по элементам
       for (let i = 0; i < value.length; i++) {
-        result.push(callback(value[i], i, value));
+        // Передаем обернутое значение в колбэк и добавляем развернутый результат в массив
+        const wrappedResult = callback(ass.wrap(value[i]), i, ass.wrap(value));
+        result.push(ass.unwrap(wrappedResult));
       }
     } else if (type === 'set') {
       // Для множеств (Set) используем for...of с ручным индексом
       let index = 0;
       for (const val of value) {
-        result.push(callback(val, index++, value));
+        const wrappedResult = callback(ass.wrap(val), index++, ass.wrap(value));
+        result.push(ass.unwrap(wrappedResult));
       }
     } else if (type === 'map') {
       // Для карт (Map) итерируемся по записям [ключ, значение]
       for (const [key, val] of value) {
-        result.push(callback(val, key, value));
+        const wrappedResult = callback(ass.wrap(val), key, ass.wrap(value));
+        result.push(ass.unwrap(wrappedResult));
       }
     } else if (type === 'object') {
       // Для объектов итерируемся по ключам
       const keys = Object.keys(value);
       for (let i = 0; i < keys.length; i++) {
         const key = keys[i];
-        result.push(callback(value[key], key, value));
+        const wrappedResult = callback(ass.wrap(value[key]), key, ass.wrap(value));
+        result.push(ass.unwrap(wrappedResult));
       }
     } else if (!isMany && value !== null && value !== undefined) {
       // Для примитивов и других не-множественных типов
       // рассматриваем их как один элемент
-      result.push(callback(value, 0, [value]));
+      const wrappedResult = callback(ass.wrap(value), 0, ass.wrap([value]));
+      result.push(ass.unwrap(wrappedResult));
     }
     // Для null и undefined результат будет пустым массивом
 
@@ -240,7 +246,10 @@ export function map(ass, op, args) {
               case 'add':
                 // Точечное добавление нового элемента
                 if (detail.value !== undefined) {
-                  const newValue = transformer(detail.value, detail.key, origin.this);
+                  const wrappedValue = ass.wrap(detail.value);
+                  const wrappedOriginal = ass.wrap(origin.this);
+                  const wrappedResult = transformer(wrappedValue, detail.key, wrappedOriginal);
+                  const newValue = ass.unwrap(wrappedResult);
                   ass.this.push(newValue);
                 } else {
                   performFullRecalculation();
@@ -262,7 +271,10 @@ export function map(ass, op, args) {
                     detail.affectedIndices.forEach(oldIndex => {
                       const newIndex = oldIndex - 1;
                       const value = originArray[newIndex];
-                      ass.this[newIndex] = transformer(value, newIndex, originArray);
+                      const wrappedValue = ass.wrap(value);
+                      const wrappedOriginal = ass.wrap(originArray);
+                      const wrappedResult = transformer(wrappedValue, newIndex, wrappedOriginal);
+                      ass.this[newIndex] = ass.unwrap(wrappedResult);
                     });
                   }
                 } else if (detail.key !== undefined) {
@@ -270,7 +282,10 @@ export function map(ass, op, args) {
                   const index = ass.this.findIndex((item, i) => {
                     // Для set/map ключ = значение, для объектов это имя свойства
                     if (detail.type === 'set' || detail.type === 'map') {
-                      return item === transformer(detail.key, detail.key, origin.this);
+                      const wrappedKey = ass.wrap(detail.key);
+                      const wrappedOriginal = ass.wrap(origin.this);
+                      const wrappedResult = transformer(wrappedKey, detail.key, wrappedOriginal);
+                      return item === ass.unwrap(wrappedResult);
                     } else {
                       // Пробуем найти по совпадению с трансформированным значением
                       return i === detail.position;
@@ -292,10 +307,16 @@ export function map(ass, op, args) {
                 if (detail.key !== undefined && detail.position !== undefined) {
                   // Для массивов, строк и чисел обновляем по индексу
                   if (detail.position < ass.this.length) {
-                    ass.this[detail.position] = transformer(detail.value, detail.key, origin.this);
+                    const wrappedValue = ass.wrap(detail.value);
+                    const wrappedOriginal = ass.wrap(origin.this);
+                    const wrappedResult = transformer(wrappedValue, detail.key, wrappedOriginal);
+                    ass.this[detail.position] = ass.unwrap(wrappedResult);
                   } else if (detail.isNewProperty) {
                     // Если это новое свойство, добавляем его
-                    ass.this.push(transformer(detail.value, detail.key, origin.this));
+                    const wrappedValue = ass.wrap(detail.value);
+                    const wrappedOriginal = ass.wrap(origin.this);
+                    const wrappedResult = transformer(wrappedValue, detail.key, wrappedOriginal);
+                    ass.this.push(ass.unwrap(wrappedResult));
                   } else {
                     performFullRecalculation();
                   }
@@ -306,10 +327,16 @@ export function map(ass, op, args) {
                     : undefined;
 
                   if (position !== undefined && position < ass.this.length) {
-                    ass.this[position] = transformer(detail.value, detail.key, origin.this);
+                    const wrappedValue = ass.wrap(detail.value);
+                    const wrappedOriginal = ass.wrap(origin.this);
+                    const wrappedResult = transformer(wrappedValue, detail.key, wrappedOriginal);
+                    ass.this[position] = ass.unwrap(wrappedResult);
                   } else if (detail.isNewProperty) {
                     // Если это новое свойство, добавляем его
-                    ass.this.push(transformer(detail.value, detail.key, origin.this));
+                    const wrappedValue = ass.wrap(detail.value);
+                    const wrappedOriginal = ass.wrap(origin.this);
+                    const wrappedResult = transformer(wrappedValue, detail.key, wrappedOriginal);
+                    ass.this.push(ass.unwrap(wrappedResult));
                   } else {
                     performFullRecalculation();
                   }
@@ -334,7 +361,10 @@ export function map(ass, op, args) {
                       const newIndex = oldIndex - 1;
                       if (newIndex < originArray.length) {
                         const value = originArray[newIndex];
-                        ass.this[newIndex] = transformer(value, newIndex, originArray);
+                        const wrappedValue = ass.wrap(value);
+                        const wrappedOriginal = ass.wrap(originArray);
+                        const wrappedResult = transformer(wrappedValue, newIndex, wrappedOriginal);
+                        ass.this[newIndex] = ass.unwrap(wrappedResult);
                       }
                     });
                   }
@@ -343,10 +373,18 @@ export function map(ass, op, args) {
                   const index = ass.this.findIndex((item, idx) => {
                     // Пытаемся найти исходное значение
                     if (detail.type === 'set') {
-                      return origin.this.has(detail.value) &&
-                             item === transformer(detail.value, idx, origin.this);
+                      if (origin.this.has(detail.value)) {
+                        const wrappedValue = ass.wrap(detail.value);
+                        const wrappedOriginal = ass.wrap(origin.this);
+                        const wrappedResult = transformer(wrappedValue, idx, wrappedOriginal);
+                        return item === ass.unwrap(wrappedResult);
+                      }
+                      return false;
                     } else {
-                      return item === transformer(detail.value, idx, origin.this);
+                      const wrappedValue = ass.wrap(detail.value);
+                      const wrappedOriginal = ass.wrap(origin.this);
+                      const wrappedResult = transformer(wrappedValue, idx, wrappedOriginal);
+                      return item === ass.unwrap(wrappedResult);
                     }
                   });
 
@@ -367,7 +405,10 @@ export function map(ass, op, args) {
                   // Преобразуем и добавляем каждый новый элемент в результат
                   detail.items.forEach((value, idx) => {
                     const originalIndex = prevLength + idx;
-                    const transformedValue = transformer(value, originalIndex, origin.this);
+                    const wrappedValue = ass.wrap(value);
+                    const wrappedOriginal = ass.wrap(origin.this);
+                    const wrappedResult = transformer(wrappedValue, originalIndex, wrappedOriginal);
+                    const transformedValue = ass.unwrap(wrappedResult);
                     ass.this.push(transformedValue);
                   });
                 } else {
@@ -395,7 +436,10 @@ export function map(ass, op, args) {
                     const originArray = origin.this;
                     // Перерасчитываем все элементы, так как их индексы изменились
                     for (let i = 0; i < ass.this.length; i++) {
-                      ass.this[i] = transformer(originArray[i], i, originArray);
+                      const wrappedValue = ass.wrap(originArray[i]);
+                      const wrappedOriginal = ass.wrap(originArray);
+                      const wrappedResult = transformer(wrappedValue, i, wrappedOriginal);
+                      ass.this[i] = ass.unwrap(wrappedResult);
                     }
                   }
                 } else {
@@ -425,32 +469,49 @@ export function map(ass, op, args) {
           // Функция для полного перевычисления результата
           function performFullRecalculation() {
             const type = origin.detect;
+            const wrappedOriginal = ass.wrap(origin.this);
 
             if (type === 'array') {
-              ass.this = origin.this.map(transformer);
+              const newResult = [];
+              origin.this.forEach((val, idx) => {
+                const wrappedVal = ass.wrap(val);
+                const wrappedResult = transformer(wrappedVal, idx, wrappedOriginal);
+                newResult.push(ass.unwrap(wrappedResult));
+              });
+              ass.this = newResult;
             } else if (type === 'object') {
               const newResult = [];
               Object.keys(origin.this).forEach(key => {
-                newResult.push(transformer(origin.this[key], key, origin.this));
+                const val = origin.this[key];
+                const wrappedVal = ass.wrap(val);
+                const wrappedResult = transformer(wrappedVal, key, wrappedOriginal);
+                newResult.push(ass.unwrap(wrappedResult));
               });
               ass.this = newResult;
             } else if (type === 'map') {
               const newResult = [];
               origin.this.forEach((val, key) => {
-                newResult.push(transformer(val, key, origin.this));
+                const wrappedVal = ass.wrap(val);
+                const wrappedResult = transformer(wrappedVal, key, wrappedOriginal);
+                newResult.push(ass.unwrap(wrappedResult));
               });
               ass.this = newResult;
             } else if (type === 'set') {
               const newResult = [];
               let index = 0;
               for (const val of origin.this) {
-                newResult.push(transformer(val, index++, origin.this));
+                const wrappedVal = ass.wrap(val);
+                const wrappedResult = transformer(wrappedVal, index++, wrappedOriginal);
+                newResult.push(ass.unwrap(wrappedResult));
               }
               ass.this = newResult;
             } else if (type === 'string') {
               const newResult = [];
               for (let i = 0; i < origin.this.length; i++) {
-                newResult.push(transformer(origin.this[i], i, origin.this));
+                const val = origin.this[i];
+                const wrappedVal = ass.wrap(val);
+                const wrappedResult = transformer(wrappedVal, i, wrappedOriginal);
+                newResult.push(ass.unwrap(wrappedResult));
               }
               ass.this = newResult;
             }
@@ -492,7 +553,7 @@ export function map(ass, op, args) {
     });
 
     return resultAssociation;
-  };
+  }
 }
 
 /**

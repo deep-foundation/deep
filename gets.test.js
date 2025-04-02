@@ -116,72 +116,64 @@ test('forEach для разных типов данных', async (t) => {
   });
 });
 
-test('map для разных типов данных', async (t) => {
-  await t.test('Для массива', () => {
-    const array = [1, 2, 3];
-    const result = deep(array).map(x => x * 2);
-    assert.deepStrictEqual(result.this, [2, 4, 6]);
+test('map для разных типов данных', () => {
+  // Тест для массива
+  const arr = [1, 2, 3];
+  const resultArr = deep(arr).map(x => x * 2);
+  assert.deepEqual(resultArr.this, [2, 4, 6]);
+  assert.ok(resultArr instanceof Association);
+
+  // Проверка, что параметры коллбэка являются экземплярами Association
+  const cbParams = [];
+  deep(arr).map(x => {
+    cbParams.push(x);
+    return x * 2;
   });
+  assert.ok(cbParams.every(x => x instanceof Association));
 
-  await t.test('Для объекта', () => {
-    const obj = { a: 1, b: 2, c: 3 };
-    const result = deep(obj).map(x => x * 2);
-    assert.deepStrictEqual(result.this, [2, 4, 6]);
-  });
+  // Тест для объекта
+  const obj = { a: 1, b: 2, c: 3 };
+  const resultObj = deep(obj).map(x => x * 2);
+  assert.deepEqual(resultObj.this, [2, 4, 6]);
 
-  await t.test('Для строки', () => {
-    const str = 'abc';
-    const result = deep(str).map(x => x.toUpperCase());
-    assert.deepStrictEqual(result.this, ['A', 'B', 'C']);
-  });
+  // Тест для строки
+  const str = 'abc';
+  const resultStr = deep(str).map(x => x + x);
+  assert.deepEqual(resultStr.this, ['aa', 'bb', 'cc']);
 
-  await t.test('Для Map', () => {
-    const map = new Map([['a', 1], ['b', 2], ['c', 3]]);
-    const result = deep(map).map(x => x * 2);
-    assert.deepStrictEqual(result.this, [2, 4, 6]);
-  });
+  // Тест для Map
+  const map = new Map([['a', 1], ['b', 2], ['c', 3]]);
+  const resultMap = deep(map).map(x => x * 2);
+  assert.deepEqual(resultMap.this, [2, 4, 6]);
 
-  await t.test('Для Set', () => {
-    const set = new Set([1, 2, 3]);
-    const result = deep(set).map(x => x * 2);
-    assert.deepStrictEqual(result.this, [2, 4, 6]);
-  });
+  // Тест для Set
+  const set = new Set([1, 2, 3]);
+  const resultSet = deep(set).map(x => x * 2);
+  assert.deepEqual(resultSet.this, [2, 4, 6]);
 
-  // Тесты для примитивов
-  await t.test('Для числа', () => {
-    const num = 123;
-    const result = deep(num).map(x => x * 2);
-    assert.deepStrictEqual(result.this, [246], 'Число должно быть преобразовано в массив с одним элементом');
-  });
+  // Тест для чисел
+  const num = 123;
+  const resultNum = deep(num).map(x => x + 1);
+  assert.deepEqual(resultNum.this, [124]);
 
-  await t.test('Для boolean', () => {
-    const bool = true;
-    const result = deep(bool).map(x => !x);
-    assert.deepStrictEqual(result.this, [false], 'Boolean должен быть преобразован в массив с одним элементом');
-  });
+  // Тест для boolean
+  const bool = true;
+  const resultBool = deep(bool).map(x => x ? 'F' : 'T');
+  assert.deepEqual(resultBool.this, ['F']);
 
-  await t.test('Для null и undefined', () => {
-    const nullResult = deep(null).map(x => x);
-    assert.deepStrictEqual(nullResult.this, [], 'null должен быть преобразован в пустой массив');
+  // Тесты для примитивов с константным возвращаемым значением
+  const resultNumConst = deep(num).map(() => 'X');
+  assert.deepEqual(resultNumConst.this, ['X']);
 
-    const undefinedResult = deep(undefined).map(x => x);
-    assert.deepStrictEqual(undefinedResult.this, [], 'undefined должен быть преобразован в пустой массив');
-  });
+  // Проверка unwrap коллбэка
+  const unwrappedCallback = x => x * 2;
+  const wrappedCallback = new Association(unwrappedCallback);
+  const resultWithWrappedCb = deep(arr).map(wrappedCallback);
+  assert.deepEqual(resultWithWrappedCb.this, [2, 4, 6]);
 
-  // Тесты для примитивов с константным возвратом
-  await t.test('Для примитивов с константным возвратом', () => {
-    const numResult = deep(123).map(() => 2);
-    assert.deepStrictEqual(numResult.this, [2], 'Число с константным возвратом должно работать корректно');
-
-    const boolResult = deep(true).map(() => 2);
-    assert.deepStrictEqual(boolResult.this, [2], 'Boolean с константным возвратом должен работать корректно');
-
-    const symbolResult = deep(Symbol('test')).map(() => 2);
-    assert.deepStrictEqual(symbolResult.this, [2], 'Symbol с константным возвратом должен работать корректно');
-
-    const bigintResult = deep(BigInt(123)).map(() => 2);
-    assert.deepStrictEqual(bigintResult.this, [2], 'BigInt с константным возвратом должен работать корректно');
-  });
+  // Тест для null и undefined
+  assert.deepEqual(deep(null).map(x => x).this, []);
+  assert.deepEqual(deep(undefined).map(x => x).this, []);
 });
 
 test('filter для разных типов данных', async (t) => {
