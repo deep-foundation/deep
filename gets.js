@@ -569,11 +569,11 @@ export function filter(ass, op, args) {
   if (op === 'get') {
     // Возвращаем кешированную функцию из temp или создаем новую
     return ass.temp.filter = ass.temp.filter || (callback =>
-      Association._proxy.get('filter').call(ass, ass, 'apply', [callback])
+      filter(ass, 'apply', [callback])
     );
   } else if (op === 'apply') {
     // Получаем функцию фильтрации из аргументов и применяем unwrap
-    const callback = ass.unwrap(args[0]);
+    const callback = Association._proxy.get('unwrap').call(ass, ass, 'apply', [args[0]]);
 
     // Проверяем, что callback является функцией
     if (typeof callback !== 'function') {
@@ -593,12 +593,12 @@ export function filter(ass, op, args) {
     if (type === 'array') {
       // Для массивов итерируемся по элементам
       for (let i = 0; i < value.length; i++) {
-        // Передаем обернутые значения в callback, но проверяем сырой результат
-        // unwrap-нутого callback-а для корректной работы с булевыми результатами
-        const wrappedValue = ass.wrap(value[i]);
-        const callbackResult = callback(wrappedValue, i, ass.wrap(value));
+        // Передаем обернутые значения в callback
+        const wrappedValue = Association._proxy.get('wrap').call(ass, ass, 'apply', [value[i]]);
+        const wrappedCollection = Association._proxy.get('wrap').call(ass, ass, 'apply', [value]);
+        const callbackResult = callback(wrappedValue, i, wrappedCollection);
         // Распаковываем результат, если был возвращен Association
-        const unwrappedResult = ass.unwrap(callbackResult);
+        const unwrappedResult = Association._proxy.get('unwrap').call(ass, ass, 'apply', [callbackResult]);
         if (unwrappedResult) {
           result.push(value[i]);
         }
@@ -606,12 +606,12 @@ export function filter(ass, op, args) {
     } else if (type === 'string') {
       // Для строк итерируемся по символам
       for (let i = 0; i < value.length; i++) {
-        // Передаем обернутые значения в callback, но проверяем сырой результат
-        // unwrap-нутого callback-а для корректной работы с булевыми результатами
-        const wrappedValue = ass.wrap(value[i]);
-        const callbackResult = callback(wrappedValue, i, ass.wrap(value));
+        // Передаем обернутые значения в callback
+        const wrappedValue = Association._proxy.get('wrap').call(ass, ass, 'apply', [value[i]]);
+        const wrappedCollection = Association._proxy.get('wrap').call(ass, ass, 'apply', [value]);
+        const callbackResult = callback(wrappedValue, i, wrappedCollection);
         // Распаковываем результат, если был возвращен Association
-        const unwrappedResult = ass.unwrap(callbackResult);
+        const unwrappedResult = Association._proxy.get('unwrap').call(ass, ass, 'apply', [callbackResult]);
         if (unwrappedResult) {
           result.push(value[i]);
         }
@@ -620,11 +620,12 @@ export function filter(ass, op, args) {
       // Исправлено: корректная итерация по Set с использованием for...of
       let index = 0;
       for (const val of value) {
-        // Передаем обернутые значения в callback, но проверяем сырой результат
-        const wrappedValue = ass.wrap(val);
-        const callbackResult = callback(wrappedValue, index++, ass.wrap(value));
+        // Передаем обернутые значения в callback
+        const wrappedValue = Association._proxy.get('wrap').call(ass, ass, 'apply', [val]);
+        const wrappedCollection = Association._proxy.get('wrap').call(ass, ass, 'apply', [value]);
+        const callbackResult = callback(wrappedValue, index++, wrappedCollection);
         // Распаковываем результат, если был возвращен Association
-        const unwrappedResult = ass.unwrap(callbackResult);
+        const unwrappedResult = Association._proxy.get('unwrap').call(ass, ass, 'apply', [callbackResult]);
         if (unwrappedResult) {
           result.push(val);
         }
@@ -632,11 +633,12 @@ export function filter(ass, op, args) {
     } else if (type === 'map') {
       // Для карт (Map) итерируемся по записям [ключ, значение]
       for (const [key, val] of value) {
-        // Передаем обернутые значения в callback, но проверяем сырой результат
-        const wrappedValue = ass.wrap(val);
-        const callbackResult = callback(wrappedValue, key, ass.wrap(value));
+        // Передаем обернутые значения в callback
+        const wrappedValue = Association._proxy.get('wrap').call(ass, ass, 'apply', [val]);
+        const wrappedCollection = Association._proxy.get('wrap').call(ass, ass, 'apply', [value]);
+        const callbackResult = callback(wrappedValue, key, wrappedCollection);
         // Распаковываем результат, если был возвращен Association
-        const unwrappedResult = ass.unwrap(callbackResult);
+        const unwrappedResult = Association._proxy.get('unwrap').call(ass, ass, 'apply', [callbackResult]);
         if (unwrappedResult) {
           result.push(val);
         }
@@ -646,11 +648,12 @@ export function filter(ass, op, args) {
       const keys = Object.keys(value);
       for (let i = 0; i < keys.length; i++) {
         const key = keys[i];
-        // Передаем обернутые значения в callback, но проверяем сырой результат
-        const wrappedValue = ass.wrap(value[key]);
-        const callbackResult = callback(wrappedValue, key, ass.wrap(value));
+        // Передаем обернутые значения в callback
+        const wrappedValue = Association._proxy.get('wrap').call(ass, ass, 'apply', [value[key]]);
+        const wrappedCollection = Association._proxy.get('wrap').call(ass, ass, 'apply', [value]);
+        const callbackResult = callback(wrappedValue, key, wrappedCollection);
         // Распаковываем результат, если был возвращен Association
-        const unwrappedResult = ass.unwrap(callbackResult);
+        const unwrappedResult = Association._proxy.get('unwrap').call(ass, ass, 'apply', [callbackResult]);
         if (unwrappedResult) {
           result.push(value[key]);
         }
@@ -705,7 +708,11 @@ export function filter(ass, op, args) {
                     const newValue = originValue[newIndex];
 
                     // Если элемент проходит фильтр, добавляем его
-                    if (filterFn(ass.wrap(newValue), newIndex, ass.wrap(originValue))) {
+                    const wrappedValue = Association._proxy.get('wrap').call(ass, ass, 'apply', [newValue]);
+                    const wrappedCollection = Association._proxy.get('wrap').call(ass, ass, 'apply', [originValue]);
+                    const callbackResult = filterFn(wrappedValue, newIndex, wrappedCollection);
+                    const unwrappedResult = Association._proxy.get('unwrap').call(ass, ass, 'apply', [callbackResult]);
+                    if (unwrappedResult) {
                       newFilteredValues.push(newValue);
                       hasChanges = true;
                     }
@@ -786,18 +793,20 @@ export function filter(ass, op, args) {
 
             if (type === 'array') {
               for (let i = 0; i < originValue.length; i++) {
-                const wrappedValue = ass.wrap(originValue[i]);
-                const callbackResult = filterFn(wrappedValue, i, ass.wrap(originValue));
-                const unwrappedResult = ass.unwrap(callbackResult);
+                const wrappedValue = Association._proxy.get('wrap').call(ass, ass, 'apply', [originValue[i]]);
+                const wrappedCollection = Association._proxy.get('wrap').call(ass, ass, 'apply', [originValue]);
+                const callbackResult = filterFn(wrappedValue, i, wrappedCollection);
+                const unwrappedResult = Association._proxy.get('unwrap').call(ass, ass, 'apply', [callbackResult]);
                 if (unwrappedResult) {
                   filteredResult.push(originValue[i]);
                 }
               }
             } else if (type === 'map') {
               originValue.forEach((val, key) => {
-                const wrappedValue = ass.wrap(val);
-                const callbackResult = filterFn(wrappedValue, key, ass.wrap(originValue));
-                const unwrappedResult = ass.unwrap(callbackResult);
+                const wrappedValue = Association._proxy.get('wrap').call(ass, ass, 'apply', [val]);
+                const wrappedCollection = Association._proxy.get('wrap').call(ass, ass, 'apply', [originValue]);
+                const callbackResult = filterFn(wrappedValue, key, wrappedCollection);
+                const unwrappedResult = Association._proxy.get('unwrap').call(ass, ass, 'apply', [callbackResult]);
                 if (unwrappedResult) {
                   filteredResult.push(val);
                 }
@@ -805,18 +814,20 @@ export function filter(ass, op, args) {
             } else if (type === 'set') {
               let index = 0;
               originValue.forEach(val => {
-                const wrappedValue = ass.wrap(val);
-                const callbackResult = filterFn(wrappedValue, index++, ass.wrap(originValue));
-                const unwrappedResult = ass.unwrap(callbackResult);
+                const wrappedValue = Association._proxy.get('wrap').call(ass, ass, 'apply', [val]);
+                const wrappedCollection = Association._proxy.get('wrap').call(ass, ass, 'apply', [originValue]);
+                const callbackResult = filterFn(wrappedValue, index++, wrappedCollection);
+                const unwrappedResult = Association._proxy.get('unwrap').call(ass, ass, 'apply', [callbackResult]);
                 if (unwrappedResult) {
                   filteredResult.push(val);
                 }
               });
             } else if (type === 'string') {
               for (let i = 0; i < originValue.length; i++) {
-                const wrappedValue = ass.wrap(originValue[i]);
-                const callbackResult = filterFn(wrappedValue, i, ass.wrap(originValue));
-                const unwrappedResult = ass.unwrap(callbackResult);
+                const wrappedValue = Association._proxy.get('wrap').call(ass, ass, 'apply', [originValue[i]]);
+                const wrappedCollection = Association._proxy.get('wrap').call(ass, ass, 'apply', [originValue]);
+                const callbackResult = filterFn(wrappedValue, i, wrappedCollection);
+                const unwrappedResult = Association._proxy.get('unwrap').call(ass, ass, 'apply', [callbackResult]);
                 if (unwrappedResult) {
                   filteredResult.push(originValue[i]);
                 }
@@ -825,9 +836,10 @@ export function filter(ass, op, args) {
               const keys = Object.keys(originValue);
               for (let i = 0; i < keys.length; i++) {
                 const key = keys[i];
-                const wrappedValue = ass.wrap(originValue[key]);
-                const callbackResult = filterFn(wrappedValue, key, ass.wrap(originValue));
-                const unwrappedResult = ass.unwrap(callbackResult);
+                const wrappedValue = Association._proxy.get('wrap').call(ass, ass, 'apply', [originValue[key]]);
+                const wrappedCollection = Association._proxy.get('wrap').call(ass, ass, 'apply', [originValue]);
+                const callbackResult = filterFn(wrappedValue, key, wrappedCollection);
+                const unwrappedResult = Association._proxy.get('unwrap').call(ass, ass, 'apply', [callbackResult]);
                 if (unwrappedResult) {
                   filteredResult.push(originValue[key]);
                 }
@@ -1266,11 +1278,11 @@ export function every(ass, op, args) {
   if (op === 'get') {
     // Возвращаем кешированную функцию из temp или создаем новую
     return ass.temp.every = ass.temp.every || (callback =>
-      Association._proxy.get('every').call(ass, ass, 'apply', [callback])
+      every(ass, 'apply', [callback])
     );
   } else if (op === 'apply') {
-    // Получаем функцию проверки из аргументов
-    const callback = args[0];
+    // Получаем функцию проверки из аргументов и применяем unwrap
+    const callback = Association._proxy.get('unwrap').call(ass, ass, 'apply', [args[0]]);
 
     // Проверяем, что callback является функцией
     if (typeof callback !== 'function') {
@@ -1287,10 +1299,42 @@ export function every(ass, op, args) {
     const type = ass.detect;
 
     // Применяем функцию проверки в зависимости от типа данных
-    if (type === 'array' || type === 'string' || type === 'set') {
-      // Для массивов, строк и множеств итерируемся по элементам
+    if (type === 'array') {
+      // Для массивов итерируемся по элементам
       for (let i = 0; i < value.length; i++) {
-        if (!callback(value[i], i, value)) {
+        const wrappedValue = Association._proxy.get('wrap').call(ass, ass, 'apply', [value[i]]);
+        const wrappedCollection = Association._proxy.get('wrap').call(ass, ass, 'apply', [value]);
+        const callbackResult = callback(wrappedValue, i, wrappedCollection);
+        const unwrappedResult = Association._proxy.get('unwrap').call(ass, ass, 'apply', [callbackResult]);
+
+        if (!unwrappedResult) {
+          result = false;
+          break;
+        }
+      }
+    } else if (type === 'string') {
+      // Для строк итерируемся по символам
+      for (let i = 0; i < value.length; i++) {
+        const wrappedValue = Association._proxy.get('wrap').call(ass, ass, 'apply', [value[i]]);
+        const wrappedCollection = Association._proxy.get('wrap').call(ass, ass, 'apply', [value]);
+        const callbackResult = callback(wrappedValue, i, wrappedCollection);
+        const unwrappedResult = Association._proxy.get('unwrap').call(ass, ass, 'apply', [callbackResult]);
+
+        if (!unwrappedResult) {
+          result = false;
+          break;
+        }
+      }
+    } else if (type === 'set') {
+      // Для Set используем for...of с ручным индексом
+      let index = 0;
+      for (const val of value) {
+        const wrappedValue = Association._proxy.get('wrap').call(ass, ass, 'apply', [val]);
+        const wrappedCollection = Association._proxy.get('wrap').call(ass, ass, 'apply', [value]);
+        const callbackResult = callback(wrappedValue, index++, wrappedCollection);
+        const unwrappedResult = Association._proxy.get('unwrap').call(ass, ass, 'apply', [callbackResult]);
+
+        if (!unwrappedResult) {
           result = false;
           break;
         }
@@ -1298,7 +1342,12 @@ export function every(ass, op, args) {
     } else if (type === 'map') {
       // Для карт (Map) итерируемся по записям [ключ, значение]
       for (const [key, val] of value) {
-        if (!callback(val, key, value)) {
+        const wrappedValue = Association._proxy.get('wrap').call(ass, ass, 'apply', [val]);
+        const wrappedCollection = Association._proxy.get('wrap').call(ass, ass, 'apply', [value]);
+        const callbackResult = callback(wrappedValue, key, wrappedCollection);
+        const unwrappedResult = Association._proxy.get('unwrap').call(ass, ass, 'apply', [callbackResult]);
+
+        if (!unwrappedResult) {
           result = false;
           break;
         }
@@ -1308,7 +1357,12 @@ export function every(ass, op, args) {
       const keys = Object.keys(value);
       for (let i = 0; i < keys.length; i++) {
         const key = keys[i];
-        if (!callback(value[key], key, value)) {
+        const wrappedValue = Association._proxy.get('wrap').call(ass, ass, 'apply', [value[key]]);
+        const wrappedCollection = Association._proxy.get('wrap').call(ass, ass, 'apply', [value]);
+        const callbackResult = callback(wrappedValue, key, wrappedCollection);
+        const unwrappedResult = Association._proxy.get('unwrap').call(ass, ass, 'apply', [callbackResult]);
+
+        if (!unwrappedResult) {
           result = false;
           break;
         }
@@ -1354,14 +1408,24 @@ export function every(ass, op, args) {
               everyResult = true;
             } else if (Array.isArray(originValue)) {
               for (let i = 0; i < originValue.length; i++) {
-                if (!predicateFn(originValue[i], i, originValue)) {
+                const wrappedValue = Association._proxy.get('wrap').call(ass, ass, 'apply', [originValue[i]]);
+                const wrappedCollection = Association._proxy.get('wrap').call(ass, ass, 'apply', [originValue]);
+                const callbackResult = predicateFn(wrappedValue, i, wrappedCollection);
+                const unwrappedResult = Association._proxy.get('unwrap').call(ass, ass, 'apply', [callbackResult]);
+
+                if (!unwrappedResult) {
                   everyResult = false;
                   break;
                 }
               }
             } else if (originValue instanceof Map) {
               for (const [key, val] of originValue.entries()) {
-                if (!predicateFn(val, key, originValue)) {
+                const wrappedValue = Association._proxy.get('wrap').call(ass, ass, 'apply', [val]);
+                const wrappedCollection = Association._proxy.get('wrap').call(ass, ass, 'apply', [originValue]);
+                const callbackResult = predicateFn(wrappedValue, key, wrappedCollection);
+                const unwrappedResult = Association._proxy.get('unwrap').call(ass, ass, 'apply', [callbackResult]);
+
+                if (!unwrappedResult) {
                   everyResult = false;
                   break;
                 }
@@ -1369,14 +1433,24 @@ export function every(ass, op, args) {
             } else if (originValue instanceof Set) {
               let index = 0;
               for (const val of originValue) {
-                if (!predicateFn(val, index++, originValue)) {
+                const wrappedValue = Association._proxy.get('wrap').call(ass, ass, 'apply', [val]);
+                const wrappedCollection = Association._proxy.get('wrap').call(ass, ass, 'apply', [originValue]);
+                const callbackResult = predicateFn(wrappedValue, index++, wrappedCollection);
+                const unwrappedResult = Association._proxy.get('unwrap').call(ass, ass, 'apply', [callbackResult]);
+
+                if (!unwrappedResult) {
                   everyResult = false;
                   break;
                 }
               }
             } else if (type === 'string') {
               for (let i = 0; i < originValue.length; i++) {
-                if (!predicateFn(originValue[i], i, originValue)) {
+                const wrappedValue = Association._proxy.get('wrap').call(ass, ass, 'apply', [originValue[i]]);
+                const wrappedCollection = Association._proxy.get('wrap').call(ass, ass, 'apply', [originValue]);
+                const callbackResult = predicateFn(wrappedValue, i, wrappedCollection);
+                const unwrappedResult = Association._proxy.get('unwrap').call(ass, ass, 'apply', [callbackResult]);
+
+                if (!unwrappedResult) {
                   everyResult = false;
                   break;
                 }
@@ -1385,7 +1459,12 @@ export function every(ass, op, args) {
               const keys = Object.keys(originValue);
               for (let i = 0; i < keys.length; i++) {
                 const key = keys[i];
-                if (!predicateFn(originValue[key], key, originValue)) {
+                const wrappedValue = Association._proxy.get('wrap').call(ass, ass, 'apply', [originValue[key]]);
+                const wrappedCollection = Association._proxy.get('wrap').call(ass, ass, 'apply', [originValue]);
+                const callbackResult = predicateFn(wrappedValue, key, wrappedCollection);
+                const unwrappedResult = Association._proxy.get('unwrap').call(ass, ass, 'apply', [callbackResult]);
+
+                if (!unwrappedResult) {
                   everyResult = false;
                   break;
                 }
@@ -1417,7 +1496,7 @@ export function every(ass, op, args) {
     });
 
     return resultAssociation;
-  };
+  }
 }
 
 /**
