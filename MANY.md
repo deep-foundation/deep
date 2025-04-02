@@ -175,7 +175,7 @@ const symDiffObj = deep(obj1).symmetricDifference(obj2);
 
 **Возвращает:**
 - Для Set/Array: новый Set, содержащий все элементы из обоих множеств
-- Для Map/Object: новый Map, содержащий все пары ключ-значение из обоих объектов
+- Для Map/Object: новый Map, содержащий все пары ключ-значение из обоих объектов. Важно: в случае конфликта ключей (когда ключ присутствует и в исходном объекте, и в `otherSet`), значение из `otherSet` имеет приоритет и сохраняется в результирующем Map/Object.
 
 **Примеры:**
 ```javascript
@@ -193,13 +193,15 @@ const unionArr = deep(arr1).union(arr2);
 
 // Для Map
 const map1 = new Map([['a', 1], ['b', 2], ['c', 3]]);
-const map2 = new Map([['b', 2], ['c', 3], ['d', 4]]);
+const map2 = new Map([['b', 20], ['c', 30], ['d', 4]]);
 const unionMap = deep(map1).union(map2);
-// unionMap.this = Map { 'a' => 1, 'b' => 2, 'c' => 3, 'd' => 4 }
+// unionMap.this = Map { 'a' => 1, 'b' => 20, 'c' => 30, 'd' => 4 }
+// Обратите внимание, что для ключей 'b' и 'c' сохранены значения из map2
 
 // Для Object
 const obj1 = { a: 1, b: 2, c: 3 };
-const obj2 = { b: 2, c: 3, d: 4 };
+const obj2 = { b: 20, c: 30, d: 4 };
 const unionObj = deep(obj1).union(obj2);
-// unionObj.this = Map { 'a' => 1, 'b' => 2, 'c' => 3, 'd' => 4 }
+// unionObj.this = Map { 'a' => 1, 'b' => 20, 'c' => 30, 'd' => 4 }
+// Обратите внимание, что для ключей 'b' и 'c' сохранены значения из obj2
 ```

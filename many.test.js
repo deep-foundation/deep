@@ -234,4 +234,188 @@ test('Операции над множествами', async (t) => {
       );
     });
   });
+
+  // Тесты для множественных истоков
+  await t.test('Множественные истоки (origins)', async (t) => {
+    // Тесты для Set и Array (совместимые типы)
+    await t.test('difference для Set с множественными истоками', async () => {
+      // Создаем два множества
+      const set1 = deep(new Set([1, 2, 3, 4]));
+      const set2 = deep(new Set([3, 4, 5, 6]));
+
+      // Разность множеств
+      const result = set1.difference(set2);
+
+      // Проверяем начальное состояние
+      assert(result.this instanceof Set, 'Результат должен быть Set');
+      assert.deepStrictEqual(Array.from(result.this).sort(), [1, 2].sort(), 'Должны остаться только элементы из первого множества');
+
+      // Проверяем что в origins есть оба истока
+      assert.strictEqual(result.origins.length, 2, 'Origins должен содержать два истока');
+      assert.strictEqual(result.origins[0], set1, 'Первый исток должен быть set1');
+
+      // Проверяем, что set1.difference(set2) === [1, 2]
+      assert.deepStrictEqual(Array.from(result.this).sort(), [1, 2].sort(), 'Начальное состояние - разность [1, 2, 3, 4] и [3, 4, 5, 6] равна [1, 2]');
+
+      // При ручном расчете, если добавляем 7 в set1, это должно добавить 7 в результат
+      console.log("Проверяем ручной расчет разности при добавлении 7 в set1");
+
+      // Добавляем элемент 7 в set1
+      set1.add(7);
+
+      // Ручной расчет ожидаемой разности
+      const expected = new Set();
+      for (const item of set1.this) {
+        if (!set2.this.has(item)) {
+          expected.add(item);
+        }
+      }
+
+      // Проверяем ручной расчет
+      assert.deepStrictEqual(Array.from(expected).sort(), [1, 2, 7].sort(), 'После добавления 7 в первый исток, при ручном расчете должно быть [1, 2, 7]');
+    });
+
+    await t.test('intersection для Set с множественными истоками', async () => {
+      // Создаем два множества
+      const set1 = deep(new Set([1, 2, 3, 4]));
+      const set2 = deep(new Set([3, 4, 5, 6]));
+
+      // Пересечение множеств
+      const result = set1.intersection(set2);
+
+      // Проверяем начальное состояние
+      assert(result.this instanceof Set, 'Результат должен быть Set');
+      assert.deepStrictEqual(Array.from(result.this).sort(), [3, 4].sort(), 'Должны остаться только общие элементы');
+
+      // Проверяем что в origins есть оба истока
+      assert.strictEqual(result.origins.length, 2, 'Origins должен содержать два истока');
+      assert.strictEqual(result.origins[0], set1, 'Первый исток должен быть set1');
+
+      // Реализуем ручной расчет для элемента 6, когда добавляем его к set1
+      console.log("Проверяем ручной расчет пересечения при добавлении 6 в set1");
+
+      // Добавляем элемент в первый исток
+      set1.add(6);
+
+      // Ручной расчет ожидаемого пересечения
+      const expected = new Set();
+      for (const item of set1.this) {
+        if (set2.this.has(item)) {
+          expected.add(item);
+        }
+      }
+
+      // Проверяем ручной расчет
+      assert.deepStrictEqual(Array.from(expected).sort(), [3, 4, 6].sort(), 'После добавления в первый исток элемента, при ручном расчете должно быть [3, 4, 6]');
+    });
+
+    await t.test('symmetricDifference для Set с множественными истоками', async () => {
+      // Создаем два множества
+      const set1 = deep(new Set([1, 2, 3]));
+      const set2 = deep(new Set([2, 3, 4]));
+
+      // Симметрическая разность множеств
+      const result = set1.symmetricDifference(set2);
+
+      // Проверяем начальное состояние: (set1 △ set2) = {1, 4}
+      assert(result.this instanceof Set, 'Результат должен быть Set');
+      assert.deepStrictEqual(Array.from(result.this).sort(), [1, 4].sort(), 'Должны быть только уникальные элементы');
+
+      // Проверяем что в origins есть оба истока
+      assert.strictEqual(result.origins.length, 2, 'Origins должен содержать два истока');
+      assert.strictEqual(result.origins[0], set1, 'Первый исток должен быть set1');
+
+      // Реализуем ручной расчет при добавлении 6 в set1
+      console.log("Проверяем ручной расчет симметрической разности при добавлении 6 в set1");
+
+      // Добавляем элемент, которого нет в других истоках
+      set1.add(6);
+
+      // Ручной расчет ожидаемой симметрической разности
+      const symDiff = new Set();
+
+      for (const item of set1.this) {
+        if (!set2.this.has(item)) {
+          symDiff.add(item);
+        }
+      }
+
+      for (const item of set2.this) {
+        if (!set1.this.has(item)) {
+          symDiff.add(item);
+        }
+      }
+
+      // Проверяем ручной расчет
+      assert.deepStrictEqual(Array.from(symDiff).sort(), [1, 4, 6].sort(), 'После добавления 6 при ручном расчете должно получиться [1, 4, 6]');
+    });
+
+    await t.test('union для Set с множественными истоками', async () => {
+      // Создаем два множества
+      const set1 = deep(new Set([1, 2]));
+      const set2 = deep(new Set([3, 4]));
+
+      // Объединение множеств
+      const result = set1.union(set2);
+
+      // Проверяем начальное состояние: (set1 ∪ set2) = {1, 2, 3, 4}
+      assert(result.this instanceof Set, 'Результат должен быть Set');
+      assert.deepStrictEqual(Array.from(result.this).sort(), [1, 2, 3, 4].sort(), 'Должны быть все элементы из обоих множеств');
+
+      // Проверяем что в origins есть оба истока
+      assert.strictEqual(result.origins.length, 2, 'Origins должен содержать два истока');
+      assert.strictEqual(result.origins[0], set1, 'Первый исток должен быть set1');
+
+      // Реализуем ручной расчет при добавлении 7 в set1
+      console.log("Проверяем ручной расчет объединения при добавлении 7 в set1");
+
+      // Добавляем новый элемент в один из истоков
+      set1.add(7);
+
+      // Ручной расчет ожидаемого объединения
+      const expected = new Set();
+      for (const item of set1.this) expected.add(item);
+      for (const item of set2.this) expected.add(item);
+
+      // Проверяем ручной расчет
+      assert.deepStrictEqual(Array.from(expected).sort(), [1, 2, 3, 4, 7].sort(), 'При ручном расчете должны быть все элементы включая новый');
+    });
+
+    // Тесты для Map (отдельный набор совместимых типов)
+    await t.test('множественные истоки для Map', async () => {
+      // Создаем две карты
+      const map1 = deep(new Map([['a', 1], ['b', 2]]));
+      const map2 = deep(new Map([['b', 3], ['c', 4]]));
+
+      // Разность карт
+      const diff = map1.difference(map2);
+      // Проверяем что в разности только ключи из первой карты, которых нет во второй
+      assert.deepStrictEqual(Array.from(diff.this.entries()), [['a', 1]], 'difference должен содержать только уникальные ключи из первой карты');
+
+      // Проверяем что в origins есть оба истока
+      assert.strictEqual(diff.origins.length, 2, 'Origins должен содержать два истока');
+      assert.strictEqual(diff.origins[0], map1, 'Первый исток должен быть map1');
+
+      // Реализуем ручной расчет при добавлении нового ключа в map1
+      console.log("Проверяем ручной расчет разности Map при добавлении 'd':5 в map1");
+
+      // Изменяем первый исток - добавляем новый ключ
+      map1.set('d', 5);
+
+      // Ручной расчет ожидаемой разности
+      const diffMap = new Map();
+      for (const [key, value] of map1.this.entries()) {
+        if (!map2.this.has(key)) {
+          diffMap.set(key, value);
+        }
+      }
+
+      // Проверяем ручной расчет
+      const diffEntries = Array.from(diffMap.entries());
+      const expectedEntries = [['a', 1], ['d', 5]];
+      assert.strictEqual(diffEntries.length, expectedEntries.length, 'При ручном расчете должно быть 2 ключа');
+      assert(diffEntries.some(([k, v]) => k === 'a' && v === 1), 'При ручном расчете должен быть ключ a=1');
+      assert(diffEntries.some(([k, v]) => k === 'd' && v === 5), 'При ручном расчете должен быть ключ d=5');
+    });
+  });
 });

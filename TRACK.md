@@ -32,6 +32,21 @@
 - **values()** - отслеживание списка значений
 - **entries()** - отслеживание пар [ключ, значение]
 
+### Теоретико-множественные операции
+
+Механизм отслеживания также поддерживает операции над множествами:
+
+- **difference(otherSet)** - отслеживание разности множеств (A - B)
+- **intersection(otherSet)** - отслеживание пересечения множеств (A ∩ B)
+- **symmetricDifference(otherSet)** - отслеживание симметрической разности множеств (A △ B)
+- **union(otherSet)** - отслеживание объединения множеств (A ∪ B)
+
+Для этих операций отслеживание особенно важно, так как результат зависит от изменений в обоих исходных множествах. Механизм track обеспечивает:
+
+1. Обновление результата при изменении любого из исходных множеств
+2. Сохранение связей между исходными и результирующими ассоциациями
+3. Передачу событий изменения по цепочке зависимостей
+
 ## Примеры использования
 
 ### Простая цепочка отслеживания
@@ -114,6 +129,45 @@ console.log(roles.this);      // ['user', 'editor', 'admin']
 console.log(adminRoles.this); // ['editor', 'admin']
 ```
 
+### Отслеживание множественных операций
+
+```js
+import deep from 'deep7';
+
+// Создаем два множества
+const set1 = deep(new Set([1, 2, 3, 4]));
+const set2 = deep(new Set([3, 4, 5, 6]));
+
+// Создаем результаты множественных операций
+const diff = set1.difference(set2.this);
+const intersection = set1.intersection(set2.this);
+const symDiff = set1.symmetricDifference(set2.this);
+const union = set1.union(set2.this);
+
+console.log(Array.from(diff.this));          // [1, 2]
+console.log(Array.from(intersection.this));  // [3, 4]
+console.log(Array.from(symDiff.this));       // [1, 2, 5, 6]
+console.log(Array.from(union.this));         // [1, 2, 3, 4, 5, 6]
+
+// Модифицируем первое множество
+set1.add(7);
+
+// Все результаты автоматически обновляются
+console.log(Array.from(diff.this));          // [1, 2, 7]
+console.log(Array.from(intersection.this));  // [3, 4]
+console.log(Array.from(symDiff.this));       // [1, 2, 5, 6, 7]
+console.log(Array.from(union.this));         // [1, 2, 3, 4, 5, 6, 7]
+
+// Модифицируем второе множество
+set2.add(7);
+
+// Результаты снова обновляются
+console.log(Array.from(diff.this));          // [1, 2]
+console.log(Array.from(intersection.this));  // [3, 4, 7]
+console.log(Array.from(symDiff.this));       // [1, 2, 5, 6]
+console.log(Array.from(union.this));         // [1, 2, 3, 4, 5, 6, 7]
+```
+
 ## Оптимизации отслеживания
 
 Система отслеживания использует различные оптимизации для повышения производительности:
@@ -147,18 +201,22 @@ numbers.push(4); // Это вызовет событие change в doubled
 
 ```js
 association.temp = {
-  // Ссылка на исходную ассоциацию
+  // Ссылка на исходную ассоциацию (для методов map, filter, keys, values, entries)
   origin: <Association>,
 
-  // Метод, используемый для создания этой ассоциации
-  method: 'map' | 'filter' | 'keys' | 'values' | 'entries',
+  // Массив исходных ассоциаций (для теоретико-множественных операций)
+  origins: [<Association>, <Association>, ...],
 
-  // Функция преобразования (для map, filter)
+  // Метод, используемый для создания этой ассоциации
+  method: 'map' | 'filter' | 'keys' | 'values' | 'entries' | 'difference' | 'intersection' | 'symmetricDifference' | 'union',
+
+  // Функция преобразования (для map, filter и теоретико-множественных операций)
   transformer: <Function>,
 
   // Обработчики событий для lifecycle управления
   offChange: <Function>,  // Отписка от событий change
   offKill: <Function>,    // Отписка при уничтожении ассоциации
+  offChanges: [<Function>, ...], // Массив функций отписки для множественных истоков
 
   // Дополнительные метаданные для отслеживания
   // ...
