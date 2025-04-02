@@ -98,6 +98,90 @@ export class Association extends Function {
   }
 
   /**
+   * Преобразует строковое представление значения к верхнему регистру
+   * @returns {Association} - Новый экземпляр Association с результатом в верхнем регистре
+   */
+  toUpperCase() {
+    const str = this.toString();
+    return new Association(str.toUpperCase());
+  }
+
+  /**
+   * Преобразует строковое представление значения к нижнему регистру
+   * @returns {Association} - Новый экземпляр Association с результатом в нижнем регистре
+   */
+  toLowerCase() {
+    const str = this.toString();
+    return new Association(str.toLowerCase());
+  }
+
+  /**
+   * Преобразует первую букву строкового представления к нижнему регистру
+   * @returns {Association} - Новый экземпляр Association с результатом
+   */
+  toLowerCaseFirst() {
+    const str = this.toString();
+    if (str.length === 0) return new Association('');
+    return new Association(str.charAt(0).toLowerCase() + str.slice(1));
+  }
+
+  /**
+   * Преобразует первую букву строкового представления к верхнему регистру
+   * @returns {Association} - Новый экземпляр Association с результатом
+   */
+  toUpperCaseFirst() {
+    const str = this.toString();
+    if (str.length === 0) return new Association('');
+    return new Association(str.charAt(0).toUpperCase() + str.slice(1));
+  }
+
+  /**
+   * Преобразует значение в строку с заданным количеством символов (с добавлением отступов)
+   * @param {number} length - Желаемая длина строки
+   * @param {string} [padding=' '] - Символ для заполнения отступов
+   * @param {boolean} [padEnd=false] - Если true, то отступы добавляются в конец строки
+   * @returns {Association} - Новый экземпляр Association с результатом
+   */
+  toPaddedString(length, padding = ' ', padEnd = false) {
+    const str = this.toString();
+    if (padEnd) {
+      return new Association(str.padEnd(length, padding));
+    }
+    return new Association(str.padStart(length, padding));
+  }
+
+  /**
+   * Форматирует числовое значение с указанным количеством цифр после запятой
+   * @param {number} digits - Количество знаков после запятой
+   * @returns {Association} - Новый экземпляр Association с отформатированным числовым значением
+   */
+  toFixed(digits) {
+    const value = this.valueOf();
+    if (typeof value !== 'number') {
+      const num = Number(value);
+      return new Association(isNaN(num) ? '0.00' : num.toFixed(digits));
+    }
+    return new Association(value.toFixed(digits));
+  }
+
+  /**
+   * Преобразует значение в JSON-строку
+   * @param {number|string} [space] - Отступы для форматирования JSON
+   * @returns {Association} - Новый экземпляр Association с JSON-строкой
+   */
+  toJSON(space) {
+    const value = this.this;
+    if (value === undefined) {
+      return new Association(undefined);
+    }
+    try {
+      return new Association(JSON.stringify(value, null, space));
+    } catch (e) {
+      return new Association('{}');
+    }
+  }
+
+  /**
    * Получение проксированной версии экземпляра Association
    * @returns {Proxy<Association>} Проксированная версия экземпляра
    */
@@ -128,6 +212,13 @@ export class Association extends Function {
         if (key === Symbol.toPrimitive) return target[Symbol.toPrimitive].bind(target);
         if (key === 'valueOf') return target.valueOf.bind(target);
         if (key === 'toString') return target.toString.bind(target);
+        if (key === 'toUpperCase') return target.toUpperCase.bind(target);
+        if (key === 'toLowerCase') return target.toLowerCase.bind(target);
+        if (key === 'toLowerCaseFirst') return target.toLowerCaseFirst.bind(target);
+        if (key === 'toUpperCaseFirst') return target.toUpperCaseFirst.bind(target);
+        if (key === 'toPaddedString') return target.toPaddedString.bind(target);
+        if (key === 'toFixed') return target.toFixed.bind(target);
+        if (key === 'toJSON') return target.toJSON.bind(target);
 
         // Для интеграции с отладчиками и утилитами печати
         if (key === 'inspect' || key === Symbol.for('nodejs.util.inspect.custom')) {

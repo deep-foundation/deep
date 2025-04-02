@@ -275,16 +275,27 @@ test('unwrap - разворачивание Association в исходное зн
 
 test('wrap и unwrap - проверка кеширования функций', () => {
   const a = deep();
+  const originalValue = { value: 10 };
 
-  // Получаем ссылки на функции
-  const wrap1 = a.wrap;
-  const wrap2 = a.wrap;
-  const unwrap1 = a.unwrap;
-  const unwrap2 = a.unwrap;
+  // Получаем функции wrap и unwrap
+  const wrapFn1 = a.wrap;
+  const unwrapFn1 = a.unwrap;
+
+  // Получаем функции еще раз
+  const wrapFn2 = a.wrap;
+  const unwrapFn2 = a.unwrap;
 
   // Проверяем, что функции кешируются
-  assert.strictEqual(wrap1, wrap2, 'wrap должен кешировать функцию');
-  assert.strictEqual(unwrap1, unwrap2, 'unwrap должен кешировать функцию');
+  assert.strictEqual(wrapFn1, wrapFn2, 'Функция wrap должна кешироваться');
+  assert.strictEqual(unwrapFn1, unwrapFn2, 'Функция unwrap должна кешироваться');
+
+  // Проверяем работу функций
+  const wrapped = a.wrap(originalValue);
+  const rewrapped = a.wrap(wrapped);
+  const unwrapped = a.unwrap(rewrapped);
+
+  assert.strictEqual(rewrapped, wrapped, 'Повторное оборачивание должно вернуть тот же объект');
+  assert.strictEqual(unwrapped, originalValue, 'Разворачивание должно вернуть исходное значение');
 });
 
 test('wrap и unwrap - проверка сложных сценариев использования', () => {
@@ -389,4 +400,223 @@ test('Association - wrap и unwrap', () => {
   obj.value = 20;
 
   assert.strictEqual(wrapped2.this.value, 20, 'Изменения в оригинальном объекте должны отражаться в обернутом');
+});
+
+test('Методы работы со строками в Association', async (t) => {
+  await t.test('toUpperCase - преобразование к верхнему регистру', () => {
+    // Для строкового значения
+    const str = deep('hello').toUpperCase();
+    assert.ok(str instanceof Association, 'Результат должен быть экземпляром Association');
+    assert.strictEqual(str.this, 'HELLO');
+
+    // Для числового значения
+    const num = deep(123).toUpperCase();
+    assert.ok(num instanceof Association);
+    assert.strictEqual(num.this, '123');
+
+    // Для объекта
+    const obj = { name: 'Alice' };
+    const objUpper = deep(obj).toUpperCase();
+    assert.ok(objUpper instanceof Association);
+    assert.strictEqual(objUpper.this.toUpperCase(), '{"NAME":"ALICE"}'.toUpperCase());
+
+    // Для null и undefined
+    assert.strictEqual(deep(null).toUpperCase().this, 'NULL');
+    assert.strictEqual(deep(undefined).toUpperCase().this, 'UNDEFINED');
+  });
+
+  await t.test('toLowerCase - преобразование к нижнему регистру', () => {
+    // Для строкового значения
+    const str = deep('HELLO').toLowerCase();
+    assert.ok(str instanceof Association, 'Результат должен быть экземпляром Association');
+    assert.strictEqual(str.this, 'hello');
+
+    // Для числового значения
+    const num = deep(123).toLowerCase();
+    assert.ok(num instanceof Association);
+    assert.strictEqual(num.this, '123');
+
+    // Для объекта
+    const obj = { NAME: 'ALICE' };
+    const objLower = deep(obj).toLowerCase();
+    assert.ok(objLower instanceof Association);
+    assert.strictEqual(objLower.this.toLowerCase(), '{"name":"alice"}'.toLowerCase());
+
+    // Для null и undefined
+    assert.strictEqual(deep(null).toLowerCase().this, 'null');
+    assert.strictEqual(deep(undefined).toLowerCase().this, 'undefined');
+  });
+
+  await t.test('toLowerCaseFirst - первый символ в нижнем регистре', () => {
+    // Для строкового значения
+    const str1 = deep('Hello').toLowerCaseFirst();
+    assert.ok(str1 instanceof Association, 'Результат должен быть экземпляром Association');
+    assert.strictEqual(str1.this, 'hello');
+
+    const str2 = deep('HELLO').toLowerCaseFirst();
+    assert.ok(str2 instanceof Association);
+    assert.strictEqual(str2.this, 'hELLO');
+
+    // Для пустой строки
+    const empty = deep('').toLowerCaseFirst();
+    assert.ok(empty instanceof Association);
+    assert.strictEqual(empty.this, '');
+
+    // Для числового значения
+    assert.strictEqual(deep(123).toLowerCaseFirst().this, '123');
+
+    // Для null и undefined
+    assert.strictEqual(deep(null).toLowerCaseFirst().this, 'null');
+    assert.strictEqual(deep(undefined).toLowerCaseFirst().this, 'undefined');
+  });
+
+  await t.test('toUpperCaseFirst - первый символ в верхнем регистре', () => {
+    // Для строкового значения
+    const str1 = deep('hello').toUpperCaseFirst();
+    assert.ok(str1 instanceof Association, 'Результат должен быть экземпляром Association');
+    assert.strictEqual(str1.this, 'Hello');
+
+    const str2 = deep('hello world').toUpperCaseFirst();
+    assert.ok(str2 instanceof Association);
+    assert.strictEqual(str2.this, 'Hello world');
+
+    // Для пустой строки
+    const empty = deep('').toUpperCaseFirst();
+    assert.ok(empty instanceof Association);
+    assert.strictEqual(empty.this, '');
+
+    // Для числового значения
+    assert.strictEqual(deep(123).toUpperCaseFirst().this, '123');
+
+    // Для null и undefined
+    assert.strictEqual(deep(null).toUpperCaseFirst().this, 'Null');
+    assert.strictEqual(deep(undefined).toUpperCaseFirst().this, 'Undefined');
+  });
+
+  await t.test('toPaddedString - добавление отступов', () => {
+    // Дополнение строки в начале
+    const padded1 = deep('123').toPaddedString(5, '0');
+    assert.ok(padded1 instanceof Association, 'Результат должен быть экземпляром Association');
+    assert.strictEqual(padded1.this, '00123');
+
+    // Дополнение строки в конце
+    const padded2 = deep('123').toPaddedString(5, '0', true);
+    assert.ok(padded2 instanceof Association);
+    assert.strictEqual(padded2.this, '12300');
+
+    // Дополнение строки пробелами по умолчанию
+    const padded3 = deep('123').toPaddedString(5);
+    assert.ok(padded3 instanceof Association);
+    assert.strictEqual(padded3.this, '  123');
+
+    // Строка длиннее запрошенной длины
+    const padded4 = deep('12345').toPaddedString(3);
+    assert.ok(padded4 instanceof Association);
+    assert.strictEqual(padded4.this, '12345');
+
+    // Для числового значения
+    const padded5 = deep(123).toPaddedString(5, '0');
+    assert.ok(padded5 instanceof Association);
+    assert.strictEqual(padded5.this, '00123');
+
+    // Для null и undefined
+    const padded6 = deep(null).toPaddedString(5, '0');
+    assert.ok(padded6 instanceof Association);
+    assert.strictEqual(padded6.this, '0null');
+
+    const padded7 = deep(undefined).toPaddedString(12, ' ');
+    assert.ok(padded7 instanceof Association);
+    assert.strictEqual(padded7.this, '   undefined');
+  });
+
+  await t.test('toFixed - форматирование числа', () => {
+    // Для числового значения
+    const fixed1 = deep(123.456).toFixed(2);
+    assert.ok(fixed1 instanceof Association, 'Результат должен быть экземпляром Association');
+    assert.strictEqual(fixed1.this, '123.46');
+
+    const fixed2 = deep(123).toFixed(2);
+    assert.ok(fixed2 instanceof Association);
+    assert.strictEqual(fixed2.this, '123.00');
+
+    // Для строки, содержащей число
+    const fixed3 = deep('123.456').toFixed(2);
+    assert.ok(fixed3 instanceof Association);
+    assert.strictEqual(fixed3.this, '123.46');
+
+    // Для строки, не содержащей число
+    const fixed4 = deep('hello').toFixed(2);
+    assert.ok(fixed4 instanceof Association);
+    assert.strictEqual(fixed4.this, '0.00');
+
+    // Для null и undefined
+    const fixed5 = deep(null).toFixed(2);
+    assert.ok(fixed5 instanceof Association);
+    assert.strictEqual(fixed5.this, '0.00');
+
+    const fixed6 = deep(undefined).toFixed(2);
+    assert.ok(fixed6 instanceof Association);
+    assert.strictEqual(fixed6.this, '0.00');
+  });
+
+  await t.test('toJSON - преобразование в JSON-строку', () => {
+    // Для объекта
+    const obj = { name: 'Alice', age: 30 };
+    const json1 = deep(obj).toJSON();
+    assert.ok(json1 instanceof Association, 'Результат должен быть экземпляром Association');
+    assert.strictEqual(json1.this, '{"name":"Alice","age":30}');
+
+    // Для массива
+    const json2 = deep([1, 2, 3]).toJSON();
+    assert.ok(json2 instanceof Association);
+    assert.strictEqual(json2.this, '[1,2,3]');
+
+    // С отступами
+    const json3 = deep({ a: 1 }).toJSON(2);
+    assert.ok(json3 instanceof Association);
+    assert.strictEqual(json3.this, '{\n  "a": 1\n}');
+
+    // Для строки
+    const json4 = deep('hello').toJSON();
+    assert.ok(json4 instanceof Association);
+    assert.strictEqual(json4.this, '"hello"');
+
+    // Для числа
+    const json5 = deep(123).toJSON();
+    assert.ok(json5 instanceof Association);
+    assert.strictEqual(json5.this, '123');
+
+    // Для null и undefined
+    const json6 = deep(null).toJSON();
+    assert.ok(json6 instanceof Association);
+    assert.strictEqual(json6.this, 'null');
+
+    const json7 = deep(undefined).toJSON();
+    assert.ok(json7 instanceof Association);
+    assert.strictEqual(json7.this, undefined);
+
+    // Для объекта с циклической ссылкой
+    const cyclical = {};
+    cyclical.self = cyclical;
+    const json8 = deep(cyclical).toJSON();
+    assert.ok(json8 instanceof Association);
+    assert.strictEqual(json8.this, '{}');
+  });
+
+  await t.test('Комбинированное использование методов', () => {
+    // toLowerCase + toUpperCaseFirst
+    const combined1 = deep('HELLO WORLD').toLowerCase().toUpperCaseFirst();
+    assert.ok(combined1 instanceof Association, 'Результат должен быть экземпляром Association');
+    assert.strictEqual(combined1.this, 'Hello world');
+
+    // toUpperCase + toPaddedString
+    const combined2 = deep('abc').toUpperCase().toPaddedString(5, '*');
+    assert.ok(combined2 instanceof Association);
+    assert.strictEqual(combined2.this, '**ABC');
+
+    // Использование в шаблонных строках
+    const name = deep('john');
+    const greeting = `Hello, ${name.toUpperCaseFirst()}!`;
+    assert.strictEqual(greeting, 'Hello, John!');
+  });
 });
