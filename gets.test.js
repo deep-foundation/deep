@@ -211,7 +211,7 @@ test('reduce для разных типов данных', async (t) => {
 
   await t.test('Для строки', () => {
     const str = 'abc';
-    const result = deep(str).reduce((acc, x) => acc + x.toUpperCase(), '');
+    const result = deep(str).reduce((acc, x) => acc + x.this.toUpperCase(), '');
     assert.strictEqual(result.this, 'ABC');
   });
 

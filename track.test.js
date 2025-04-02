@@ -569,7 +569,7 @@ test('Track на разных типах данных и операциях', as
       const source = deep('abc'); // Используем массив вместо строки
 
       // Применяем метод reduce для создания строки в верхнем регистре
-      const result = source.reduce((acc, x) => acc + x.toUpperCase(), '');
+      const result = source.reduce((acc, x) => acc + x.this.toUpperCase(), '');
 
       // Инициализируем трекер
       const tracker = result.track;

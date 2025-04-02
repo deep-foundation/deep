@@ -885,9 +885,9 @@ export function reduce(ass, op, args) {
       Association._proxy.get('reduce').call(ass, ass, 'apply', [callback, initialValue])
     );
   } else if (op === 'apply') {
-    // Получаем функцию свертки и начальное значение из аргументов
-    const callback = args[0];
-    const initialValue = args[1];
+    // Получаем функцию свертки и начальное значение из аргументов и применяем unwrap
+    const callback = ass.unwrap(args[0]);
+    const initialValue = args.length > 1 ? ass.unwrap(args[1]) : undefined;
     const hasInitialValue = args.length > 1;
 
     // Проверяем, что callback является функцией
@@ -940,16 +940,39 @@ export function reduce(ass, op, args) {
       accumulator = initialValue;
     }
 
+    // Оборачиваем начальный аккумулятор для callback
+    let wrappedAccumulator = ass.wrap(accumulator);
+
     // Выполняем свертку
     if (type === 'array') {
       for (let i = startIndex; i < value.length; i++) {
-        accumulator = callback(accumulator, value[i], i, value);
+        // Оборачиваем текущее значение и всю коллекцию для callback
+        const wrappedValue = ass.wrap(value[i]);
+        const wrappedCollection = ass.wrap(value);
+
+        // Вызываем callback с обернутыми данными
+        const result = callback(wrappedAccumulator, wrappedValue, i, wrappedCollection);
+
+        // Разворачиваем результат и сохраняем в аккумулятор
+        accumulator = ass.unwrap(result);
+        // Снова оборачиваем для следующей итерации
+        wrappedAccumulator = ass.wrap(accumulator);
       }
     } else if (type === 'map') {
       let index = 0;
       for (const [key, val] of value) {
         if (index >= startIndex) {
-          accumulator = callback(accumulator, val, key, value);
+          // Оборачиваем текущее значение и всю коллекцию для callback
+          const wrappedValue = ass.wrap(val);
+          const wrappedCollection = ass.wrap(value);
+
+          // Вызываем callback с обернутыми данными
+          const result = callback(wrappedAccumulator, wrappedValue, key, wrappedCollection);
+
+          // Разворачиваем результат и сохраняем в аккумулятор
+          accumulator = ass.unwrap(result);
+          // Снова оборачиваем для следующей итерации
+          wrappedAccumulator = ass.wrap(accumulator);
         }
         index++;
       }
@@ -958,19 +981,49 @@ export function reduce(ass, op, args) {
       let index = 0;
       for (const val of value) {
         if (index >= startIndex) {
-          accumulator = callback(accumulator, val, index, value);
+          // Оборачиваем текущее значение и всю коллекцию для callback
+          const wrappedValue = ass.wrap(val);
+          const wrappedCollection = ass.wrap(value);
+
+          // Вызываем callback с обернутыми данными
+          const result = callback(wrappedAccumulator, wrappedValue, index, wrappedCollection);
+
+          // Разворачиваем результат и сохраняем в аккумулятор
+          accumulator = ass.unwrap(result);
+          // Снова оборачиваем для следующей итерации
+          wrappedAccumulator = ass.wrap(accumulator);
         }
         index++;
       }
     } else if (type === 'string') {
       for (let i = startIndex; i < value.length; i++) {
-        accumulator = callback(accumulator, value[i], i, value);
+        // Оборачиваем текущее значение и всю коллекцию для callback
+        const wrappedValue = ass.wrap(value[i]);
+        const wrappedCollection = ass.wrap(value);
+
+        // Вызываем callback с обернутыми данными
+        const result = callback(wrappedAccumulator, wrappedValue, i, wrappedCollection);
+
+        // Разворачиваем результат и сохраняем в аккумулятор
+        accumulator = ass.unwrap(result);
+        // Снова оборачиваем для следующей итерации
+        wrappedAccumulator = ass.wrap(accumulator);
       }
     } else if (type === 'object') {
       const keys = Object.keys(value);
       for (let i = startIndex; i < keys.length; i++) {
         const key = keys[i];
-        accumulator = callback(accumulator, value[key], key, value);
+        // Оборачиваем текущее значение и всю коллекцию для callback
+        const wrappedValue = ass.wrap(value[key]);
+        const wrappedCollection = ass.wrap(value);
+
+        // Вызываем callback с обернутыми данными
+        const result = callback(wrappedAccumulator, wrappedValue, key, wrappedCollection);
+
+        // Разворачиваем результат и сохраняем в аккумулятор
+        accumulator = ass.unwrap(result);
+        // Снова оборачиваем для следующей итерации
+        wrappedAccumulator = ass.wrap(accumulator);
       }
     }
 
@@ -1076,34 +1129,99 @@ export function reduce(ass, op, args) {
 
             // Выполняем свертку
             if (Array.isArray(originValue)) {
+              // Оборачиваем начальный аккумулятор
+              let wrappedAccumulator = ass.wrap(accumulator);
+
               for (let i = startIndex; i < originValue.length; i++) {
-                accumulator = callback(accumulator, originValue[i], i, originValue);
+                // Оборачиваем текущее значение и коллекцию
+                const wrappedValue = ass.wrap(originValue[i]);
+                const wrappedCollection = ass.wrap(originValue);
+
+                // Вызываем callback с обернутыми данными
+                const result = callback(wrappedAccumulator, wrappedValue, i, wrappedCollection);
+
+                // Разворачиваем результат и сохраняем в аккумулятор
+                accumulator = ass.unwrap(result);
+                // Снова оборачиваем для следующей итерации
+                wrappedAccumulator = ass.wrap(accumulator);
               }
             } else if (originValue instanceof Map) {
               let index = 0;
+              // Оборачиваем начальный аккумулятор
+              let wrappedAccumulator = ass.wrap(accumulator);
+
               for (const [key, val] of originValue) {
                 if (index >= startIndex) {
-                  accumulator = callback(accumulator, val, key, originValue);
+                  // Оборачиваем текущее значение и коллекцию
+                  const wrappedValue = ass.wrap(val);
+                  const wrappedCollection = ass.wrap(originValue);
+
+                  // Вызываем callback с обернутыми данными
+                  const result = callback(wrappedAccumulator, wrappedValue, key, wrappedCollection);
+
+                  // Разворачиваем результат и сохраняем в аккумулятор
+                  accumulator = ass.unwrap(result);
+                  // Снова оборачиваем для следующей итерации
+                  wrappedAccumulator = ass.wrap(accumulator);
                 }
                 index++;
               }
             } else if (originValue instanceof Set) {
               let index = 0;
+              // Оборачиваем начальный аккумулятор
+              let wrappedAccumulator = ass.wrap(accumulator);
+
               for (const val of originValue) {
                 if (index >= startIndex) {
-                  accumulator = callback(accumulator, val, index, originValue);
+                  // Оборачиваем текущее значение и коллекцию
+                  const wrappedValue = ass.wrap(val);
+                  const wrappedCollection = ass.wrap(originValue);
+
+                  // Вызываем callback с обернутыми данными
+                  const result = callback(wrappedAccumulator, wrappedValue, index, wrappedCollection);
+
+                  // Разворачиваем результат и сохраняем в аккумулятор
+                  accumulator = ass.unwrap(result);
+                  // Снова оборачиваем для следующей итерации
+                  wrappedAccumulator = ass.wrap(accumulator);
                 }
                 index++;
               }
             } else if (typeof originValue === 'string') {
+              // Оборачиваем начальный аккумулятор
+              let wrappedAccumulator = ass.wrap(accumulator);
+
               for (let i = startIndex; i < originValue.length; i++) {
-                accumulator = callback(accumulator, originValue[i], i, originValue);
+                // Оборачиваем текущее значение и коллекцию
+                const wrappedValue = ass.wrap(originValue[i]);
+                const wrappedCollection = ass.wrap(originValue);
+
+                // Вызываем callback с обернутыми данными
+                const result = callback(wrappedAccumulator, wrappedValue, i, wrappedCollection);
+
+                // Разворачиваем результат и сохраняем в аккумулятор
+                accumulator = ass.unwrap(result);
+                // Снова оборачиваем для следующей итерации
+                wrappedAccumulator = ass.wrap(accumulator);
               }
             } else if (typeof originValue === 'object' && originValue !== null) {
               const keys = Object.keys(originValue);
+              // Оборачиваем начальный аккумулятор
+              let wrappedAccumulator = ass.wrap(accumulator);
+
               for (let i = startIndex; i < keys.length; i++) {
                 const key = keys[i];
-                accumulator = callback(accumulator, originValue[key], key, originValue);
+                // Оборачиваем текущее значение и коллекцию
+                const wrappedValue = ass.wrap(originValue[key]);
+                const wrappedCollection = ass.wrap(originValue);
+
+                // Вызываем callback с обернутыми данными
+                const result = callback(wrappedAccumulator, wrappedValue, key, wrappedCollection);
+
+                // Разворачиваем результат и сохраняем в аккумулятор
+                accumulator = ass.unwrap(result);
+                // Снова оборачиваем для следующей итерации
+                wrappedAccumulator = ass.wrap(accumulator);
               }
             }
 
