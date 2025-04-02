@@ -432,7 +432,7 @@ test('Track на разных типах данных и операциях', as
       const source = deep('abcde');
 
       // Применяем метод filter для фильтрации только гласных букв
-      const result = source.filter(x => ['a', 'e', 'i', 'o', 'u'].includes(x));
+      const result = source.filter(x => ['a', 'e', 'i', 'o', 'u'].includes(x.this));
 
       // Инициализируем трекер
       const tracker = result.track;

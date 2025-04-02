@@ -191,7 +191,7 @@ test('filter для разных типов данных', async (t) => {
 
   await t.test('Для строки', () => {
     const str = 'abcde';
-    const result = deep(str).filter(x => ['a', 'e'].includes(x));
+    const result = deep(str).filter(x => ['a', 'e'].includes(x.this));
     assert.deepStrictEqual(result.this, ['a', 'e']);
   });
 });

@@ -572,8 +572,8 @@ export function filter(ass, op, args) {
       Association._proxy.get('filter').call(ass, ass, 'apply', [callback])
     );
   } else if (op === 'apply') {
-    // Получаем функцию фильтрации из аргументов
-    const callback = args[0];
+    // Получаем функцию фильтрации из аргументов и применяем unwrap
+    const callback = ass.unwrap(args[0]);
 
     // Проверяем, что callback является функцией
     if (typeof callback !== 'function') {
@@ -590,24 +590,54 @@ export function filter(ass, op, args) {
     const type = ass.detect;
 
     // Применяем функцию фильтрации в зависимости от типа данных
-    if (type === 'array' || type === 'string') {
-      // Для массивов и строк итерируемся по элементам
+    if (type === 'array') {
+      // Для массивов итерируемся по элементам
       for (let i = 0; i < value.length; i++) {
-        if (callback(value[i], i, value)) {
+        // Передаем обернутые значения в callback, но проверяем сырой результат
+        // unwrap-нутого callback-а для корректной работы с булевыми результатами
+        const wrappedValue = ass.wrap(value[i]);
+        const callbackResult = callback(wrappedValue, i, ass.wrap(value));
+        // Распаковываем результат, если был возвращен Association
+        const unwrappedResult = ass.unwrap(callbackResult);
+        if (unwrappedResult) {
+          result.push(value[i]);
+        }
+      }
+    } else if (type === 'string') {
+      // Для строк итерируемся по символам
+      for (let i = 0; i < value.length; i++) {
+        // Передаем обернутые значения в callback, но проверяем сырой результат
+        // unwrap-нутого callback-а для корректной работы с булевыми результатами
+        const wrappedValue = ass.wrap(value[i]);
+        const callbackResult = callback(wrappedValue, i, ass.wrap(value));
+        // Распаковываем результат, если был возвращен Association
+        const unwrappedResult = ass.unwrap(callbackResult);
+        if (unwrappedResult) {
           result.push(value[i]);
         }
       }
     } else if (type === 'set') {
       // Исправлено: корректная итерация по Set с использованием for...of
+      let index = 0;
       for (const val of value) {
-        if (callback(val, val, value)) {
+        // Передаем обернутые значения в callback, но проверяем сырой результат
+        const wrappedValue = ass.wrap(val);
+        const callbackResult = callback(wrappedValue, index++, ass.wrap(value));
+        // Распаковываем результат, если был возвращен Association
+        const unwrappedResult = ass.unwrap(callbackResult);
+        if (unwrappedResult) {
           result.push(val);
         }
       }
     } else if (type === 'map') {
       // Для карт (Map) итерируемся по записям [ключ, значение]
       for (const [key, val] of value) {
-        if (callback(val, key, value)) {
+        // Передаем обернутые значения в callback, но проверяем сырой результат
+        const wrappedValue = ass.wrap(val);
+        const callbackResult = callback(wrappedValue, key, ass.wrap(value));
+        // Распаковываем результат, если был возвращен Association
+        const unwrappedResult = ass.unwrap(callbackResult);
+        if (unwrappedResult) {
           result.push(val);
         }
       }
@@ -616,7 +646,12 @@ export function filter(ass, op, args) {
       const keys = Object.keys(value);
       for (let i = 0; i < keys.length; i++) {
         const key = keys[i];
-        if (callback(value[key], key, value)) {
+        // Передаем обернутые значения в callback, но проверяем сырой результат
+        const wrappedValue = ass.wrap(value[key]);
+        const callbackResult = callback(wrappedValue, key, ass.wrap(value));
+        // Распаковываем результат, если был возвращен Association
+        const unwrappedResult = ass.unwrap(callbackResult);
+        if (unwrappedResult) {
           result.push(value[key]);
         }
       }
@@ -670,7 +705,7 @@ export function filter(ass, op, args) {
                     const newValue = originValue[newIndex];
 
                     // Если элемент проходит фильтр, добавляем его
-                    if (filterFn(newValue, newIndex, originValue)) {
+                    if (filterFn(ass.wrap(newValue), newIndex, ass.wrap(originValue))) {
                       newFilteredValues.push(newValue);
                       hasChanges = true;
                     }
@@ -751,26 +786,38 @@ export function filter(ass, op, args) {
 
             if (type === 'array') {
               for (let i = 0; i < originValue.length; i++) {
-                if (filterFn(originValue[i], i, originValue)) {
+                const wrappedValue = ass.wrap(originValue[i]);
+                const callbackResult = filterFn(wrappedValue, i, ass.wrap(originValue));
+                const unwrappedResult = ass.unwrap(callbackResult);
+                if (unwrappedResult) {
                   filteredResult.push(originValue[i]);
                 }
               }
             } else if (type === 'map') {
               originValue.forEach((val, key) => {
-                if (filterFn(val, key, originValue)) {
+                const wrappedValue = ass.wrap(val);
+                const callbackResult = filterFn(wrappedValue, key, ass.wrap(originValue));
+                const unwrappedResult = ass.unwrap(callbackResult);
+                if (unwrappedResult) {
                   filteredResult.push(val);
                 }
               });
             } else if (type === 'set') {
               let index = 0;
               originValue.forEach(val => {
-                if (filterFn(val, index++, originValue)) {
+                const wrappedValue = ass.wrap(val);
+                const callbackResult = filterFn(wrappedValue, index++, ass.wrap(originValue));
+                const unwrappedResult = ass.unwrap(callbackResult);
+                if (unwrappedResult) {
                   filteredResult.push(val);
                 }
               });
             } else if (type === 'string') {
               for (let i = 0; i < originValue.length; i++) {
-                if (filterFn(originValue[i], i, originValue)) {
+                const wrappedValue = ass.wrap(originValue[i]);
+                const callbackResult = filterFn(wrappedValue, i, ass.wrap(originValue));
+                const unwrappedResult = ass.unwrap(callbackResult);
+                if (unwrappedResult) {
                   filteredResult.push(originValue[i]);
                 }
               }
@@ -778,7 +825,10 @@ export function filter(ass, op, args) {
               const keys = Object.keys(originValue);
               for (let i = 0; i < keys.length; i++) {
                 const key = keys[i];
-                if (filterFn(originValue[key], key, originValue)) {
+                const wrappedValue = ass.wrap(originValue[key]);
+                const callbackResult = filterFn(wrappedValue, key, ass.wrap(originValue));
+                const unwrappedResult = ass.unwrap(callbackResult);
+                if (unwrappedResult) {
                   filteredResult.push(originValue[key]);
                 }
               }
@@ -815,7 +865,7 @@ export function filter(ass, op, args) {
     });
 
     return resultAssociation;
-  };
+  }
 }
 
 /**
@@ -1206,14 +1256,14 @@ export function every(ass, op, args) {
                   break;
                 }
               }
-            } else if (typeof originValue === 'string') {
+            } else if (type === 'string') {
               for (let i = 0; i < originValue.length; i++) {
                 if (!predicateFn(originValue[i], i, originValue)) {
                   everyResult = false;
                   break;
                 }
               }
-            } else if (typeof originValue === 'object') {
+            } else if (type === 'object') {
               const keys = Object.keys(originValue);
               for (let i = 0; i < keys.length; i++) {
                 const key = keys[i];
@@ -1609,9 +1659,9 @@ export function join(ass, op, args) {
               newResult = Array.from(originValue.values()).join(sep);
             } else if (originValue instanceof Set) {
               newResult = Array.from(originValue).join(sep);
-            } else if (typeof originValue === 'string') {
+            } else if (type === 'string') {
               newResult = originValue.split('').join(sep);
-            } else if (typeof originValue === 'object') {
+            } else if (type === 'object') {
               newResult = Object.values(originValue).join(sep);
             } else {
               newResult = String(originValue);
