@@ -84,13 +84,26 @@ export function get(ass, op, args) {
  * Выполняет перебор элементов коллекции или свойств объекта
  * @param {Association} ass - Экземпляр Association
  * @param {string} op - Операция ('get', 'apply')
- * @param {Function} [callback] - функция обратного вызова (value, key, collection)
+ * @param {Array} args - Аргументы вызова (callback)
  * @returns {Association} - Исходный экземпляр Association
  */
-export function forEach(ass, op) {
+export function forEach(ass, op, args) {
   if (op !== 'get' && op !== 'apply') return;
 
-  return function(callback) {
+  if (op === 'get') {
+    // Возвращаем кешированную функцию из temp или создаем новую
+    return ass.temp.forEach = ass.temp.forEach || ((callback) =>
+      forEach(ass, 'apply', [callback])
+    );
+  } else if (op === 'apply') {
+    // Получаем callback из аргументов и применяем unwrap
+    const callback = ass.unwrap(args[0]);
+
+    // Проверяем, что callback является функцией
+    if (typeof callback !== 'function') {
+      throw new Error('callback must be a function');
+    }
+
     const value = ass.this;
 
     if (value === null || value === undefined) {
@@ -99,27 +112,27 @@ export function forEach(ass, op) {
 
     if (Array.isArray(value)) {
       for (let i = 0; i < value.length; i++) {
-        callback(value[i], i, value);
+        callback(ass.wrap(value[i]), i, ass.wrap(value));
       }
     } else if (value instanceof Map) {
-      value.forEach((val, key) => callback(val, key, value));
+      value.forEach((val, key) => callback(ass.wrap(val), key, ass.wrap(value)));
     } else if (value instanceof Set) {
       let index = 0;
-      value.forEach(val => callback(val, index++, value));
+      value.forEach(val => callback(ass.wrap(val), index++, ass.wrap(value)));
     } else if (typeof value === 'string') {
       for (let i = 0; i < value.length; i++) {
-        callback(value[i], i, value);
+        callback(ass.wrap(value[i]), i, ass.wrap(value));
       }
     } else if (typeof value === 'object') {
       const keys = Object.keys(value);
       for (let i = 0; i < keys.length; i++) {
         const key = keys[i];
-        callback(value[key], key, value);
+        callback(ass.wrap(value[key]), key, ass.wrap(value));
       }
     }
 
     return ass;
-  };
+  }
 }
 
 /**

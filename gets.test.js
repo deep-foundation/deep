@@ -12,7 +12,8 @@ test('forEach для разных типов данных', async (t) => {
     const array = [1, 2, 3];
     const result = [];
     deep(array).forEach((value, index) => {
-      result.push({ value, index });
+      assert.ok(value instanceof Association, 'Значение должно быть экземпляром Association');
+      result.push({ value: value.this, index });
     });
     assert.deepStrictEqual(result, [
       { value: 1, index: 0 },
@@ -25,7 +26,8 @@ test('forEach для разных типов данных', async (t) => {
     const obj = { a: 1, b: 2, c: 3 };
     const result = [];
     deep(obj).forEach((value, key) => {
-      result.push({ value, key });
+      assert.ok(value instanceof Association, 'Значение должно быть экземпляром Association');
+      result.push({ value: value.this, key });
     });
     assert.deepStrictEqual(result, [
       { value: 1, key: 'a' },
@@ -38,7 +40,8 @@ test('forEach для разных типов данных', async (t) => {
     const str = 'abc';
     const result = [];
     deep(str).forEach((value, index) => {
-      result.push({ value, index });
+      assert.ok(value instanceof Association, 'Значение должно быть экземпляром Association');
+      result.push({ value: value.this, index });
     });
     assert.deepStrictEqual(result, [
       { value: 'a', index: 0 },
@@ -51,7 +54,8 @@ test('forEach для разных типов данных', async (t) => {
     const map = new Map([['a', 1], ['b', 2], ['c', 3]]);
     const result = [];
     deep(map).forEach((value, key) => {
-      result.push({ value, key });
+      assert.ok(value instanceof Association, 'Значение должно быть экземпляром Association');
+      result.push({ value: value.this, key });
     });
     assert.deepStrictEqual(result, [
       { value: 1, key: 'a' },
@@ -64,13 +68,23 @@ test('forEach для разных типов данных', async (t) => {
     const set = new Set([1, 2, 3]);
     const result = [];
     deep(set).forEach((value, index) => {
-      result.push({ value, index });
+      assert.ok(value instanceof Association, 'Значение должно быть экземпляром Association');
+      result.push({ value: value.this, index });
     });
     assert.deepStrictEqual(result, [
       { value: 1, index: 0 },
       { value: 2, index: 1 },
       { value: 3, index: 2 }
     ]);
+  });
+
+  await t.test('Для коллекции', () => {
+    const set = new Set([1, 2, 3]);
+    let collection;
+    deep(set).forEach((value, index, coll) => {
+      collection = coll;
+    });
+    assert.ok(collection instanceof Association, 'Коллекция должна быть экземпляром Association');
   });
 
   await t.test('Для null и undefined', () => {
@@ -85,6 +99,20 @@ test('forEach для разных типов данных', async (t) => {
       result2.push(value);
     });
     assert.deepStrictEqual(result2, []);
+  });
+
+  await t.test('Проверка unwrap с callback', () => {
+    const array = [1, 2, 3];
+    const result = [];
+    const wrappedCallback = deep((value, index) => {
+      result.push({ value: value.this, index });
+    });
+    deep(array).forEach(wrappedCallback);
+    assert.deepStrictEqual(result, [
+      { value: 1, index: 0 },
+      { value: 2, index: 1 },
+      { value: 3, index: 2 }
+    ]);
   });
 });
 
