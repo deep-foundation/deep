@@ -494,8 +494,6 @@ export function filter(ass, op, args) {
         // Создаем обработчик событий change для автоматического обновления
         // Подписываемся на событие change у origin
         const offChange = origin.on('change', (event, meta) => {
-          console.log(`Filter(${ass.temp.method}) получил событие от ${origin.temp?.method || 'unknown'}, operation: ${event?.detail?.operation || 'unknown'}`);
-
           // Проверяем наличие детальной информации и метаданных
           const detail = event?.detail;
           const eventMethod = meta?.method;
@@ -538,8 +536,6 @@ export function filter(ass, op, args) {
                   // Всегда вызываем событие change независимо от наличия новых элементов
                   // чтобы цепочка дальше получила обновление
                   if (ass.emit) {
-                    console.log(`Вызываем emit в ${method} ${operation || 'update'} для ${JSON.stringify(ass.this)}`);
-
                     ass.emit('change', {
                       origin: origin,
                       reason: 'track',
@@ -599,8 +595,6 @@ export function filter(ass, op, args) {
             const filteredResult = [];
             const previousResult = [...ass.this]; // Сохраняем текущий результат
 
-            console.log(`performFullRecalculation для ${method}, origin: ${JSON.stringify(originValue)}, current: ${JSON.stringify(previousResult)}`);
-
             if (type === 'array') {
               for (let i = 0; i < originValue.length; i++) {
                 if (filterFn(originValue[i], i, originValue)) {
@@ -646,8 +640,6 @@ export function filter(ass, op, args) {
 
               // Генерируем событие изменения при изменении результата
               if (ass.emit) {
-                console.log(`Вызываем emit в ${method} ${operation || 'update'} для ${JSON.stringify(ass.this)}`);
-
                 ass.emit('change', {
                   origin: origin,
                   reason: 'track',
@@ -656,9 +648,6 @@ export function filter(ass, op, args) {
                   detail: event?.detail,
                   method: meta?.method || event?.detail?.operation || 'update'
                 });
-
-                // Отладочный вывод
-                console.log('Filter generated change event', event?.detail?.operation);
               }
             }
           }

@@ -171,7 +171,11 @@ export class Events {
         } catch (error) {
           // Предотвращаем прерывание цепочки вызовов при ошибке
           // в одном из обработчиков
-          console.error(`Ошибка в обработчике события ${eventType}:`, error);
+          // Вместо логирования в консоль генерируем событие 'error'
+          this.emit('error', {
+            originalEvent: eventType,
+            error: error
+          });
         }
       });
     }

@@ -54,10 +54,7 @@ function recalculateResult(result) {
   const method = result.temp.method;
   const origins = result.origins;
 
-  console.log(`Пересчитываем результат метода ${method} для ${origins.length} истоков`);
-
   if (!method || !origins || origins.length === 0) {
-    console.log('Недостаточно данных для пересчета');
     return;
   }
 
@@ -79,7 +76,6 @@ function recalculateResult(result) {
       // Сортируем и обновляем результат
       const sortedArray = Array.from(resultSet).sort((a, b) => a - b);
       result.this = new Set(sortedArray);
-      console.log(`Пересчитан результат difference: ${Array.from(result.this)}`);
     } else {
       // Аналогично для Map
       const resultMap = new Map();
@@ -99,7 +95,6 @@ function recalculateResult(result) {
       }
 
       result.this = resultMap;
-      console.log(`Пересчитан результат difference для Map: ${Array.from(result.this.entries())}`);
     }
   } else if (method === 'intersection') {
     if (origins[0].this.isArray || origins[0].this.isSet) {
@@ -117,7 +112,6 @@ function recalculateResult(result) {
       // Сортируем и обновляем результат
       const sortedArray = Array.from(resultSet).sort((a, b) => a - b);
       result.this = new Set(sortedArray);
-      console.log(`Пересчитан результат intersection: ${Array.from(result.this)}`);
     } else {
       // Аналогично для Map
       const resultMap = new Map();
@@ -141,7 +135,6 @@ function recalculateResult(result) {
       }
 
       result.this = resultMap;
-      console.log(`Пересчитан результат intersection для Map: ${Array.from(result.this.entries())}`);
     }
   } else if (method === 'symmetricDifference') {
     if (origins[0].this.isArray || origins[0].this.isSet) {
@@ -168,7 +161,6 @@ function recalculateResult(result) {
       // Сортируем и обновляем результат
       const sortedArray = Array.from(resultSet).sort((a, b) => a - b);
       result.this = new Set(sortedArray);
-      console.log(`Пересчитан результат symmetricDifference: ${Array.from(result.this)}`);
     } else {
       // Аналогично для Map
       const countMap = new Map();
@@ -195,7 +187,6 @@ function recalculateResult(result) {
       }
 
       result.this = resultMap;
-      console.log(`Пересчитан результат symmetricDifference для Map: ${Array.from(result.this.entries())}`);
     }
   } else if (method === 'union') {
     if (origins[0].this.isArray || origins[0].this.isSet) {
@@ -213,7 +204,6 @@ function recalculateResult(result) {
       // Сортируем и обновляем результат
       const sortedArray = Array.from(resultSet).sort((a, b) => a - b);
       result.this = new Set(sortedArray);
-      console.log(`Пересчитан результат union: ${Array.from(result.this)}`);
     } else {
       // Аналогично для Map, последний исток имеет приоритет для значений
       const resultMap = new Map();
@@ -228,7 +218,6 @@ function recalculateResult(result) {
       }
 
       result.this = resultMap;
-      console.log(`Пересчитан результат union для Map: ${Array.from(result.this.entries())}`);
     }
   }
 
@@ -430,8 +419,6 @@ export function difference(ass, op, args) {
 
           // Создаем обработчик изменений для всех истоков
           const updateHandler = (origin, event, meta) => {
-            console.log(`Получено событие в difference от ${origin?.temp?.method || 'неизвестно'}, операция: ${event?.detail?.operation || 'неизвестно'}`);
-
             // Вместо точечных обновлений делаем полный пересчет для надежности
             recalculateResult(result);
 
@@ -497,8 +484,6 @@ export function difference(ass, op, args) {
 
           // Создаем обработчик изменений для всех истоков
           const updateHandler = (origin, event, meta) => {
-            console.log(`Получено событие в difference от ${origin?.temp?.method || 'неизвестно'}, операция: ${event?.detail?.operation || 'неизвестно'}`);
-
             // Вместо точечных обновлений делаем полный пересчет для надежности
             recalculateResult(resultAss);
 
@@ -569,8 +554,6 @@ export function intersection(ass, op, args) {
 
           // Создаем обработчик изменений для всех истоков
           const updateHandler = (origin, event, meta) => {
-            console.log(`Получено событие в intersection от ${origin?.temp?.method || 'неизвестно'}, операция: ${event?.detail?.operation || 'неизвестно'}`);
-
             // Вместо точечных обновлений делаем полный пересчет для надежности
             recalculateResult(result);
 
@@ -609,8 +592,6 @@ export function intersection(ass, op, args) {
 
           // Создаем обработчик изменений для всех истоков
           const updateHandler = (origin, event, meta) => {
-            console.log(`Получено событие в intersection от ${origin?.temp?.method || 'неизвестно'}, операция: ${event?.detail?.operation || 'неизвестно'}`);
-
             // Вместо точечных обновлений делаем полный пересчет для надежности
             recalculateResult(resultAss);
 
@@ -695,8 +676,6 @@ export function symmetricDifference(ass, op, args) {
 
           // Создаем обработчик изменений для всех истоков
           const updateHandler = (origin, event, meta) => {
-            console.log(`Получено событие в symmetricDifference от ${origin?.temp?.method || 'неизвестно'}, операция: ${event?.detail?.operation || 'неизвестно'}`);
-
             // Вместо точечных обновлений делаем полный пересчет для надежности
             recalculateResult(result);
 
@@ -774,8 +753,6 @@ export function symmetricDifference(ass, op, args) {
 
           // Создаем обработчик изменений для всех истоков
           const updateHandler = (origin, event, meta) => {
-            console.log(`Получено событие в symmetricDifference от ${origin?.temp?.method || 'неизвестно'}, операция: ${event?.detail?.operation || 'неизвестно'}`);
-
             // Вместо точечных обновлений делаем полный пересчет для надежности
             recalculateResult(resultAss);
 
@@ -868,8 +845,6 @@ export function union(ass, op, args) {
 
           // Создаем обработчик изменений для всех истоков
           const updateHandler = (origin, event, meta) => {
-            console.log(`Получено событие в union от ${origin?.temp?.method || 'неизвестно'}, операция: ${event?.detail?.operation || 'неизвестно'}`);
-
             // Вместо точечных обновлений делаем полный пересчет для надежности
             recalculateResult(result);
 
@@ -903,8 +878,6 @@ export function union(ass, op, args) {
 
           // Создаем обработчик изменений для всех истоков
           const updateHandler = (origin, event, meta) => {
-            console.log(`Получено событие в union от ${origin?.temp?.method || 'неизвестно'}, операция: ${event?.detail?.operation || 'неизвестно'}`);
-
             // Вместо точечных обновлений делаем полный пересчет для надежности
             recalculateResult(resultAss);
 
