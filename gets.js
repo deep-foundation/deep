@@ -450,8 +450,46 @@ export function map(ass, op, args) {
               case 'unshift':
                 // Обработка события unshift - добавление элементов в начало и сдвиг существующих
                 if (detail.items && Array.isArray(detail.items)) {
-                  // Для простоты делаем полное перевычисление, так как все индексы меняются
-                  performFullRecalculation();
+                  // Получаем исходный массив
+                  const originArray = origin.this;
+                  const newItems = [];
+
+                  // Преобразуем новые элементы
+                  for (let i = 0; i < detail.items.length; i++) {
+                    const wrappedValue = ass.wrap(detail.items[i]);
+                    const wrappedOriginal = ass.wrap(originArray);
+                    const wrappedResult = transformer(wrappedValue, i, wrappedOriginal);
+                    const transformedValue = ass.unwrap(wrappedResult);
+                    newItems.push(transformedValue);
+                  }
+
+                  // Обновляем индексы существующих элементов
+                  // Сдвигаем существующие элементы вправо для освобождения места для новых
+                  for (let i = ass.this.length - 1; i >= 0; i--) {
+                    ass.this[i + detail.items.length] = ass.this[i];
+                  }
+
+                  // Вставляем новые элементы в начало
+                  for (let i = 0; i < newItems.length; i++) {
+                    ass.this[i] = newItems[i];
+                  }
+
+                  // Генерируем событие изменения
+                  if (ass.emit) {
+                    ass.emit('change', {
+                      origin: origin,
+                      reason: 'track',
+                      prev: event?.prev,
+                      next: ass.this,
+                      detail: {
+                        operation: 'unshift',
+                        items: newItems,
+                        prevLength: ass.this.length - newItems.length,
+                        currentLength: ass.this.length
+                      },
+                      method: 'unshift'
+                    });
+                  }
                 } else {
                   performFullRecalculation();
                 }
@@ -751,6 +789,289 @@ export function filter(ass, op, args) {
                   performFullRecalculation();
                 }
                 break;
+              case 'add':
+                // Для add проверяем новый элемент через предикат
+                if (detail.key !== undefined && detail.value !== undefined) {
+                  const originValue = origin.this;
+                  const wrappedValue = ass.wrap(detail.value);
+                  const wrappedCollection = ass.wrap(originValue);
+                  const callbackResult = filterFn(wrappedValue, detail.key, wrappedCollection);
+                  const unwrappedResult = ass.unwrap(callbackResult);
+
+                  // Сохраняем текущий массив для события change
+                  const previousResult = [...ass.this];
+
+                  // Если элемент проходит фильтр, добавляем его
+                  if (unwrappedResult) {
+                    ass.this.push(detail.value);
+
+                    // Генерируем событие изменения
+                    if (ass.emit) {
+                      ass.emit('change', {
+                        origin: origin,
+                        reason: 'track',
+                        prev: { this: previousResult },
+                        next: { this: ass.this },
+                        detail: {
+                          operation: 'add',
+                          key: detail.key,
+                          value: detail.value
+                        },
+                        method: 'add'
+                      });
+                    }
+                  }
+                } else {
+                  performFullRecalculation();
+                }
+                break;
+
+              case 'delete':
+                // Удаляем элемент из результата если он там был
+                if (detail.key !== undefined || detail.position !== undefined) {
+                  const position = detail.position;
+                  let indexToRemove = -1;
+
+                  // Для массивов удаляем элемент по позиции
+                  if (position !== undefined && position < ass.this.length) {
+                    indexToRemove = position;
+                  }
+                  // Для объектов и других коллекций ищем по ключу
+                  else if (detail.key !== undefined) {
+                    // Находим индекс в отфильтрованном массиве, который соответствует ключу
+                    // Сложно определить без сохранения маппинга ключ->индекс, поэтому делаем пересчет
+                    performFullRecalculation();
+                    return;
+                  }
+
+                  if (indexToRemove !== -1) {
+                    // Сохраняем текущий массив для события change
+                    const previousResult = [...ass.this];
+
+                    // Удаляем элемент
+                    ass.this.splice(indexToRemove, 1);
+
+                    // Генерируем событие изменения
+                    if (ass.emit) {
+                      ass.emit('change', {
+                        origin: origin,
+                        reason: 'track',
+                        prev: { this: previousResult },
+                        next: { this: ass.this },
+                        detail: {
+                          operation: 'delete',
+                          position: indexToRemove
+                        },
+                        method: 'delete'
+                      });
+                    }
+                  } else {
+                    // Не нашли элемент для удаления
+                    performFullRecalculation();
+                  }
+                } else {
+                  performFullRecalculation();
+                }
+                break;
+
+              case 'set':
+                // Перепроверяем измененный элемент через предикат
+                if ((detail.key !== undefined || detail.position !== undefined) && detail.value !== undefined) {
+                  const originValue = origin.this;
+                  const position = detail.position;
+                  const key = detail.key;
+                  const wrappedValue = ass.wrap(detail.value);
+                  const wrappedCollection = ass.wrap(originValue);
+                  const callbackResult = filterFn(wrappedValue, key !== undefined ? key : position, wrappedCollection);
+                  const unwrappedResult = ass.unwrap(callbackResult);
+
+                  // Сохраняем текущий массив для события change
+                  const previousResult = [...ass.this];
+                  let hasChanges = false;
+
+                  if (position !== undefined && position < ass.this.length) {
+                    // Элемент был в результате - обновляем или удаляем
+                    if (unwrappedResult) {
+                      // Обновляем значение
+                      ass.this[position] = detail.value;
+                    } else {
+                      // Удаляем элемент, так как он больше не проходит фильтр
+                      ass.this.splice(position, 1);
+                    }
+                    hasChanges = true;
+                  } else if (detail.isNewProperty && unwrappedResult) {
+                    // Новый элемент, который проходит фильтр - добавляем
+                    ass.this.push(detail.value);
+                    hasChanges = true;
+                  }
+
+                  if (hasChanges && ass.emit) {
+                    ass.emit('change', {
+                      origin: origin,
+                      reason: 'track',
+                      prev: { this: previousResult },
+                      next: { this: ass.this },
+                      detail: {
+                        operation: 'set',
+                        key: key,
+                        position: position,
+                        value: detail.value
+                      },
+                      method: 'set'
+                    });
+                  } else if (!hasChanges) {
+                    performFullRecalculation();
+                  }
+                } else {
+                  performFullRecalculation();
+                }
+                break;
+
+              case 'remove':
+                // Удаляем элемент из результата если он там был
+                if (detail.value !== undefined) {
+                  // Ищем индекс элемента в результате
+                  const indexToRemove = ass.this.findIndex(item =>
+                    JSON.stringify(item) === JSON.stringify(detail.value));
+
+                  if (indexToRemove !== -1) {
+                    // Сохраняем текущий массив для события change
+                    const previousResult = [...ass.this];
+
+                    // Удаляем элемент
+                    ass.this.splice(indexToRemove, 1);
+
+                    // Генерируем событие изменения
+                    if (ass.emit) {
+                      ass.emit('change', {
+                        origin: origin,
+                        reason: 'track',
+                        prev: { this: previousResult },
+                        next: { this: ass.this },
+                        detail: {
+                          operation: 'remove',
+                          position: indexToRemove,
+                          value: detail.value
+                        },
+                        method: 'remove'
+                      });
+                    }
+                  } else {
+                    // Не нашли элемент для удаления
+                    performFullRecalculation();
+                  }
+                } else {
+                  performFullRecalculation();
+                }
+                break;
+
+              case 'pop':
+                // Удаляем последний элемент если он был в результате
+                if (ass.this.length > 0) {
+                  // Сохраняем текущий массив для события change
+                  const previousResult = [...ass.this];
+
+                  // Удаляем последний элемент
+                  ass.this.pop();
+
+                  // Генерируем событие изменения
+                  if (ass.emit) {
+                    ass.emit('change', {
+                      origin: origin,
+                      reason: 'track',
+                      prev: { this: previousResult },
+                      next: { this: ass.this },
+                      detail: {
+                        operation: 'pop',
+                        prevLength: previousResult.length,
+                        currentLength: ass.this.length
+                      },
+                      method: 'pop'
+                    });
+                  }
+                } else {
+                  performFullRecalculation();
+                }
+                break;
+
+              case 'shift':
+                // Удаляем первый элемент если он был в результате
+                if (ass.this.length > 0) {
+                  // Сохраняем текущий массив для события change
+                  const previousResult = [...ass.this];
+
+                  // Удаляем первый элемент
+                  ass.this.shift();
+
+                  // Генерируем событие изменения
+                  if (ass.emit) {
+                    ass.emit('change', {
+                      origin: origin,
+                      reason: 'track',
+                      prev: { this: previousResult },
+                      next: { this: ass.this },
+                      detail: {
+                        operation: 'shift',
+                        prevLength: previousResult.length,
+                        currentLength: ass.this.length
+                      },
+                      method: 'shift'
+                    });
+                  }
+                } else {
+                  performFullRecalculation();
+                }
+                break;
+
+              case 'unshift':
+                // Проверяем новые элементы через предикат, добавляем в начало если проходят
+                if (detail.items && Array.isArray(detail.items)) {
+                  const originValue = origin.this;
+                  const newFilteredValues = [];
+
+                  // Проверяем новые элементы через функцию фильтрации
+                  for (let i = 0; i < detail.items.length; i++) {
+                    const newValue = detail.items[i];
+
+                    // Если элемент проходит фильтр, добавляем его
+                    const wrappedValue = ass.wrap(newValue);
+                    const wrappedCollection = ass.wrap(originValue);
+                    const callbackResult = filterFn(wrappedValue, i, wrappedCollection);
+                    const unwrappedResult = ass.unwrap(callbackResult);
+                    if (unwrappedResult) {
+                      newFilteredValues.push(newValue);
+                    }
+                  }
+
+                  if (newFilteredValues.length > 0) {
+                    // Сохраняем текущий массив для события change
+                    const previousResult = [...ass.this];
+
+                    // Добавляем отфильтрованные элементы в начало результата
+                    ass.this.unshift(...newFilteredValues);
+
+                    // Генерируем событие изменения
+                    if (ass.emit) {
+                      ass.emit('change', {
+                        origin: origin,
+                        reason: 'track',
+                        prev: { this: previousResult },
+                        next: { this: ass.this },
+                        detail: {
+                          operation: 'unshift',
+                          items: newFilteredValues,
+                          prevLength: previousResult.length,
+                          currentLength: ass.this.length
+                        },
+                        method: 'unshift'
+                      });
+                    }
+                  }
+                } else {
+                  performFullRecalculation();
+                }
+                break;
+
               default:
                 // Для остальных операций делаем полное перевычисление
                 performFullRecalculation();
@@ -1075,8 +1396,156 @@ export function reduce(ass, op, args) {
             return;
           }
 
-          // Для других случаев - полное перевычисление
-          performFullRecalculation();
+          // Точечное обновление результата вместо полного перевычисления
+          // Проверяем наличие детальной информации и метаданных
+          const detail = event?.detail;
+          const eventMethod = meta?.method;
+          const operation = detail?.operation;
+
+          if (operation) {
+            const callback = ass.temp.callback;
+            const hasInitialValue = ass.temp.hasInitialValue;
+
+            switch (operation) {
+              case 'add':
+              case 'push':
+                // Для операций добавления элемента, если аккумулятор - это результат суммирования
+                if (callback.toString().includes('acc + x') &&
+                    typeof ass.this === 'number' &&
+                    detail.value !== undefined &&
+                    typeof detail.value === 'number') {
+
+                  // Для арифметических операций можно просто добавить новое значение к аккумулятору
+                  const prevValue = ass.this;
+                  ass.this += detail.value;
+
+                  // Генерируем событие изменения
+                  if (ass.emit) {
+                    ass.emit('change', {
+                      origin: origin,
+                      reason: 'track',
+                      prev: prevValue,
+                      next: ass.this,
+                      detail: detail,
+                      method: operation
+                    });
+                  }
+                } else if (callback.toString().includes('acc.concat') &&
+                           Array.isArray(ass.this) &&
+                           detail.value !== undefined) {
+
+                  // Для операции конкатенации можно просто добавить новый элемент
+                  const prevValue = [...ass.this];
+                  ass.this = [...ass.this, detail.value];
+
+                  // Генерируем событие изменения
+                  if (ass.emit) {
+                    ass.emit('change', {
+                      origin: origin,
+                      reason: 'track',
+                      prev: prevValue,
+                      next: ass.this,
+                      detail: detail,
+                      method: operation
+                    });
+                  }
+                } else {
+                  performFullRecalculation();
+                }
+                break;
+
+              case 'delete':
+              case 'pop':
+              case 'shift':
+                // Для числовых массивов и операции вычитания элемента
+                if (callback.toString().includes('acc - x') &&
+                    typeof ass.this === 'number' &&
+                    detail.value !== undefined &&
+                    typeof detail.value === 'number') {
+
+                  const prevValue = ass.this;
+                  ass.this -= detail.value;
+
+                  // Генерируем событие изменения
+                  if (ass.emit) {
+                    ass.emit('change', {
+                      origin: origin,
+                      reason: 'track',
+                      prev: prevValue,
+                      next: ass.this,
+                      detail: detail,
+                      method: operation
+                    });
+                  }
+                } else {
+                  performFullRecalculation();
+                }
+                break;
+
+              case 'unshift':
+                // Для операции добавления в начало массива
+                if (callback.toString().includes('acc + x') &&
+                    typeof ass.this === 'number' &&
+                    detail.items &&
+                    Array.isArray(detail.items) &&
+                    detail.items.every(item => typeof item === 'number')) {
+
+                  // Для арифметических операций можно просто суммировать новые значения
+                  const prevValue = ass.this;
+                  const sum = detail.items.reduce((sum, val) => sum + val, 0);
+                  ass.this += sum;
+
+                  // Генерируем событие изменения
+                  if (ass.emit) {
+                    ass.emit('change', {
+                      origin: origin,
+                      reason: 'track',
+                      prev: prevValue,
+                      next: ass.this,
+                      detail: detail,
+                      method: operation
+                    });
+                  }
+                } else if (callback.toString().includes('acc.concat') &&
+                           Array.isArray(ass.this) &&
+                           detail.items &&
+                           Array.isArray(detail.items)) {
+
+                  // Для операции конкатенации можно добавить новые элементы
+                  const prevValue = [...ass.this];
+                  ass.this = [...detail.items, ...ass.this];
+
+                  // Генерируем событие изменения
+                  if (ass.emit) {
+                    ass.emit('change', {
+                      origin: origin,
+                      reason: 'track',
+                      prev: prevValue,
+                      next: ass.this,
+                      detail: detail,
+                      method: operation
+                    });
+                  }
+                } else {
+                  performFullRecalculation();
+                }
+                break;
+
+              case 'set':
+                // Операция set сложно обрабатывать точечно, так как она может менять значение любого элемента
+                // Полное перевычисление будет надежнее
+                performFullRecalculation();
+                break;
+
+              default:
+                // Для других операций делаем полное перевычисление
+                performFullRecalculation();
+                break;
+            }
+          } else {
+            // Для других случаев - полное перевычисление
+            performFullRecalculation();
+          }
 
           // Функция для полного перевычисления результата
           function performFullRecalculation() {

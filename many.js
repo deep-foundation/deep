@@ -419,11 +419,226 @@ export function difference(ass, op, args) {
 
           // Создаем обработчик изменений для всех истоков
           const updateHandler = (origin, event, meta) => {
-            // Вместо точечных обновлений делаем полный пересчет для надежности
-            recalculateResult(result);
+            // Проверяем наличие детальной информации
+            const detail = event?.detail;
+            const operation = detail?.operation;
 
-            // Генерируем событие изменения
-            if (result.emit) {
+            // Определяем, является ли источник изменений первым истоком (основным)
+            const isFirstOrigin = origin === ass.origins[0];
+
+            if (operation) {
+              switch (operation) {
+                case 'add':
+                  if (detail.value !== undefined) {
+                    const newValue = detail.value;
+
+                    if (isFirstOrigin) {
+                      // Элемент добавлен в первый исток (A)
+                      // Проверяем его отсутствие во всех других истоках (B, C, ...)
+                      let existsInOtherOrigins = false;
+
+                      for (let i = 1; i < ass.origins.length; i++) {
+                        const otherOrigin = ass.origins[i];
+                        const otherSet = toSet(otherOrigin.this);
+
+                        if (otherSet.has(newValue)) {
+                          existsInOtherOrigins = true;
+                          break;
+                        }
+                      }
+
+                      // Если элемент отсутствует во всех других истоках, добавляем его в результат
+                      if (!existsInOtherOrigins) {
+                        const resultSet = toSet(ass.this);
+
+                        if (!resultSet.has(newValue)) {
+                          // Добавляем элемент в результат
+                          if (ass.this instanceof Set) {
+                            ass.this.add(newValue);
+                          } else {
+                            // Если результат - массив или другая структура
+                            const resultArray = Array.from(ass.this);
+                            resultArray.push(newValue);
+                            resultArray.sort((a, b) => a - b); // сортируем массив
+                            ass.this = new Set(resultArray);
+                          }
+
+                          // Генерируем событие изменения
+                          if (ass.emit) {
+                            ass.emit('change', {
+                              origin: origin,
+                              reason: 'track',
+                              detail: {
+                                operation: 'add',
+                                value: newValue
+                              },
+                              method: 'add'
+                            });
+                          }
+                        }
+                      }
+                    } else {
+                      // Элемент добавлен в другой исток (B, C, ...)
+                      // Проверяем его наличие в первом истоке (A)
+                      const firstOrigin = ass.origins[0];
+                      const firstSet = toSet(firstOrigin.this);
+
+                      // Если элемент есть в первом истоке и в результате, его нужно удалить из результата
+                      if (firstSet.has(newValue)) {
+                        const resultSet = toSet(ass.this);
+
+                        if (resultSet.has(newValue)) {
+                          // Удаляем элемент из результата, так как он теперь есть в обоих наборах
+                          if (ass.this instanceof Set) {
+                            ass.this.delete(newValue);
+                          } else {
+                            // Если результат - массив или другая структура
+                            const resultArray = Array.from(ass.this);
+                            const index = resultArray.indexOf(newValue);
+                            if (index !== -1) {
+                              resultArray.splice(index, 1);
+                              ass.this = new Set(resultArray);
+                            }
+                          }
+
+                          // Генерируем событие изменения
+                          if (ass.emit) {
+                            ass.emit('change', {
+                              origin: origin,
+                              reason: 'track',
+                              detail: {
+                                operation: 'delete',
+                                value: newValue
+                              },
+                              method: 'delete'
+                            });
+                          }
+                        }
+                      }
+                    }
+                  } else {
+                    recalculateResult(result);
+                  }
+                  break;
+
+                case 'delete':
+                  if (detail.value !== undefined) {
+                    const valueToDelete = detail.value;
+
+                    if (isFirstOrigin) {
+                      // Элемент удален из первого истока (A)
+                      // Если он был в результате разности, удаляем его
+                      const resultSet = toSet(ass.this);
+
+                      if (resultSet.has(valueToDelete)) {
+                        // Удаляем элемент из результата
+                        if (ass.this instanceof Set) {
+                          ass.this.delete(valueToDelete);
+                        } else {
+                          // Если результат - массив или другая структура
+                          const resultArray = Array.from(ass.this);
+                          const index = resultArray.indexOf(valueToDelete);
+                          if (index !== -1) {
+                            resultArray.splice(index, 1);
+                            ass.this = new Set(resultArray);
+                          }
+                        }
+
+                        // Генерируем событие изменения
+                        if (ass.emit) {
+                          ass.emit('change', {
+                            origin: origin,
+                            reason: 'track',
+                            detail: {
+                              operation: 'delete',
+                              value: valueToDelete
+                            },
+                            method: 'delete'
+                          });
+                        }
+                      }
+                    } else {
+                      // Элемент удален из другого истока (B, C, ...)
+                      // Проверяем его наличие в первом истоке (A)
+                      const firstOrigin = ass.origins[0];
+                      const firstSet = toSet(firstOrigin.this);
+
+                      // Если элемент есть в первом истоке, его нужно добавить в результат
+                      if (firstSet.has(valueToDelete)) {
+                        const resultSet = toSet(ass.this);
+
+                        if (!resultSet.has(valueToDelete)) {
+                          // Добавляем элемент в результат
+                          if (ass.this instanceof Set) {
+                            ass.this.add(valueToDelete);
+                          } else {
+                            // Если результат - массив или другая структура
+                            const resultArray = Array.from(ass.this);
+                            resultArray.push(valueToDelete);
+                            resultArray.sort((a, b) => a - b); // сортируем массив
+                            ass.this = new Set(resultArray);
+                          }
+
+                          // Генерируем событие изменения
+                          if (ass.emit) {
+                            ass.emit('change', {
+                              origin: origin,
+                              reason: 'track',
+                              detail: {
+                                operation: 'add',
+                                value: valueToDelete
+                              },
+                              method: 'add'
+                            });
+                          }
+                        }
+                      }
+                    }
+                  } else {
+                    recalculateResult(result);
+                  }
+                  break;
+
+                case 'set':
+                  // Для операций set обрабатываем как комбинацию delete и add
+                  if (detail.value !== undefined && (detail.key !== undefined || detail.position !== undefined)) {
+                    // Сначала удаляем старое значение
+                    if (detail.prevValue !== undefined) {
+                      // Имитируем событие delete для старого значения
+                      const deleteEvent = {
+                        detail: {
+                          operation: 'delete',
+                          value: detail.prevValue
+                        }
+                      };
+                      updateHandler(origin, deleteEvent, meta);
+                    }
+
+                    // Затем добавляем новое значение
+                    const addEvent = {
+                      detail: {
+                        operation: 'add',
+                        value: detail.value
+                      }
+                    };
+                    updateHandler(origin, addEvent, meta);
+                  } else {
+                    recalculateResult(result);
+                  }
+                  break;
+
+                default:
+                  // Для других операций делаем полный пересчет
+                  recalculateResult(result);
+                  break;
+              }
+            } else {
+              // Если нет детальной информации, делаем полный пересчет
+              recalculateResult(result);
+            }
+
+            // Генерируем событие изменения если событие не было сгенерировано в обработчиках выше
+            if (result.emit && !event.detail) {
               result.emit('change', event, meta);
             }
           };
@@ -484,11 +699,141 @@ export function difference(ass, op, args) {
 
           // Создаем обработчик изменений для всех истоков
           const updateHandler = (origin, event, meta) => {
-            // Вместо точечных обновлений делаем полный пересчет для надежности
-            recalculateResult(resultAss);
+            // Проверяем наличие детальной информации
+            const detail = event?.detail;
+            const operation = detail?.operation;
 
-            // Генерируем событие изменения
-            if (resultAss.emit) {
+            if (operation) {
+              switch (operation) {
+                case 'add':
+                  // Обработка операции добавления элемента
+                  if (detail.value !== undefined) {
+                    const newValue = detail.value;
+                    const resultSet = toSet(ass.this);
+
+                    // В union новый элемент всегда добавляется в результат,
+                    // если его там еще нет
+                    if (!resultSet.has(newValue)) {
+                      // Добавляем элемент в результат
+                      if (ass.this instanceof Set) {
+                        ass.this.add(newValue);
+                      } else {
+                        // Если результат - массив
+                        const resultArray = Array.from(ass.this);
+                        resultArray.push(newValue);
+                        resultArray.sort((a, b) => a - b); // сортируем массив
+                        ass.this = new Set(resultArray);
+                      }
+
+                      // Генерируем событие изменения
+                      if (ass.emit) {
+                        ass.emit('change', {
+                          origin: origin,
+                          reason: 'track',
+                          detail: {
+                            operation: 'add',
+                            value: newValue
+                          },
+                          method: 'add'
+                        });
+                      }
+                    }
+                  } else {
+                    recalculateResult(resultAss);
+                  }
+                  break;
+
+                case 'delete':
+                  // Обработка операции удаления элемента
+                  if (detail.value !== undefined) {
+                    const valueToDelete = detail.value;
+                    const resultSet = toSet(ass.this);
+
+                    // Проверяем наличие элемента в других истоках
+                    let existsInAnyOtherOrigin = false;
+
+                    for (let i = 0; i < ass.origins.length; i++) {
+                      const currentOrigin = ass.origins[i];
+                      if (currentOrigin !== origin) {
+                        const originSet = toSet(currentOrigin.this);
+                        if (originSet.has(valueToDelete)) {
+                          existsInAnyOtherOrigin = true;
+                          break;
+                        }
+                      }
+                    }
+
+                    // Если элемент не существует ни в одном другом истоке,
+                    // удаляем его из результата
+                    if (!existsInAnyOtherOrigin && resultSet.has(valueToDelete)) {
+                      // Удаляем элемент из результата
+                      if (ass.this instanceof Set) {
+                        ass.this.delete(valueToDelete);
+                      } else {
+                        // Если результат - массив
+                        const resultArray = Array.from(ass.this);
+                        const indexToRemove = resultArray.indexOf(valueToDelete);
+                        if (indexToRemove !== -1) {
+                          resultArray.splice(indexToRemove, 1);
+                          ass.this = new Set(resultArray);
+                        }
+                      }
+
+                      // Генерируем событие изменения
+                      if (ass.emit) {
+                        ass.emit('change', {
+                          origin: origin,
+                          reason: 'track',
+                          detail: {
+                            operation: 'delete',
+                            value: valueToDelete
+                          },
+                          method: 'delete'
+                        });
+                      }
+                    }
+                  } else {
+                    recalculateResult(resultAss);
+                  }
+                  break;
+
+                case 'set':
+                  // Обрабатываем set как комбинацию delete и add
+                  if (detail.prevValue !== undefined && detail.value !== undefined) {
+                    // Сначала удаляем старое значение (имитируем delete)
+                    const deleteEvent = {
+                      detail: {
+                        operation: 'delete',
+                        value: detail.prevValue
+                      }
+                    };
+                    updateHandler(origin, deleteEvent, meta);
+
+                    // Затем добавляем новое значение (имитируем add)
+                    const addEvent = {
+                      detail: {
+                        operation: 'add',
+                        value: detail.value
+                      }
+                    };
+                    updateHandler(origin, addEvent, meta);
+                  } else {
+                    recalculateResult(resultAss);
+                  }
+                  break;
+
+                default:
+                  // Для других операций делаем полный пересчет
+                  recalculateResult(resultAss);
+                  break;
+              }
+            } else {
+              // Если нет детальной информации, делаем полный пересчет
+              recalculateResult(resultAss);
+            }
+
+            // Генерируем событие изменения если событие не было сгенерировано в обработчиках выше
+            if (resultAss.emit && !event.detail) {
               resultAss.emit('change', event, meta);
             }
           };
@@ -554,11 +899,114 @@ export function intersection(ass, op, args) {
 
           // Создаем обработчик изменений для всех истоков
           const updateHandler = (origin, event, meta) => {
-            // Вместо точечных обновлений делаем полный пересчет для надежности
-            recalculateResult(result);
+            // Проверяем наличие детальной информации
+            const detail = event?.detail;
+            const operation = detail?.operation;
 
-            // Генерируем событие изменения
-            if (result.emit) {
+            if (operation) {
+              switch (operation) {
+                case 'add':
+                  // Проверяем наличие нового элемента во всех истоках
+                  if (detail.value !== undefined) {
+                    const newValue = detail.value;
+                    let existsInAllOrigins = true;
+
+                    // Проверяем наличие во всех остальных истоках
+                    for (let i = 0; i < ass.origins.length; i++) {
+                      const currentOrigin = ass.origins[i];
+                      if (currentOrigin !== origin) {
+                        const originSet = toSet(currentOrigin.this);
+                        if (!originSet.has(newValue)) {
+                          existsInAllOrigins = false;
+                          break;
+                        }
+                      }
+                    }
+
+                    // Если элемент присутствует во всех истоках, добавляем его в результат
+                    if (existsInAllOrigins) {
+                      const resultSet = toSet(ass.this);
+                      if (!resultSet.has(newValue)) {
+                        // Добавляем элемент в результат
+                        if (ass.this instanceof Set) {
+                          ass.this.add(newValue);
+                        } else {
+                          // Если результат - массив
+                          const resultArray = Array.from(ass.this);
+                          resultArray.push(newValue);
+                          resultArray.sort((a, b) => a - b); // сортируем массив
+                          ass.this = new Set(resultArray);
+                        }
+
+                        // Генерируем событие изменения
+                        if (ass.emit) {
+                          ass.emit('change', {
+                            origin: origin,
+                            reason: 'track',
+                            detail: {
+                              operation: 'add',
+                              value: newValue
+                            },
+                            method: 'add'
+                          });
+                        }
+                      }
+                    }
+                  } else {
+                    recalculateResult(result);
+                  }
+                  break;
+
+                case 'delete':
+                  // Если элемент удаляется из любого истока, его нужно удалить из пересечения
+                  if (detail.value !== undefined) {
+                    const valueToDelete = detail.value;
+                    const resultSet = toSet(ass.this);
+
+                    if (resultSet.has(valueToDelete)) {
+                      // Удаляем элемент из результата
+                      if (ass.this instanceof Set) {
+                        ass.this.delete(valueToDelete);
+                      } else {
+                        // Если результат - массив или другая структура
+                        const resultArray = Array.from(ass.this);
+                        const index = resultArray.indexOf(valueToDelete);
+                        if (index !== -1) {
+                          resultArray.splice(index, 1);
+                          ass.this = new Set(resultArray);
+                        }
+                      }
+
+                      // Генерируем событие изменения
+                      if (ass.emit) {
+                        ass.emit('change', {
+                          origin: origin,
+                          reason: 'track',
+                          detail: {
+                            operation: 'delete',
+                            value: valueToDelete
+                          },
+                          method: 'delete'
+                        });
+                      }
+                    }
+                  } else {
+                    recalculateResult(result);
+                  }
+                  break;
+
+                default:
+                  // Для других операций делаем полный пересчет
+                  recalculateResult(result);
+                  break;
+              }
+            } else {
+              // Если нет детальной информации, делаем полный пересчет
+              recalculateResult(result);
+            }
+
+            // Генерируем событие изменения если событие не было сгенерировано в обработчиках выше
+            if (result.emit && !event.detail) {
               result.emit('change', event, meta);
             }
           };
@@ -573,31 +1021,117 @@ export function intersection(ass, op, args) {
       } else {
         const map1 = toMap(ass.this);
         const map2 = toMap(other);
-        const result = new Map();
+        const resultMap = new Map();
         for (const [key, value] of map1) {
           if (map2.has(key)) {
-            result.set(key, value);
+            resultMap.set(key, value);
           }
         }
 
-        const resultAss = new Association(result);
+        const result = new Association(resultMap);
         // Сохраняем оба источника в массиве origins
-        resultAss.origins = [ass, new Association(other)];
-        resultAss.temp.method = 'intersection';
+        result.origins = [ass, new Association(other)];
+        result.temp.method = 'intersection';
 
         // Добавляем локальный track с поддержкой множественных origins
-        resultAss._proxy.set('track', (ass, op) => {
+        result._proxy.set('track', (ass, op) => {
           if (op !== 'get') return;
           const track = Association._proxy.get('track').call(ass, ass, 'get');
 
           // Создаем обработчик изменений для всех истоков
           const updateHandler = (origin, event, meta) => {
-            // Вместо точечных обновлений делаем полный пересчет для надежности
-            recalculateResult(resultAss);
+            // Проверяем наличие детальной информации
+            const detail = event?.detail;
+            const operation = detail?.operation;
 
-            // Генерируем событие изменения
-            if (resultAss.emit) {
-              resultAss.emit('change', event, meta);
+            if (operation) {
+              switch (operation) {
+                case 'add':
+                  // Проверяем наличие нового элемента во всех истоках
+                  if (detail.key !== undefined && detail.value !== undefined) {
+                    const newKey = detail.key;
+                    let existsInAllOrigins = true;
+
+                    // Проверяем наличие во всех остальных истоках
+                    for (let i = 0; i < ass.origins.length; i++) {
+                      const currentOrigin = ass.origins[i];
+                      if (currentOrigin !== origin) {
+                        const originMap = toMap(currentOrigin.this);
+                        if (!originMap.has(newKey)) {
+                          existsInAllOrigins = false;
+                          break;
+                        }
+                      }
+                    }
+
+                    // Если ключ присутствует во всех истоках, добавляем его в результат
+                    if (existsInAllOrigins) {
+                      const resultMap = toMap(ass.this);
+                      if (!resultMap.has(newKey)) {
+                        // Добавляем ключ-значение в результат
+                        ass.this.set(newKey, detail.value);
+
+                        // Генерируем событие изменения
+                        if (ass.emit) {
+                          ass.emit('change', {
+                            origin: origin,
+                            reason: 'track',
+                            detail: {
+                              operation: 'add',
+                              key: newKey,
+                              value: detail.value
+                            },
+                            method: 'add'
+                          });
+                        }
+                      }
+                    }
+                  } else {
+                    recalculateResult(result);
+                  }
+                  break;
+
+                case 'delete':
+                  // Если ключ удаляется из любого истока, его нужно удалить из пересечения
+                  if (detail.key !== undefined) {
+                    const keyToDelete = detail.key;
+                    const resultMap = toMap(ass.this);
+
+                    if (resultMap.has(keyToDelete)) {
+                      // Удаляем ключ из результата
+                      ass.this.delete(keyToDelete);
+
+                      // Генерируем событие изменения
+                      if (ass.emit) {
+                        ass.emit('change', {
+                          origin: origin,
+                          reason: 'track',
+                          detail: {
+                            operation: 'delete',
+                            key: keyToDelete
+                          },
+                          method: 'delete'
+                        });
+                      }
+                    }
+                  } else {
+                    recalculateResult(result);
+                  }
+                  break;
+
+                default:
+                  // Для других операций делаем полный пересчет
+                  recalculateResult(result);
+                  break;
+              }
+            } else {
+              // Если нет детальной информации, делаем полный пересчет
+              recalculateResult(result);
+            }
+
+            // Генерируем событие изменения если событие не было сгенерировано в обработчиках выше
+            if (result.emit && !event.detail) {
+              result.emit('change', event, meta);
             }
           };
 
@@ -607,7 +1141,7 @@ export function intersection(ass, op, args) {
           return track;
         });
 
-        return resultAss;
+        return result;
       }
     };
   }
@@ -676,11 +1210,215 @@ export function symmetricDifference(ass, op, args) {
 
           // Создаем обработчик изменений для всех истоков
           const updateHandler = (origin, event, meta) => {
-            // Вместо точечных обновлений делаем полный пересчет для надежности
-            recalculateResult(result);
+            // Проверяем наличие детальной информации
+            const detail = event?.detail;
+            const operation = detail?.operation;
 
-            // Генерируем событие изменения
-            if (result.emit) {
+            if (operation) {
+              switch (operation) {
+                case 'add':
+                  // Обработка операции добавления элемента
+                  if (detail.value !== undefined) {
+                    const newValue = detail.value;
+
+                    // Проверяем наличие нового элемента в других истоках
+                    let existsInAnyOtherOrigin = false;
+
+                    for (let i = 0; i < ass.origins.length; i++) {
+                      const currentOrigin = ass.origins[i];
+                      if (currentOrigin !== origin) {
+                        const originSet = toSet(currentOrigin.this);
+                        if (originSet.has(newValue)) {
+                          existsInAnyOtherOrigin = true;
+                          break;
+                        }
+                      }
+                    }
+
+                    // Операция зависит от наличия элемента в других истоках
+                    const resultSet = toSet(ass.this);
+
+                    if (existsInAnyOtherOrigin) {
+                      // Если элемент существует в другом истоке, удаляем его из результата
+                      if (resultSet.has(newValue)) {
+                        // Удаляем элемент из результата
+                        if (ass.this instanceof Set) {
+                          ass.this.delete(newValue);
+                        } else {
+                          // Если результат - массив
+                          const resultArray = Array.from(ass.this);
+                          const indexToRemove = resultArray.indexOf(newValue);
+                          if (indexToRemove !== -1) {
+                            resultArray.splice(indexToRemove, 1);
+                            ass.this = new Set(resultArray);
+                          }
+                        }
+
+                        // Генерируем событие изменения
+                        if (ass.emit) {
+                          ass.emit('change', {
+                            origin: origin,
+                            reason: 'track',
+                            detail: {
+                              operation: 'delete',
+                              value: newValue
+                            },
+                            method: 'delete'
+                          });
+                        }
+                      }
+                    } else {
+                      // Если элемент не существует в других истоках, добавляем его в результат
+                      if (!resultSet.has(newValue)) {
+                        // Добавляем элемент в результат
+                        if (ass.this instanceof Set) {
+                          ass.this.add(newValue);
+                        } else {
+                          // Если результат - массив
+                          const resultArray = Array.from(ass.this);
+                          resultArray.push(newValue);
+                          resultArray.sort((a, b) => a - b); // сортируем массив
+                          ass.this = new Set(resultArray);
+                        }
+
+                        // Генерируем событие изменения
+                        if (ass.emit) {
+                          ass.emit('change', {
+                            origin: origin,
+                            reason: 'track',
+                            detail: {
+                              operation: 'add',
+                              value: newValue
+                            },
+                            method: 'add'
+                          });
+                        }
+                      }
+                    }
+                  } else {
+                    recalculateResult(result);
+                  }
+                  break;
+
+                case 'delete':
+                  // Обработка операции удаления элемента
+                  if (detail.value !== undefined) {
+                    const valueToDelete = detail.value;
+                    const resultSet = toSet(ass.this);
+
+                    // Проверяем наличие элемента в других истоках
+                    let existsInAnyOtherOrigin = false;
+
+                    for (let i = 0; i < ass.origins.length; i++) {
+                      const currentOrigin = ass.origins[i];
+                      if (currentOrigin !== origin) {
+                        const originSet = toSet(currentOrigin.this);
+                        if (originSet.has(valueToDelete)) {
+                          existsInAnyOtherOrigin = true;
+                          break;
+                        }
+                      }
+                    }
+
+                    if (existsInAnyOtherOrigin) {
+                      // Если элемент существует в другом истоке, добавляем его в результат
+                      if (!resultSet.has(valueToDelete)) {
+                        // Добавляем элемент в результат
+                        if (ass.this instanceof Set) {
+                          ass.this.add(valueToDelete);
+                        } else {
+                          // Если результат - массив
+                          const resultArray = Array.from(ass.this);
+                          resultArray.push(valueToDelete);
+                          resultArray.sort((a, b) => a - b); // сортируем массив
+                          ass.this = new Set(resultArray);
+                        }
+
+                        // Генерируем событие изменения
+                        if (ass.emit) {
+                          ass.emit('change', {
+                            origin: origin,
+                            reason: 'track',
+                            detail: {
+                              operation: 'add',
+                              value: valueToDelete
+                            },
+                            method: 'add'
+                          });
+                        }
+                      }
+                    } else {
+                      // Если элемент не существует в других истоках, удаляем его из результата
+                      if (resultSet.has(valueToDelete)) {
+                        // Удаляем элемент из результата
+                        if (ass.this instanceof Set) {
+                          ass.this.delete(valueToDelete);
+                        } else {
+                          // Если результат - массив
+                          const resultArray = Array.from(ass.this);
+                          const indexToRemove = resultArray.indexOf(valueToDelete);
+                          if (indexToRemove !== -1) {
+                            resultArray.splice(indexToRemove, 1);
+                            ass.this = new Set(resultArray);
+                          }
+                        }
+
+                        // Генерируем событие изменения
+                        if (ass.emit) {
+                          ass.emit('change', {
+                            origin: origin,
+                            reason: 'track',
+                            detail: {
+                              operation: 'delete',
+                              value: valueToDelete
+                            },
+                            method: 'delete'
+                          });
+                        }
+                      }
+                    }
+                  } else {
+                    recalculateResult(result);
+                  }
+                  break;
+
+                case 'set':
+                  // Обрабатываем set как комбинацию delete и add
+                  if (detail.prevValue !== undefined && detail.value !== undefined) {
+                    // Сначала удаляем старое значение (имитируем delete)
+                    const deleteEvent = {
+                      detail: {
+                        operation: 'delete',
+                        value: detail.prevValue
+                      }
+                    };
+                    updateHandler(origin, deleteEvent, meta);
+
+                    // Затем добавляем новое значение (имитируем add)
+                    const addEvent = {
+                      detail: {
+                        operation: 'add',
+                        value: detail.value
+                      }
+                    };
+                    updateHandler(origin, addEvent, meta);
+                  } else {
+                    recalculateResult(result);
+                  }
+                  break;
+
+                default:
+                  // Для других операций делаем полный пересчет
+                  recalculateResult(result);
+                  break;
+              }
+            } else {
+              // Если нет детальной информации, делаем полный пересчет
+              recalculateResult(result);
+            }
+
+            // Генерируем событие изменения если событие не было сгенерировано в обработчиках выше
+            if (result.emit && !event.detail) {
               result.emit('change', event, meta);
             }
           };
@@ -753,11 +1491,126 @@ export function symmetricDifference(ass, op, args) {
 
           // Создаем обработчик изменений для всех истоков
           const updateHandler = (origin, event, meta) => {
-            // Вместо точечных обновлений делаем полный пересчет для надежности
-            recalculateResult(resultAss);
+            // Проверяем наличие детальной информации
+            const detail = event?.detail;
+            const operation = detail?.operation;
 
-            // Генерируем событие изменения
-            if (resultAss.emit) {
+            if (operation) {
+              switch (operation) {
+                case 'add':
+                  // Обработка операции добавления ключа-значения
+                  if (detail.key !== undefined && detail.value !== undefined) {
+                    const newKey = detail.key;
+                    const resultMap = toMap(ass.this);
+
+                    // В union новый ключ всегда добавляется в результат,
+                    // если его там еще нет
+                    if (!resultMap.has(newKey)) {
+                      ass.this.set(newKey, detail.value);
+
+                      // Генерируем событие изменения
+                      if (ass.emit) {
+                        ass.emit('change', {
+                          origin: origin,
+                          reason: 'track',
+                          detail: {
+                            operation: 'add',
+                            key: newKey,
+                            value: detail.value
+                          },
+                          method: 'add'
+                        });
+                      }
+                    }
+                  } else {
+                    recalculateResult(resultAss);
+                  }
+                  break;
+
+                case 'delete':
+                  // Обработка операции удаления ключа
+                  if (detail.key !== undefined) {
+                    const keyToDelete = detail.key;
+                    const resultMap = toMap(ass.this);
+
+                    // Проверяем наличие ключа в других истоках
+                    let existsInAnyOtherOrigin = false;
+
+                    for (let i = 0; i < ass.origins.length; i++) {
+                      const currentOrigin = ass.origins[i];
+                      if (currentOrigin !== origin) {
+                        const originMap = toMap(currentOrigin.this);
+                        if (originMap.has(keyToDelete)) {
+                          existsInAnyOtherOrigin = true;
+                          break;
+                        }
+                      }
+                    }
+
+                    // Если ключ не существует ни в одном другом истоке,
+                    // удаляем его из результата
+                    if (!existsInAnyOtherOrigin && resultMap.has(keyToDelete)) {
+                      ass.this.delete(keyToDelete);
+
+                      // Генерируем событие изменения
+                      if (ass.emit) {
+                        ass.emit('change', {
+                          origin: origin,
+                          reason: 'track',
+                          detail: {
+                            operation: 'delete',
+                            key: keyToDelete
+                          },
+                          method: 'delete'
+                        });
+                      }
+                    }
+                  } else {
+                    recalculateResult(resultAss);
+                  }
+                  break;
+
+                case 'set':
+                  // Для Map операция set может как обновить существующее значение,
+                  // так и добавить новый ключ
+                  if (detail.key !== undefined && detail.value !== undefined) {
+                    const keyToSet = detail.key;
+                    const resultMap = toMap(ass.this);
+
+                    // Просто обновляем или добавляем значение в результат
+                    ass.this.set(keyToSet, detail.value);
+
+                    // Генерируем событие изменения
+                    if (ass.emit) {
+                      ass.emit('change', {
+                        origin: origin,
+                        reason: 'track',
+                        detail: {
+                          operation: 'set',
+                          key: keyToSet,
+                          value: detail.value,
+                          prevValue: resultMap.get(keyToSet)
+                        },
+                        method: 'set'
+                      });
+                    }
+                  } else {
+                    recalculateResult(resultAss);
+                  }
+                  break;
+
+                default:
+                  // Для других операций делаем полный пересчет
+                  recalculateResult(resultAss);
+                  break;
+              }
+            } else {
+              // Если нет детальной информации, делаем полный пересчет
+              recalculateResult(resultAss);
+            }
+
+            // Генерируем событие изменения если событие не было сгенерировано в обработчиках выше
+            if (resultAss.emit && !event.detail) {
               resultAss.emit('change', event, meta);
             }
           };
@@ -845,11 +1698,141 @@ export function union(ass, op, args) {
 
           // Создаем обработчик изменений для всех истоков
           const updateHandler = (origin, event, meta) => {
-            // Вместо точечных обновлений делаем полный пересчет для надежности
-            recalculateResult(result);
+            // Проверяем наличие детальной информации
+            const detail = event?.detail;
+            const operation = detail?.operation;
 
-            // Генерируем событие изменения
-            if (result.emit) {
+            if (operation) {
+              switch (operation) {
+                case 'add':
+                  // Обработка операции добавления элемента
+                  if (detail.value !== undefined) {
+                    const newValue = detail.value;
+                    const resultSet = toSet(ass.this);
+
+                    // В union новый элемент всегда добавляется в результат,
+                    // если его там еще нет
+                    if (!resultSet.has(newValue)) {
+                      // Добавляем элемент в результат
+                      if (ass.this instanceof Set) {
+                        ass.this.add(newValue);
+                      } else {
+                        // Если результат - массив
+                        const resultArray = Array.from(ass.this);
+                        resultArray.push(newValue);
+                        resultArray.sort((a, b) => a - b); // сортируем массив
+                        ass.this = new Set(resultArray);
+                      }
+
+                      // Генерируем событие изменения
+                      if (ass.emit) {
+                        ass.emit('change', {
+                          origin: origin,
+                          reason: 'track',
+                          detail: {
+                            operation: 'add',
+                            value: newValue
+                          },
+                          method: 'add'
+                        });
+                      }
+                    }
+                  } else {
+                    recalculateResult(result);
+                  }
+                  break;
+
+                case 'delete':
+                  // Обработка операции удаления элемента
+                  if (detail.value !== undefined) {
+                    const valueToDelete = detail.value;
+                    const resultSet = toSet(ass.this);
+
+                    // Проверяем наличие элемента в других истоках
+                    let existsInAnyOtherOrigin = false;
+
+                    for (let i = 0; i < ass.origins.length; i++) {
+                      const currentOrigin = ass.origins[i];
+                      if (currentOrigin !== origin) {
+                        const originSet = toSet(currentOrigin.this);
+                        if (originSet.has(valueToDelete)) {
+                          existsInAnyOtherOrigin = true;
+                          break;
+                        }
+                      }
+                    }
+
+                    // Если элемент не существует ни в одном другом истоке,
+                    // удаляем его из результата
+                    if (!existsInAnyOtherOrigin && resultSet.has(valueToDelete)) {
+                      // Удаляем элемент из результата
+                      if (ass.this instanceof Set) {
+                        ass.this.delete(valueToDelete);
+                      } else {
+                        // Если результат - массив
+                        const resultArray = Array.from(ass.this);
+                        const indexToRemove = resultArray.indexOf(valueToDelete);
+                        if (indexToRemove !== -1) {
+                          resultArray.splice(indexToRemove, 1);
+                          ass.this = new Set(resultArray);
+                        }
+                      }
+
+                      // Генерируем событие изменения
+                      if (ass.emit) {
+                        ass.emit('change', {
+                          origin: origin,
+                          reason: 'track',
+                          detail: {
+                            operation: 'delete',
+                            value: valueToDelete
+                          },
+                          method: 'delete'
+                        });
+                      }
+                    }
+                  } else {
+                    recalculateResult(result);
+                  }
+                  break;
+
+                case 'set':
+                  // Обрабатываем set как комбинацию delete и add
+                  if (detail.prevValue !== undefined && detail.value !== undefined) {
+                    // Сначала удаляем старое значение (имитируем delete)
+                    const deleteEvent = {
+                      detail: {
+                        operation: 'delete',
+                        value: detail.prevValue
+                      }
+                    };
+                    updateHandler(origin, deleteEvent, meta);
+
+                    // Затем добавляем новое значение (имитируем add)
+                    const addEvent = {
+                      detail: {
+                        operation: 'add',
+                        value: detail.value
+                      }
+                    };
+                    updateHandler(origin, addEvent, meta);
+                  } else {
+                    recalculateResult(result);
+                  }
+                  break;
+
+                default:
+                  // Для других операций делаем полный пересчет
+                  recalculateResult(result);
+                  break;
+              }
+            } else {
+              // Если нет детальной информации, делаем полный пересчет
+              recalculateResult(result);
+            }
+
+            // Генерируем событие изменения если событие не было сгенерировано в обработчиках выше
+            if (result.emit && !event.detail) {
               result.emit('change', event, meta);
             }
           };
@@ -878,11 +1861,126 @@ export function union(ass, op, args) {
 
           // Создаем обработчик изменений для всех истоков
           const updateHandler = (origin, event, meta) => {
-            // Вместо точечных обновлений делаем полный пересчет для надежности
-            recalculateResult(resultAss);
+            // Проверяем наличие детальной информации
+            const detail = event?.detail;
+            const operation = detail?.operation;
 
-            // Генерируем событие изменения
-            if (resultAss.emit) {
+            if (operation) {
+              switch (operation) {
+                case 'add':
+                  // Обработка операции добавления ключа-значения
+                  if (detail.key !== undefined && detail.value !== undefined) {
+                    const newKey = detail.key;
+                    const resultMap = toMap(ass.this);
+
+                    // В union новый ключ всегда добавляется в результат,
+                    // если его там еще нет
+                    if (!resultMap.has(newKey)) {
+                      ass.this.set(newKey, detail.value);
+
+                      // Генерируем событие изменения
+                      if (ass.emit) {
+                        ass.emit('change', {
+                          origin: origin,
+                          reason: 'track',
+                          detail: {
+                            operation: 'add',
+                            key: newKey,
+                            value: detail.value
+                          },
+                          method: 'add'
+                        });
+                      }
+                    }
+                  } else {
+                    recalculateResult(resultAss);
+                  }
+                  break;
+
+                case 'delete':
+                  // Обработка операции удаления ключа
+                  if (detail.key !== undefined) {
+                    const keyToDelete = detail.key;
+                    const resultMap = toMap(ass.this);
+
+                    // Проверяем наличие ключа в других истоках
+                    let existsInAnyOtherOrigin = false;
+
+                    for (let i = 0; i < ass.origins.length; i++) {
+                      const currentOrigin = ass.origins[i];
+                      if (currentOrigin !== origin) {
+                        const originMap = toMap(currentOrigin.this);
+                        if (originMap.has(keyToDelete)) {
+                          existsInAnyOtherOrigin = true;
+                          break;
+                        }
+                      }
+                    }
+
+                    // Если ключ не существует ни в одном другом истоке,
+                    // удаляем его из результата
+                    if (!existsInAnyOtherOrigin && resultMap.has(keyToDelete)) {
+                      ass.this.delete(keyToDelete);
+
+                      // Генерируем событие изменения
+                      if (ass.emit) {
+                        ass.emit('change', {
+                          origin: origin,
+                          reason: 'track',
+                          detail: {
+                            operation: 'delete',
+                            key: keyToDelete
+                          },
+                          method: 'delete'
+                        });
+                      }
+                    }
+                  } else {
+                    recalculateResult(resultAss);
+                  }
+                  break;
+
+                case 'set':
+                  // Для Map операция set может как обновить существующее значение,
+                  // так и добавить новый ключ
+                  if (detail.key !== undefined && detail.value !== undefined) {
+                    const keyToSet = detail.key;
+                    const resultMap = toMap(ass.this);
+
+                    // Просто обновляем или добавляем значение в результат
+                    ass.this.set(keyToSet, detail.value);
+
+                    // Генерируем событие изменения
+                    if (ass.emit) {
+                      ass.emit('change', {
+                        origin: origin,
+                        reason: 'track',
+                        detail: {
+                          operation: 'set',
+                          key: keyToSet,
+                          value: detail.value,
+                          prevValue: resultMap.get(keyToSet)
+                        },
+                        method: 'set'
+                      });
+                    }
+                  } else {
+                    recalculateResult(resultAss);
+                  }
+                  break;
+
+                default:
+                  // Для других операций делаем полный пересчет
+                  recalculateResult(resultAss);
+                  break;
+              }
+            } else {
+              // Если нет детальной информации, делаем полный пересчет
+              recalculateResult(resultAss);
+            }
+
+            // Генерируем событие изменения если событие не было сгенерировано в обработчиках выше
+            if (resultAss.emit && !event.detail) {
               resultAss.emit('change', event, meta);
             }
           };
