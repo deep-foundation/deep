@@ -243,50 +243,97 @@ test('every для разных типов данных', async (t) => {
 
 test('some для разных типов данных', async (t) => {
   await t.test('Для массива', () => {
-    assert.strictEqual(deep([1, 3, 6]).some(x => x % 2 === 0), true);
-    assert.strictEqual(deep([1, 3, 5]).some(x => x % 2 === 0), false);
+    const someResult1 = deep([1, 3, 6]).some(x => x % 2 === 0);
+    assert.ok(someResult1 instanceof Association, 'Результат some должен быть Association');
+    assert.strictEqual(someResult1.this, true);
+
+    const someResult2 = deep([1, 3, 5]).some(x => x % 2 === 0);
+    assert.ok(someResult2 instanceof Association, 'Результат some должен быть Association');
+    assert.strictEqual(someResult2.this, false);
   });
 
   await t.test('Для объекта', () => {
-    assert.strictEqual(deep({ a: 1, b: 4 }).some(x => x % 2 === 0), true);
-    assert.strictEqual(deep({ a: 1, b: 3 }).some(x => x % 2 === 0), false);
+    const someResult1 = deep({ a: 1, b: 4 }).some(x => x % 2 === 0);
+    assert.ok(someResult1 instanceof Association, 'Результат some должен быть Association');
+    assert.strictEqual(someResult1.this, true);
+
+    const someResult2 = deep({ a: 1, b: 3 }).some(x => x % 2 === 0);
+    assert.ok(someResult2 instanceof Association, 'Результат some должен быть Association');
+    assert.strictEqual(someResult2.this, false);
   });
 });
 
 test('find и findKey для разных типов данных', async (t) => {
   await t.test('find для массива', () => {
-    assert.strictEqual(deep([1, 2, 3]).find(x => x > 1), 2);
-    assert.strictEqual(deep([1, 2, 3]).find(x => x > 5), undefined);
+    const findResult1 = deep([1, 2, 3]).find(x => x > 1);
+    assert.ok(findResult1 instanceof Association, 'Результат find должен быть Association');
+    assert.strictEqual(findResult1.this, 2);
+
+    const findResult2 = deep([1, 2, 3]).find(x => x > 5);
+    assert.strictEqual(findResult2, undefined);
   });
 
   await t.test('findKey для массива', () => {
-    assert.strictEqual(deep([1, 2, 3]).findKey(x => x > 1), 1);
-    assert.strictEqual(deep([1, 2, 3]).findKey(x => x > 5), undefined);
+    const findKeyResult1 = deep([1, 2, 3]).findKey(x => x > 1);
+    assert.ok(findKeyResult1 instanceof Association, 'Результат findKey должен быть Association');
+    assert.strictEqual(findKeyResult1.this, 1);
+
+    const findKeyResult2 = deep([1, 2, 3]).findKey(x => x > 5);
+    assert.strictEqual(findKeyResult2, undefined);
   });
 
   await t.test('find для объекта', () => {
-    assert.strictEqual(deep({ a: 1, b: 2 }).find(x => x > 1), 2);
-    assert.strictEqual(deep({ a: 1, b: 2 }).findKey(x => x > 1), 'b');
+    const findResult = deep({ a: 1, b: 2 }).find(x => x > 1);
+    assert.ok(findResult instanceof Association, 'Результат find должен быть Association');
+    assert.strictEqual(findResult.this, 2);
+
+    const findKeyResult = deep({ a: 1, b: 2 }).findKey(x => x > 1);
+    assert.ok(findKeyResult instanceof Association, 'Результат findKey должен быть Association');
+    assert.strictEqual(findKeyResult.this, 'b');
   });
 });
 
 test('keys, values, entries для разных типов данных', async (t) => {
   await t.test('keys', () => {
-    assert.deepStrictEqual(deep([10, 20, 30]).keys(), [0, 1, 2]);
-    assert.deepStrictEqual(deep({ a: 1, b: 2 }).keys(), ['a', 'b']);
-    assert.deepStrictEqual(deep('abc').keys(), [0, 1, 2]);
+    const keysResult = deep([10, 20, 30]).keys();
+    assert.ok(keysResult instanceof Association, 'Результат keys должен быть Association');
+    assert.deepStrictEqual(keysResult.this, [0, 1, 2]);
+
+    const objKeysResult = deep({ a: 1, b: 2 }).keys();
+    assert.ok(objKeysResult instanceof Association, 'Результат keys для объекта должен быть Association');
+    assert.deepStrictEqual(objKeysResult.this, ['a', 'b']);
+
+    const strKeysResult = deep('abc').keys();
+    assert.ok(strKeysResult instanceof Association, 'Результат keys для строки должен быть Association');
+    assert.deepStrictEqual(strKeysResult.this, [0, 1, 2]);
   });
 
   await t.test('values', () => {
-    assert.deepStrictEqual(deep([10, 20, 30]).values(), [10, 20, 30]);
-    assert.deepStrictEqual(deep({ a: 1, b: 2 }).values(), [1, 2]);
-    assert.deepStrictEqual(deep('abc').values(), ['a', 'b', 'c']);
+    const valuesResult = deep([10, 20, 30]).values();
+    assert.ok(valuesResult instanceof Association, 'Результат values должен быть Association');
+    assert.deepStrictEqual(valuesResult.this, [10, 20, 30]);
+
+    const objValuesResult = deep({ a: 1, b: 2 }).values();
+    assert.ok(objValuesResult instanceof Association, 'Результат values для объекта должен быть Association');
+    assert.deepStrictEqual(objValuesResult.this, [1, 2]);
+
+    const strValuesResult = deep('abc').values();
+    assert.ok(strValuesResult instanceof Association, 'Результат values для строки должен быть Association');
+    assert.deepStrictEqual(strValuesResult.this, ['a', 'b', 'c']);
   });
 
   await t.test('entries', () => {
-    assert.deepStrictEqual(deep([10, 20]).entries(), [[0, 10], [1, 20]]);
-    assert.deepStrictEqual(deep({ a: 1, b: 2 }).entries(), [['a', 1], ['b', 2]]);
-    assert.deepStrictEqual(deep('ab').entries(), [[0, 'a'], [1, 'b']]);
+    const entriesResult = deep([10, 20]).entries();
+    assert.ok(entriesResult instanceof Association, 'Результат entries должен быть Association');
+    assert.deepStrictEqual(entriesResult.this, [[0, 10], [1, 20]]);
+
+    const objEntriesResult = deep({ a: 1, b: 2 }).entries();
+    assert.ok(objEntriesResult instanceof Association, 'Результат entries для объекта должен быть Association');
+    assert.deepStrictEqual(objEntriesResult.this, [['a', 1], ['b', 2]]);
+
+    const strEntriesResult = deep('ab').entries();
+    assert.ok(strEntriesResult instanceof Association, 'Результат entries для строки должен быть Association');
+    assert.deepStrictEqual(strEntriesResult.this, [[0, 'a'], [1, 'b']]);
   });
 });
 
