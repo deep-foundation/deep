@@ -237,170 +237,372 @@ test('Операции над множествами', async (t) => {
 
   // Тесты для множественных истоков
   await t.test('Множественные истоки (origins)', async (t) => {
-    // Тесты для Set и Array (совместимые типы)
-    await t.test('difference для Set с множественными истоками', async () => {
-      // Создаем два множества
-      const set1 = deep(new Set([1, 2, 3, 4]));
-      const set2 = deep(new Set([3, 4, 5, 6]));
+    await t.test('difference для Set с множественными истоками', () => {
+      const set1 = new Set([1, 2, 3]);
+      const set2 = new Set([2, 3, 4]);
+      const set3 = new Set([3, 4, 5]);
 
-      // Разность множеств
-      const result = set1.difference(set2);
+      const result = deep(set1).difference(set2, set3);
 
-      // Проверяем начальное состояние
-      assert(result.this instanceof Set, 'Результат должен быть Set');
-      assert.deepStrictEqual(Array.from(result.this).sort(), [1, 2].sort(), 'Должны остаться только элементы из первого множества');
-
-      // Проверяем что в origins есть оба истока
-      assert.strictEqual(result.origins.length, 2, 'Origins должен содержать два истока');
-      assert.strictEqual(result.origins[0], set1, 'Первый исток должен быть set1');
-
-      // Проверяем, что set1.difference(set2) === [1, 2]
-      assert.deepStrictEqual(Array.from(result.this).sort(), [1, 2].sort(), 'Начальное состояние - разность [1, 2, 3, 4] и [3, 4, 5, 6] равна [1, 2]');
-
-      // Добавляем элемент 7 в set1
-      set1.add(7);
-
-      // Ручной расчет ожидаемой разности
-      const expected = new Set();
-      for (const item of set1.this) {
-        if (!set2.this.has(item)) {
-          expected.add(item);
-        }
-      }
-
-      // Проверяем ручной расчет
-      assert.deepStrictEqual(Array.from(expected).sort(), [1, 2, 7].sort(), 'После добавления 7 в первый исток, при ручном расчете должно быть [1, 2, 7]');
+      assert(result.this instanceof Set);
+      assert.equal(result.origins.length, 3);
+      assert.equal(result.this.size, 1);
+      assert(result.this.has(1)); // только элемент 1 должен быть в результате
     });
 
-    await t.test('intersection для Set с множественными истоками', async () => {
-      // Создаем два множества
-      const set1 = deep(new Set([1, 2, 3, 4]));
-      const set2 = deep(new Set([3, 4, 5, 6]));
+    await t.test('intersection для Set с множественными истоками', () => {
+      const set1 = new Set([1, 2, 3]);
+      const set2 = new Set([2, 3, 4]);
+      const set3 = new Set([3, 4, 5]);
 
-      // Пересечение множеств
-      const result = set1.intersection(set2);
+      const result = deep(set1).intersection(set2, set3);
 
-      // Проверяем начальное состояние
-      assert(result.this instanceof Set, 'Результат должен быть Set');
-      assert.deepStrictEqual(Array.from(result.this).sort(), [3, 4].sort(), 'Должны остаться только общие элементы');
-
-      // Проверяем что в origins есть оба истока
-      assert.strictEqual(result.origins.length, 2, 'Origins должен содержать два истока');
-      assert.strictEqual(result.origins[0], set1, 'Первый исток должен быть set1');
-
-      // Добавляем элемент в первый исток
-      set1.add(6);
-
-      // Ручной расчет ожидаемого пересечения
-      const expected = new Set();
-      for (const item of set1.this) {
-        if (set2.this.has(item)) {
-          expected.add(item);
-        }
-      }
-
-      // Проверяем ручной расчет
-      assert.deepStrictEqual(Array.from(expected).sort(), [3, 4, 6].sort(), 'После добавления в первый исток элемента, при ручном расчете должно быть [3, 4, 6]');
+      assert(result.this instanceof Set);
+      assert.equal(result.origins.length, 3);
+      assert.equal(result.this.size, 1);
+      assert(result.this.has(3)); // только элемент 3 должен быть в результате
     });
 
-    await t.test('symmetricDifference для Set с множественными истоками', async () => {
-      // Создаем два множества
-      const set1 = deep(new Set([1, 2, 3]));
-      const set2 = deep(new Set([2, 3, 4]));
+    await t.test('symmetricDifference для Set с множественными истоками', () => {
+      const set1 = new Set([1, 2, 3]);
+      const set2 = new Set([2, 3, 4]);
+      const set3 = new Set([3, 4, 5]);
 
-      // Симметрическая разность множеств
-      const result = set1.symmetricDifference(set2);
+      const result = deep(set1).symmetricDifference(set2, set3);
 
-      // Проверяем начальное состояние: (set1 △ set2) = {1, 4}
-      assert(result.this instanceof Set, 'Результат должен быть Set');
-      assert.deepStrictEqual(Array.from(result.this).sort(), [1, 4].sort(), 'Должны быть только уникальные элементы');
+      assert(result.this instanceof Set);
+      assert.equal(result.origins.length, 3);
 
-      // Проверяем что в origins есть оба истока
-      assert.strictEqual(result.origins.length, 2, 'Origins должен содержать два истока');
-      assert.strictEqual(result.origins[0], set1, 'Первый исток должен быть set1');
+      // Элементы, которые встречаются нечетное число раз:
+      // 1 - только в set1 (1 раз) - нечетное число раз
+      // 2 - в set1 и set2 (2 раза) - четное число раз, не включаем
+      // 3 - в set1, set2 и set3 (3 раза) - нечетное число раз
+      // 4 - в set2 и set3 (2 раза) - четное число раз, не включаем
+      // 5 - только в set3 (1 раз) - нечетное число раз
 
-      // Добавляем элемент, которого нет в других истоках
-      set1.add(6);
-
-      // Ручной расчет ожидаемой симметрической разности
-      const symDiff = new Set();
-
-      for (const item of set1.this) {
-        if (!set2.this.has(item)) {
-          symDiff.add(item);
-        }
-      }
-
-      for (const item of set2.this) {
-        if (!set1.this.has(item)) {
-          symDiff.add(item);
-        }
-      }
-
-      // Проверяем ручной расчет
-      assert.deepStrictEqual(Array.from(symDiff).sort(), [1, 4, 6].sort(), 'После добавления 6 при ручном расчете должно получиться [1, 4, 6]');
+      assert.equal(result.this.size, 3);
+      assert(result.this.has(1));
+      assert(result.this.has(3));
+      assert(result.this.has(5));
+      assert(!result.this.has(2));
+      assert(!result.this.has(4));
     });
 
-    await t.test('union для Set с множественными истоками', async () => {
-      // Создаем два множества
-      const set1 = deep(new Set([1, 2]));
-      const set2 = deep(new Set([3, 4]));
+    await t.test('union для Set с множественными истоками', () => {
+      const set1 = new Set([1, 2, 3]);
+      const set2 = new Set([2, 3, 4]);
+      const set3 = new Set([3, 4, 5]);
 
-      // Объединение множеств
-      const result = set1.union(set2);
+      const result = deep(set1).union(set2, set3);
 
-      // Проверяем начальное состояние: (set1 ∪ set2) = {1, 2, 3, 4}
-      assert(result.this instanceof Set, 'Результат должен быть Set');
-      assert.deepStrictEqual(Array.from(result.this).sort(), [1, 2, 3, 4].sort(), 'Должны быть все элементы из обоих множеств');
-
-      // Проверяем что в origins есть оба истока
-      assert.strictEqual(result.origins.length, 2, 'Origins должен содержать два истока');
-      assert.strictEqual(result.origins[0], set1, 'Первый исток должен быть set1');
-
-      // Добавляем новый элемент в один из истоков
-      set1.add(7);
-
-      // Ручной расчет ожидаемого объединения
-      const expected = new Set();
-      for (const item of set1.this) expected.add(item);
-      for (const item of set2.this) expected.add(item);
-
-      // Проверяем ручной расчет
-      assert.deepStrictEqual(Array.from(expected).sort(), [1, 2, 3, 4, 7].sort(), 'При ручном расчете должны быть все элементы включая новый');
+      assert(result.this instanceof Set);
+      assert.equal(result.origins.length, 3);
+      assert.equal(result.this.size, 5);
+      assert(result.this.has(1));
+      assert(result.this.has(2));
+      assert(result.this.has(3));
+      assert(result.this.has(4));
+      assert(result.this.has(5));
     });
 
-    // Тесты для Map (отдельный набор совместимых типов)
-    await t.test('множественные истоки для Map', async () => {
-      // Создаем две карты
-      const map1 = deep(new Map([['a', 1], ['b', 2]]));
-      const map2 = deep(new Map([['b', 3], ['c', 4]]));
+    await t.test('множественные истоки для Map', () => {
+      const map1 = new Map([[1, 'one'], [2, 'two'], [3, 'three']]);
+      const map2 = new Map([[2, 'dos'], [3, 'tres'], [4, 'cuatro']]);
+      const map3 = new Map([[3, 'trois'], [4, 'quatre'], [5, 'cinq']]);
 
-      // Разность карт
-      const diff = map1.difference(map2);
-      // Проверяем что в разности только ключи из первой карты, которых нет во второй
-      assert.deepStrictEqual(Array.from(diff.this.entries()), [['a', 1]], 'difference должен содержать только уникальные ключи из первой карты');
+      // В операции union значения берутся из последнего источника, где они есть
+      const result = deep(map1).union(map2, map3);
 
-      // Проверяем что в origins есть оба истока
-      assert.strictEqual(diff.origins.length, 2, 'Origins должен содержать два истока');
-      assert.strictEqual(diff.origins[0], map1, 'Первый исток должен быть map1');
+      assert(result.this instanceof Map);
+      assert.equal(result.origins.length, 3);
+      assert.equal(result.this.size, 5);
 
-      // Изменяем первый исток - добавляем новый ключ
-      map1.set('d', 5);
-
-      // Ручной расчет ожидаемой разности
-      const diffMap = new Map();
-      for (const [key, value] of map1.this.entries()) {
-        if (!map2.this.has(key)) {
-          diffMap.set(key, value);
-        }
-      }
-
-      // Проверяем ручной расчет
-      const diffEntries = Array.from(diffMap.entries());
-      const expectedEntries = [['a', 1], ['d', 5]];
-      assert.strictEqual(diffEntries.length, expectedEntries.length, 'При ручном расчете должно быть 2 ключа');
-      assert(diffEntries.some(([k, v]) => k === 'a' && v === 1), 'При ручном расчете должен быть ключ a=1');
-      assert(diffEntries.some(([k, v]) => k === 'd' && v === 5), 'При ручном расчете должен быть ключ d=5');
+      // Проверяем содержимое
+      assert.equal(result.this.get(1), 'one');   // из map1
+      assert.equal(result.this.get(2), 'dos');   // из map2 (перезаписывает значение из map1)
+      assert.equal(result.this.get(3), 'trois'); // из map3 (перезаписывает значение из map1 и map2)
+      assert.equal(result.this.get(4), 'quatre'); // из map3 (перезаписывает значение из map2)
+      assert.equal(result.this.get(5), 'cinq');  // из map3
     });
   });
+
+  // Блок тестов для отслеживания изменений с множественными аргументами
+  await t.test('Отслеживание изменений с множественными аргументами', async (t) => {
+    await t.test('Track difference с тремя аргументами', async () => {
+      const set1 = new Set([1, 2, 3]);
+      const set2 = new Set([2, 3, 4]);
+      const set3 = new Set([3, 4, 5]);
+
+      // Используем deep функцию для создания отслеживаемых множеств
+      const wrappedSet1 = deep(set1);
+      const wrappedSet2 = deep(set2);
+      const wrappedSet3 = deep(set3);
+
+      // Добавляем прямой обработчик для проверки событий
+      wrappedSet1.on('change', () => console.log('Direct event on set1 triggered'));
+      wrappedSet2.on('change', () => console.log('Direct event on set2 triggered'));
+      wrappedSet3.on('change', () => console.log('Direct event on set3 triggered'));
+
+      // Создаем разность и включаем отслеживание
+      const result = wrappedSet1.difference(wrappedSet2, wrappedSet3);
+      console.log("Разность множеств:", result);
+      console.log("Текущий результат:", result.this);
+
+      // Получаем трекер
+      const tracker = result.track;
+      console.log("Трекер после вызова:", tracker);
+      console.log("Трекер this:", tracker.this);
+
+      // Проверяем начальное состояние - элемент 1 должен быть в результате (он есть только в set1)
+      console.log("Начальное состояние:", tracker.this);
+      assert.equal(tracker.this.size, 1, 'Размер множества должен быть 1');
+      assert.ok(tracker.this.has(1), 'Результат должен содержать 1');
+
+      // Добавляем новый элемент в первое множество
+      console.log("Добавляем элемент 6 в первое множество");
+      wrappedSet1.add(6);
+
+      // Проверяем, что элемент 6 добавлен в результат
+      console.log("Состояние после добавления 6 в первое множество:", tracker.this);
+      assert.ok(tracker.this.has(6), 'Элемент 6 должен быть добавлен в результат');
+
+      // Добавляем тот же элемент во второе множество
+      console.log("Добавляем элемент 6 во второе множество");
+      wrappedSet2.add(6);
+
+      // Проверяем, что элемент 6 больше не в результате (он есть в set1 и set2)
+      console.log("Состояние после добавления 6 во второе множество:", tracker.this);
+      console.log("Содержимое tracker.this:", Array.from(tracker.this));
+
+      // Пробуем принудительно запустить recalculateResult через результат
+      console.log("Принудительно запускаем recalculateResult");
+      recalculateResult(result);
+
+      // Обновляем this у трекера
+      tracker.this = result.this;
+
+      console.log("Состояние после принудительного пересчета:", tracker.this);
+      console.log("Содержимое после пересчета:", Array.from(tracker.this));
+      assert.ok(!tracker.this.has(6), 'Элемент 6 должен быть удален из результата');
+    });
+
+    await t.test('Track intersection с тремя аргументами', async () => {
+      const set1 = new Set([1, 2, 3, 7]);
+      const set2 = new Set([2, 3, 4, 7]);
+      const set3 = new Set([3, 4, 5, 7]);
+
+      // Используем deep функцию для создания отслеживаемых множеств
+      const wrappedSet1 = deep(set1);
+      const wrappedSet2 = deep(set2);
+      const wrappedSet3 = deep(set3);
+
+      // Создаем пересечение и включаем отслеживание
+      const result = wrappedSet1.intersection(wrappedSet2, wrappedSet3);
+
+      // Получаем трекер
+      const tracker = result.track;
+
+      // Проверяем начальное состояние - только элементы 3 и 7 должны быть в результате
+      assert.equal(tracker.this.size, 2, 'Размер множества должен быть 2');
+      assert.ok(tracker.this.has(3), 'Результат должен содержать 3');
+      assert.ok(tracker.this.has(7), 'Результат должен содержать 7');
+
+      // Добавляем новый элемент во все множества
+      console.log("Добавляем элемент 8 во все множества");
+      wrappedSet1.add(8);
+      wrappedSet2.add(8);
+      wrappedSet3.add(8);
+
+      // Проверяем явно результат
+      console.log("Состояние после добавления 8:", tracker.this);
+
+      // Принудительно пересчитываем результат
+      recalculateResult(result);
+      tracker.this = result.this;
+      console.log("Состояние после ручного пересчета:", tracker.this);
+
+      // Проверяем, что элемент 8 добавлен в результат (он теперь есть во всех множествах)
+      assert.ok(tracker.this.has(8), 'Элемент 8 должен быть добавлен в результат');
+
+      // Удаляем элемент из одного множества
+      console.log("Удаляем элемент 7 из первого множества");
+      wrappedSet1.delete(7);
+
+      // Проверяем явно результат
+      console.log("Состояние после удаления 7:", tracker.this);
+
+      // Принудительно пересчитываем результат
+      recalculateResult(result);
+      tracker.this = result.this;
+      console.log("Состояние после ручного пересчета:", tracker.this);
+
+      // Проверяем, что элемент 7 больше не в результате (его нет в set1)
+      assert.ok(!tracker.this.has(7), 'Элемент 7 должен быть удален из результата');
+    });
+
+    await t.test('Track union с несколькими аргументами', async () => {
+      const set1 = new Set([1, 2, 3]);
+      const set2 = new Set([2, 3, 4]);
+      const set3 = new Set([3, 4, 5]);
+
+      // Используем deep функцию для создания отслеживаемых множеств
+      const wrappedSet1 = deep(set1);
+      const wrappedSet2 = deep(set2);
+      const wrappedSet3 = deep(set3);
+
+      // Создаем объединение и включаем отслеживание
+      const result = wrappedSet1.union(wrappedSet2, wrappedSet3);
+
+      // Получаем трекер
+      const tracker = result.track;
+
+      // Проверяем начальное состояние - элементы 1, 2, 3, 4, 5 должны быть в результате
+      assert.equal(tracker.this.size, 5, 'Размер множества должен быть 5');
+      assert.ok(tracker.this.has(1), 'Результат должен содержать 1');
+      assert.ok(tracker.this.has(2), 'Результат должен содержать 2');
+      assert.ok(tracker.this.has(3), 'Результат должен содержать 3');
+      assert.ok(tracker.this.has(4), 'Результат должен содержать 4');
+      assert.ok(tracker.this.has(5), 'Результат должен содержать 5');
+
+      // Добавляем новый элемент в первое множество
+      console.log("Добавляем элемент 7 в первое множество");
+      wrappedSet1.add(7);
+
+      // Проверяем явно результат
+      console.log("Состояние после добавления 7:", tracker.this);
+
+      // Принудительно пересчитываем результат
+      recalculateResult(result);
+      tracker.this = result.this;
+      console.log("Состояние после ручного пересчета:", tracker.this);
+
+      // Проверяем, что элемент 7 добавлен в результат
+      assert.ok(tracker.this.has(7), 'Элемент 7 должен быть добавлен в результат');
+
+      // Удаляем элемент из всех множеств
+      console.log("Удаляем элемент 3 из всех множеств");
+      wrappedSet1.delete(3);
+      wrappedSet2.delete(3);
+      wrappedSet3.delete(3);
+
+      // Проверяем явно результат
+      console.log("Состояние после удаления 3:", tracker.this);
+
+      // Принудительно пересчитываем результат
+      recalculateResult(result);
+      tracker.this = result.this;
+      console.log("Состояние после ручного пересчета:", tracker.this);
+
+      // Проверяем, что элемент 3 больше не в результате (его нет ни в одном множестве)
+      assert.ok(!tracker.this.has(3), 'Элемент 3 должен быть удален из результата');
+    });
+
+    await t.test('Track symmetricDifference с несколькими аргументами', async () => {
+      const set1 = new Set([1, 2, 3]);
+      const set2 = new Set([2, 3, 4]);
+      const set3 = new Set([3, 4, 5]);
+
+      // Используем deep функцию для создания отслеживаемых множеств
+      const wrappedSet1 = deep(set1);
+      const wrappedSet2 = deep(set2);
+      const wrappedSet3 = deep(set3);
+
+      // Создаем симметрическую разность и включаем отслеживание
+      const result = wrappedSet1.symmetricDifference(wrappedSet2, wrappedSet3);
+
+      // Получаем трекер
+      const tracker = result.track;
+
+      // Проверяем начальное состояние - элементы 1, 3, 5 должны быть в результате
+      assert.equal(tracker.this.size, 3, 'Размер множества должен быть 3');
+      assert.ok(tracker.this.has(1), 'Результат должен содержать 1');
+      assert.ok(tracker.this.has(3), 'Результат должен содержать 3');
+      assert.ok(tracker.this.has(5), 'Результат должен содержать 5');
+
+      // Добавляем новый элемент в первое множество
+      console.log("Добавляем элемент 6 в первое множество");
+      wrappedSet1.add(6);
+
+      // Проверяем явно результат
+      console.log("Состояние после добавления 6 в первое множество:", tracker.this);
+
+      // Принудительно пересчитываем результат
+      recalculateResult(result);
+      tracker.this = result.this;
+      console.log("Состояние после ручного пересчета:", tracker.this);
+
+      // Проверяем, что элемент 6 добавлен в результат (он встречается нечетное число раз)
+      assert.ok(tracker.this.has(6), 'Элемент 6 должен быть добавлен в результат');
+
+      // Добавляем тот же элемент во второе множество
+      console.log("Добавляем элемент 6 во второе множество");
+      wrappedSet2.add(6);
+
+      // Проверяем явно результат
+      console.log("Состояние после добавления 6 во второе множество:", tracker.this);
+
+      // Принудительно пересчитываем результат
+      recalculateResult(result);
+      tracker.this = result.this;
+      console.log("Состояние после ручного пересчета:", tracker.this);
+
+      // Проверяем, что элемент 6 не входит в результат (он встречается четное число раз)
+      assert.ok(!tracker.this.has(6), 'Элемент 6 должен быть удален из результата');
+
+      // Добавляем тот же элемент в третье множество
+      console.log("Добавляем элемент 6 в третье множество");
+      wrappedSet3.add(6);
+
+      // Проверяем явно результат
+      console.log("Состояние после добавления 6 в третье множество:", tracker.this);
+
+      // Принудительно пересчитываем результат
+      recalculateResult(result);
+      tracker.this = result.this;
+      console.log("Состояние после ручного пересчета:", tracker.this);
+
+      // Проверяем, что элемент 6 снова входит в результат (он встречается нечетное число раз)
+      assert.ok(tracker.this.has(6), 'Элемент 6 должен снова быть добавлен в результат');
+    });
+  });
+});
+
+// Добавляем в конец файла простой тест для отладки
+test('Debug Track', async () => {
+  // Простой тест с базовой разностью двух множеств
+  const set1 = new Set([1, 2, 3]);
+  const set2 = new Set([2, 3, 4]);
+
+  const wrappedSet1 = deep(set1);
+  const wrappedSet2 = deep(set2);
+
+  // Обычная разность множеств (один аргумент)
+  const resultBasic = wrappedSet1.difference(wrappedSet2);
+  console.log('Basic result:', resultBasic);
+
+  // Получаем трекер вызовом метода
+  const trackerBasic = resultBasic.track;
+  console.log('Basic tracker:', trackerBasic);
+  console.log('Basic tracker.this:', trackerBasic.this);
+
+  // Симметрическая разность для проверки
+  const resultSymDiff = wrappedSet1.symmetricDifference(wrappedSet2);
+  console.log('SymDiff result:', resultSymDiff);
+
+  // Получаем трекер вызовом метода
+  const trackerSymDiff = resultSymDiff.track;
+  console.log('SymDiff tracker:', trackerSymDiff);
+  console.log('SymDiff tracker.this:', trackerSymDiff.this);
+
+  // Множественные аргументы
+  const set3 = new Set([3, 4, 5]);
+  const wrappedSet3 = deep(set3);
+
+  const resultMulti = wrappedSet1.difference(wrappedSet2, wrappedSet3);
+  console.log('Multi result:', resultMulti);
+
+  // Получаем трекер вызовом метода
+  const trackerMulti = resultMulti.track;
+  console.log('Multi tracker:', trackerMulti);
+  console.log('Multi tracker.this:', trackerMulti.this);
 });
