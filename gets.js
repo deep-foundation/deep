@@ -2721,3 +2721,127 @@ export function join(ass, op, args) {
     return resultAssociation;
   }
 }
+
+/**
+ * Возвращает количество элементов в коллекции
+ * @param {Association} ass - Экземпляр Association
+ * @param {string} op - Операция ('get')
+ * @returns {Association} - Ассоциация с числом элементов
+ */
+export function count(ass, op) {
+  if (op !== 'get') return;
+
+  // Получаем внутреннее значение ассоциации
+  const value = ass.this;
+  let result = 0;
+
+  // Определяем количество в зависимости от типа данных
+  if (value === null || value === undefined) {
+    result = 0;
+  } else if (Array.isArray(value) || typeof value === 'string') {
+    result = value.length;
+  } else if (value instanceof Map || value instanceof Set) {
+    result = value.size;
+  } else if (typeof value === 'object') {
+    result = Object.keys(value).length;
+  } else if (value !== null && value !== undefined) {
+    // Для примитивных типов (number, boolean, symbol) считаем как 1
+    result = 1;
+  }
+
+  // Создаем новую ассоциацию для результата
+  const resultAssociation = ass.wrap(result);
+
+  // Устанавливаем исходную ассоциацию как origins
+  resultAssociation.origins = [ass];
+
+  // Сохраняем имя метода для отслеживания
+  resultAssociation.temp.method = 'count';
+
+  // Создаем локальный обработчик track
+  resultAssociation._proxy.set('track', (ass, op) => {
+    if (op !== 'get') return;
+
+    // Получаем трекер через глобальный геттер
+    const track = Association._proxy.get('track').call(ass, ass, 'get');
+
+    // Если есть система событий и у нас есть доступ к origins
+    if (ass.origins.length > 0 && ass.origins[0].on && ass.origins[0].emit) {
+      const origin = ass.origins[0];
+
+      // Создаем обработчик событий change для автоматического обновления
+      // Подписываемся на событие change у origin
+      const offChange = origin.on('change', (event, meta) => {
+        // Получаем новое значение из ассоциации-источника
+        const originValue = origin.this;
+        let newCount = 0;
+
+        // Пересчитываем количество элементов в зависимости от типа данных
+        if (originValue === null || originValue === undefined) {
+          newCount = 0;
+        } else if (Array.isArray(originValue) || typeof originValue === 'string') {
+          newCount = originValue.length;
+        } else if (originValue instanceof Map || originValue instanceof Set) {
+          newCount = originValue.size;
+        } else if (typeof originValue === 'object') {
+          newCount = Object.keys(originValue).length;
+        } else if (originValue !== null && originValue !== undefined) {
+          // Для примитивных типов (number, boolean, symbol) считаем как 1
+          newCount = 1;
+        }
+
+        // Сохраняем текущее значение до изменения
+        const prevCount = ass.this;
+
+        if (prevCount !== newCount) {
+          // Обновляем значение только если результат изменился
+          ass.this = newCount;
+
+          // Генерируем событие изменения при изменении результата
+          if (ass.emit) {
+            ass.emit('change', {
+              origin: origin,
+              reason: 'track',
+              prev: prevCount,
+              next: newCount,
+              detail: event?.detail,
+              method: meta?.method || event?.detail?.operation || 'update'
+            });
+          }
+        }
+      });
+
+      // Сохраняем функцию отписки для возможности отключения отслеживания
+      track.temp.offChange = offChange;
+    }
+
+    return track;
+  });
+
+  return resultAssociation;
+}
+
+/**
+ * Алиас для метода count, возвращает количество элементов
+ * @param {Association} ass - Экземпляр Association
+ * @param {string} op - Операция ('get')
+ * @returns {Association} - Ассоциация с числом элементов
+ */
+export function size(ass, op) {
+  return count(ass, op);
+}
+
+/**
+ * Алиас для метода count, возвращает количество элементов
+ * @param {Association} ass - Экземпляр Association
+ * @param {string} op - Операция ('get')
+ * @returns {Association} - Ассоциация с числом элементов
+ */
+export function length(ass, op) {
+  return count(ass, op);
+}
+
+// Добавляем методы в глобальный прокси Association
+Association._proxy.set('count', count);
+Association._proxy.set('size', size);
+Association._proxy.set('length', length);

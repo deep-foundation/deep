@@ -5,121 +5,139 @@
 ## Информация о системе
 
 - **Операционная система:** darwin x64
-- **Node.JS:** v23.4.0
-- **V8:** 12.9.202.28-node.11
+- **Node.JS:** v22.14.0
+- **V8:** 12.4.254.21-node.22
+
+## Методы с множественными аргументами
+
+| Тест                                       | Операций/сек | Среднее время (мкс) | Относительная производительность |
+| :----------------------------------------- | -----------: | ------------------: | -------------------------------: |
+| difference с двумя аргументами             |     1 546,63 |              646,57 |                           84.69% |
+| difference с тремя аргументами             |     1 357,41 |              736,69 |                           74.33% |
+| difference с четырьмя аргументами          |     1 090,44 |              917,06 |                           59.71% |
+| intersection с двумя аргументами           |     1 714,77 |              583,17 |                           93.89% |
+| intersection с тремя аргументами           |     1 375,75 |              726,87 |                           75.33% |
+| intersection с четырьмя аргументами        |     1 129,47 |              885,37 |                           61.84% |
+| symmetricDifference с двумя аргументами    |     1 826,32 |              547,55 |                          100.00% |
+| symmetricDifference с тремя аргументами    |     1 357,99 |              736,38 |                           74.36% |
+| symmetricDifference с четырьмя аргументами |     1 105,32 |              904,71 |                           60.52% |
+| union с двумя аргументами                  |      1 732,4 |              577,24 |                           94.86% |
+| union с тремя аргументами                  |     1 304,88 |              766,35 |                           71.45% |
+| union с четырьмя аргументами               |      1 140,7 |              876,65 |                           62.46% |
+
 
 ## difference (4 elements)
 
 | Тест                      | Операций/сек | Среднее время (мкс) | Относительная производительность |
 | :------------------------ | -----------: | ------------------: | -------------------------------: |
-| set.difference(set)       |    11 325,15 |                88,3 |                          100.00% |
-| array.difference(set)     |    10 881,15 |                91,9 |                           96.08% |
-| set.difference(array)     |     9 372,26 |               106,7 |                           82.76% |
-| array.difference(array)   |     6 698,54 |              149,29 |                           59.15% |
-| map.difference(map)       |     8 552,48 |              116,93 |                           75.52% |
-| object.difference(map)    |    11 267,25 |               88,75 |                           99.49% |
-| map.difference(object)    |    10 758,29 |               92,95 |                           94.99% |
-| object.difference(object) |    10 602,12 |               94,32 |                           93.62% |
+| set.difference(set)       |     1 859,32 |              537,83 |                          100.00% |
+| array.difference(set)     |     1 777,84 |              562,48 |                           95.62% |
+| set.difference(array)     |     1 479,04 |              676,12 |                           79.55% |
+| array.difference(array)   |     1 828,28 |              546,96 |                           98.33% |
+| map.difference(map)       |        1 662 |              601,69 |                           89.39% |
+| object.difference(map)    |     1 623,69 |              615,88 |                           87.33% |
+| map.difference(object)    |     1 767,66 |              565,72 |                           95.07% |
+| object.difference(object) |     1 711,54 |              584,27 |                           92.05% |
 
 
 ## difference (1000 elements)
 
 | Тест                      | Операций/сек | Среднее время (мкс) | Относительная производительность |
 | :------------------------ | -----------: | ------------------: | -------------------------------: |
-| set.difference(set)       |     6 473,54 |              154,47 |                          100.00% |
-| array.difference(set)     |     2 709,41 |              369,08 |                           41.85% |
-| set.difference(array)     |     3 982,39 |              251,11 |                           61.52% |
-| array.difference(array)   |     2 087,53 |              479,04 |                           32.25% |
-| map.difference(map)       |     5 039,83 |              198,42 |                           77.85% |
-| object.difference(map)    |      2 250,3 |              444,38 |                           34.76% |
-| map.difference(object)    |     2 438,87 |              410,03 |                           37.67% |
-| object.difference(object) |     1 760,46 |              568,03 |                           27.19% |
+| set.difference(set)       |     1 352,95 |              739,12 |                           97.10% |
+| array.difference(set)     |     1 140,21 |              877,03 |                           81.83% |
+| set.difference(array)     |     1 177,17 |               849,5 |                           84.48% |
+| array.difference(array)   |     1 157,99 |              863,57 |                           83.11% |
+| map.difference(map)       |     1 393,38 |              717,68 |                          100.00% |
+| object.difference(map)    |       480,16 |            2 082,66 |                           34.46% |
+| map.difference(object)    |       890,59 |            1 122,85 |                           63.92% |
+| object.difference(object) |        716,3 |            1 396,06 |                           51.41% |
 
 
 ## intersection (4 elements)
 
 | Тест                        | Операций/сек | Среднее время (мкс) | Относительная производительность |
 | :-------------------------- | -----------: | ------------------: | -------------------------------: |
-| set.intersection(set)       |    10 979,16 |               91,08 |                           90.06% |
-| array.intersection(set)     |     8 445,68 |               118,4 |                           69.27% |
-| set.intersection(array)     |     9 299,89 |              107,53 |                           76.28% |
-| array.intersection(array)   |     6 345,71 |              157,59 |                           52.05% |
-| map.intersection(map)       |     6 491,42 |              154,05 |                           53.25% |
-| object.intersection(map)    |     9 454,09 |              105,77 |                           77.55% |
-| map.intersection(object)    |    12 191,54 |               82,02 |                          100.00% |
-| object.intersection(object) |     12 108,5 |               82,59 |                           99.32% |
+| set.intersection(set)       |     1 326,03 |              754,13 |                           86.46% |
+| array.intersection(set)     |     1 309,17 |              763,84 |                           85.36% |
+| set.intersection(array)     |     1 262,95 |               791,8 |                           82.35% |
+| array.intersection(array)   |     1 428,69 |              699,94 |                           93.15% |
+| map.intersection(map)       |     1 241,41 |              805,53 |                           80.94% |
+| object.intersection(map)    |      1 520,7 |              657,59 |                           99.15% |
+| map.intersection(object)    |     1 533,69 |              652,02 |                          100.00% |
+| object.intersection(object) |     1 500,46 |              666,46 |                           97.83% |
 
 
 ## intersection (1000 elements)
 
 | Тест                        | Операций/сек | Среднее время (мкс) | Относительная производительность |
 | :-------------------------- | -----------: | ------------------: | -------------------------------: |
-| set.intersection(set)       |      7 856,1 |              127,29 |                          100.00% |
-| array.intersection(set)     |      4 749,3 |              210,56 |                           60.45% |
-| set.intersection(array)     |     4 813,39 |              207,75 |                           61.27% |
-| array.intersection(array)   |     3 659,37 |              273,27 |                           46.58% |
-| map.intersection(map)       |     5 374,76 |              186,05 |                           68.42% |
-| object.intersection(map)    |     2 632,82 |              379,82 |                           33.51% |
-| map.intersection(object)    |     2 630,81 |              380,11 |                           33.49% |
-| object.intersection(object) |     1 786,69 |              559,69 |                           22.74% |
+| set.intersection(set)       |       979,82 |             1 020,6 |                          100.00% |
+| array.intersection(set)     |       772,45 |            1 294,58 |                           78.84% |
+| set.intersection(array)     |        802,2 |            1 246,57 |                           81.87% |
+| array.intersection(array)   |       798,39 |            1 252,52 |                           81.48% |
+| map.intersection(map)       |       911,92 |            1 096,59 |                           93.07% |
+| object.intersection(map)    |       684,72 |            1 460,45 |                           69.88% |
+| map.intersection(object)    |         5,17 |          193 605,55 |                            0.53% |
+| object.intersection(object) |         5,13 |          194 782,65 |                            0.52% |
 
 
 ## symmetricDifference (4 elements)
 
 | Тест                               | Операций/сек | Среднее время (мкс) | Относительная производительность |
 | :--------------------------------- | -----------: | ------------------: | -------------------------------: |
-| set.symmetricDifference(set)       |    11 536,78 |               86,68 |                           94.10% |
-| array.symmetricDifference(set)     |    11 792,56 |                84,8 |                           96.19% |
-| set.symmetricDifference(array)     |    11 931,88 |               83,81 |                           97.33% |
-| array.symmetricDifference(array)   |     9 647,08 |              103,66 |                           78.69% |
-| map.symmetricDifference(map)       |     6 586,51 |              151,83 |                           53.73% |
-| object.symmetricDifference(map)    |     5 799,07 |              172,44 |                           47.30% |
-| map.symmetricDifference(object)    |      9 567,6 |              104,52 |                           78.04% |
-| object.symmetricDifference(object) |    12 259,56 |               81,57 |                          100.00% |
+| set.symmetricDifference(set)       |     1 041,06 |              960,56 |                           80.84% |
+| array.symmetricDifference(set)     |     1 281,49 |              780,34 |                           99.51% |
+| set.symmetricDifference(array)     |     1 287,86 |              776,48 |                          100.00% |
+| array.symmetricDifference(array)   |     1 279,27 |               781,7 |                           99.33% |
+| map.symmetricDifference(map)       |      1 073,5 |              931,53 |                           83.36% |
+| object.symmetricDifference(map)    |       956,25 |            1 045,75 |                           74.25% |
+| map.symmetricDifference(object)    |     1 159,87 |              862,16 |                           90.06% |
+| object.symmetricDifference(object) |     1 089,23 |              918,08 |                           84.58% |
 
 
 ## symmetricDifference (1000 elements)
 
 | Тест                               | Операций/сек | Среднее время (мкс) | Относительная производительность |
 | :--------------------------------- | -----------: | ------------------: | -------------------------------: |
-| set.symmetricDifference(set)       |     2 714,02 |              368,46 |                          100.00% |
-| array.symmetricDifference(set)     |      1 718,2 |                 582 |                           63.31% |
-| set.symmetricDifference(array)     |        2 712 |              368,73 |                           99.93% |
-| array.symmetricDifference(array)   |     2 128,02 |              469,92 |                           78.41% |
-| map.symmetricDifference(map)       |     2 307,44 |              433,38 |                           85.02% |
-| object.symmetricDifference(map)    |      1 763,6 |              567,02 |                           64.98% |
-| map.symmetricDifference(object)    |     1 688,76 |              592,15 |                           62.22% |
-| object.symmetricDifference(object) |     1 192,27 |              838,74 |                           43.93% |
+| set.symmetricDifference(set)       |       640,57 |             1 561,1 |                           81.24% |
+| array.symmetricDifference(set)     |       739,23 |            1 352,76 |                           93.75% |
+| set.symmetricDifference(array)     |       697,14 |            1 434,44 |                           88.42% |
+| array.symmetricDifference(array)   |       679,57 |            1 471,52 |                           86.19% |
+| map.symmetricDifference(map)       |       788,48 |            1 268,26 |                          100.00% |
+| object.symmetricDifference(map)    |       725,98 |            1 377,45 |                           92.07% |
+| map.symmetricDifference(object)    |         8,73 |          114 527,02 |                            1.11% |
+| object.symmetricDifference(object) |         8,67 |           115 335,5 |                            1.10% |
 
 
 ## union (4 elements)
 
 | Тест                      | Операций/сек | Среднее время (мкс) | Относительная производительность |
 | :------------------------ | -----------: | ------------------: | -------------------------------: |
-| set.union(set)            |     5 926,42 |              168,74 |                           55.49% |
-| array.union(set)          |     8 220,88 |              121,64 |                           76.97% |
-| set.union(array)          |    10 142,05 |                98,6 |                           94.96% |
-| array.union(array)        |    10 095,47 |               99,05 |                           94.52% |
-| map.union(map)            |    10 508,38 |               95,16 |                           98.39% |
-| object.union(map)         |    10 458,26 |               95,62 |                           97.92% |
-| map.union(object)         |    10 374,39 |               96,39 |                           97.13% |
-| Map объединение с deep    |    10 680,78 |               93,63 |                          100.00% |
-| Object объединение с deep |    10 213,45 |               97,91 |                           95.62% |
+| set.union(set)            |       940,29 |             1 063,5 |                           62.14% |
+| array.union(set)          |       999,67 |            1 000,33 |                           66.06% |
+| set.union(array)          |       987,13 |            1 013,04 |                           65.23% |
+| array.union(array)        |       751,72 |            1 330,29 |                           49.68% |
+| map.union(map)            |       703,42 |            1 421,63 |                           46.48% |
+| object.union(map)         |       713,38 |            1 401,77 |                           47.14% |
+| map.union(object)         |     1 513,25 |              660,83 |                          100.00% |
+| Map объединение с deep    |       774,48 |            1 291,19 |                           51.18% |
+| Object объединение с deep |       739,72 |            1 351,85 |                           48.88% |
 
 
 ## Объединение множеств (большие коллекции)
 
 | Тест                                                       | Операций/сек | Среднее время (мкс) | Относительная производительность |
 | :--------------------------------------------------------- | -----------: | ------------------: | -------------------------------: |
-| Set объединение большой коллекции с deep                   |     2 217,47 |              450,96 |                           36.50% |
-| Set объединение большой коллекции с нативной реализацией   |     6 075,42 |               164,6 |                          100.00% |
-| Array объединение большой коллекции с deep                 |     1 298,11 |              770,35 |                           21.37% |
-| Array объединение большой коллекции с нативной реализацией |     5 566,06 |              179,66 |                           91.62% |
-| Map объединение большой коллекции с deep                   |      2 267,5 |              441,01 |                           37.32% |
-| Object объединение большой коллекции с deep                |     1 153,54 |               866,9 |                           18.99% |
+| Set объединение большой коллекции с deep                   |       498,25 |            2 007,01 |                           14.66% |
+| Set объединение большой коллекции с нативной реализацией   |     3 397,73 |              294,31 |                          100.00% |
+| Array объединение большой коллекции с deep                 |       426,37 |            2 345,41 |                           12.55% |
+| Array объединение большой коллекции с нативной реализацией |     2 751,17 |              363,48 |                           80.97% |
+| Map объединение большой коллекции с deep                   |       555,25 |            1 800,99 |                           16.34% |
+| Object объединение большой коллекции с deep                |        321,3 |            3 112,34 |                            9.46% |
 
 
 ## Время выполнения
 
-- Дата запуска: 2025-03-31T17:32:22.404Z
-- Общее время выполнения: 5 мин 36.27 сек
+- Дата запуска: 2025-04-04T04:17:50.868Z
+- Общее время выполнения: 17 мин 4.23 сек

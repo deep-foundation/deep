@@ -5,89 +5,78 @@
 ## Информация о системе
 
 - **Операционная система:** darwin x64
-- **Node.JS:** v23.4.0
-- **V8:** 12.9.202.28-node.11
+- **Node.JS:** v22.14.0
+- **V8:** 12.4.254.21-node.22
 
 ## Обычные проверки типов
 
 | Тест                                                                           |  Операций/сек | Среднее время (мкс) | Относительная производительность |
 | :----------------------------------------------------------------------------- | ------------: | ------------------: | -------------------------------: |
-| typeof string === "string"                                                     | 45 846 736,94 |                0,02 |                          100.00% |
-| typeof number === "number"                                                     | 32 550 360,58 |                0,03 |                           71.00% |
-| typeof boolean === "boolean"                                                   | 29 906 753,06 |                0,03 |                           65.23% |
-| typeof symbol === "symbol"                                                     | 30 772 808,83 |                0,03 |                           67.12% |
-| typeof bigint === "bigint"                                                     |  31 721 697,5 |                0,03 |                           69.19% |
-| typeof function === "function"                                                 | 31 568 649,82 |                0,03 |                           68.86% |
-| value === undefined                                                            | 31 611 195,66 |                0,03 |                           68.95% |
-| value === null                                                                 | 32 296 026,77 |                0,03 |                           70.44% |
-| Array.isArray(array)                                                           | 32 229 769,19 |                0,03 |                           70.30% |
-| typeof object === "object"                                                     | 28 419 560,63 |                0,04 |                           61.99% |
-| value instanceof Date                                                          | 30 729 405,42 |                0,03 |                           67.03% |
-| value instanceof RegExp                                                        | 29 350 170,64 |                0,03 |                           64.02% |
-| value instanceof Set                                                           | 31 997 590,63 |                0,03 |                           69.79% |
-| value instanceof Map                                                           | 32 564 680,38 |                0,03 |                           71.03% |
-| value instanceof Promise                                                       | 26 372 448,87 |                0,04 |                           57.52% |
-| value instanceof Error                                                         | 28 166 740,93 |                0,04 |                           61.44% |
-| Array.isArray(array) || value instanceof Set/Map || typeof object === "object" | 31 839 062,28 |                0,03 |                           69.45% |
+| typeof string === "string"                                                     | 24 868 917,55 |                0,04 |                           81.64% |
+| typeof number === "number"                                                     | 27 915 844,62 |                0,04 |                           91.64% |
+| typeof boolean === "boolean"                                                   | 25 001 743,91 |                0,04 |                           82.07% |
+| typeof symbol === "symbol"                                                     | 30 462 649,16 |                0,03 |                          100.00% |
+| typeof bigint === "bigint"                                                     | 24 789 160,48 |                0,04 |                           81.38% |
+| typeof function === "function"                                                 | 16 082 099,91 |                0,06 |                           52.79% |
+| value === undefined                                                            | 10 378 775,51 |                 0,1 |                           34.07% |
+| value === null                                                                 | 17 984 508,24 |                0,06 |                           59.04% |
+| Array.isArray(array)                                                           | 18 769 663,62 |                0,05 |                           61.62% |
+| typeof object === "object"                                                     | 13 557 034,51 |                0,07 |                           44.50% |
+| value instanceof Date                                                          | 18 328 242,26 |                0,05 |                           60.17% |
+| value instanceof RegExp                                                        | 12 196 486,88 |                0,08 |                           40.04% |
+| value instanceof Set                                                           | 19 043 522,87 |                0,05 |                           62.51% |
+| value instanceof Map                                                           | 21 519 987,94 |                0,05 |                           70.64% |
+| value instanceof Promise                                                       | 21 341 213,88 |                0,05 |                           70.06% |
+| value instanceof Error                                                         | 24 485 984,47 |                0,04 |                           80.38% |
+| Array.isArray(array) || value instanceof Set/Map || typeof object === "object" | 27 281 562,14 |                0,04 |                           89.56% |
 
 
 ## Проверка типов через deep свойства
 
 | Тест                            | Операций/сек | Среднее время (мкс) | Относительная производительность |
 | :------------------------------ | -----------: | ------------------: | -------------------------------: |
-| deep(string).isString           | 4 735 810,44 |                0,21 |                           94.81% |
-| deep(number).isNumber           | 4 720 951,93 |                0,21 |                           94.51% |
-| deep(boolean).isBoolean         | 4 615 116,68 |                0,22 |                           92.40% |
-| deep(symbol).isSymbol           | 4 914 412,96 |                 0,2 |                           98.39% |
-| deep(bigint).isBigInt           | 4 850 357,82 |                0,21 |                           97.11% |
-| deep(function).isFunction       | 4 883 065,92 |                 0,2 |                           97.76% |
-| deep(undefined).isUndefined     | 4 988 702,48 |                 0,2 |                           99.88% |
-| deep(null).isNull               | 4 917 995,85 |                 0,2 |                           98.46% |
-| deep(array).isArray             | 4 749 397,53 |                0,21 |                           95.08% |
-| deep(object).isObject           | 3 424 220,03 |                0,29 |                           68.55% |
-| deep(plainObject).isPlainObject | 4 378 139,73 |                0,23 |                           87.65% |
-| deep(date).isDate               | 4 685 836,21 |                0,21 |                           93.81% |
-| deep(regexp).isRegExp           |  4 859 898,1 |                0,21 |                           97.30% |
-| deep(set).isSet                 | 4 919 833,76 |                 0,2 |                           98.50% |
-| deep(map).isMap                 | 4 892 204,15 |                 0,2 |                           97.94% |
-| deep(promise).isPromise         | 4 693 563,45 |                0,21 |                           93.97% |
-| deep(error).isError             | 4 762 224,77 |                0,21 |                           95.34% |
-| deep(json).isJSON               | 1 594 455,74 |                0,63 |                           31.92% |
-| deep(empty).isEmpty             | 4 904 427,53 |                 0,2 |                           98.19% |
-| deep(array).isMany              | 4 994 941,97 |                 0,2 |                          100.00% |
-| deep(object).isMany             | 3 580 134,47 |                0,28 |                           71.68% |
-| deep(set).isMany                | 4 448 955,13 |                0,22 |                           89.07% |
-| deep(map).isMany                | 4 796 629,18 |                0,21 |                           96.03% |
-| deep(string).isMany             | 4 738 813,45 |                0,21 |                           94.87% |
-| deep(number).isMany             | 4 951 349,82 |                 0,2 |                           99.13% |
-
-
-## Проверка типов через deep функции
-
-| Тест                      | Операций/сек | Среднее время (мкс) | Относительная производительность |
-| :------------------------ | -----------: | ------------------: | -------------------------------: |
-| deep(string).isString()   |            0 |                   0 |                              N/A |
-| deep(number).isNumber()   |            0 |                   0 |                              N/A |
-| deep(boolean).isBoolean() |            0 |                   0 |                              N/A |
-| deep(array).isArray()     |            0 |                   0 |                              N/A |
-| deep(object).isObject()   |            0 |                   0 |                              N/A |
+| deep(string).isString           | 3 297 387,15 |                 0,3 |                           69.40% |
+| deep(number).isNumber           |  3 244 998,4 |                0,31 |                           68.30% |
+| deep(boolean).isBoolean         |    3 895 453 |                0,26 |                           81.99% |
+| deep(symbol).isSymbol           | 3 195 911,43 |                0,31 |                           67.26% |
+| deep(bigint).isBigInt           | 2 445 884,42 |                0,41 |                           51.48% |
+| deep(function).isFunction       |  3 808 333,5 |                0,26 |                           80.15% |
+| deep(undefined).isUndefined     | 4 604 361,25 |                0,22 |                           96.91% |
+| deep(null).isNull               | 3 721 376,41 |                0,27 |                           78.32% |
+| deep(array).isArray             | 4 553 411,36 |                0,22 |                           95.83% |
+| deep(object).isObject           |  3 707 408,8 |                0,27 |                           78.03% |
+| deep(plainObject).isPlainObject | 4 217 063,37 |                0,24 |                           88.76% |
+| deep(date).isDate               | 4 751 337,64 |                0,21 |                          100.00% |
+| deep(regexp).isRegExp           | 4 601 001,05 |                0,22 |                           96.84% |
+| deep(set).isSet                 | 4 206 554,31 |                0,24 |                           88.53% |
+| deep(map).isMap                 | 3 413 691,42 |                0,29 |                           71.85% |
+| deep(promise).isPromise         | 1 835 388,02 |                0,54 |                           38.63% |
+| deep(error).isError             | 2 021 417,76 |                0,49 |                           42.54% |
+| deep(json).isJSON               |   645 992,29 |                1,55 |                           13.60% |
+| deep(empty).isEmpty             | 2 423 266,49 |                0,41 |                           51.00% |
+| deep(array).isMany              |  3 547 293,2 |                0,28 |                           74.66% |
+| deep(object).isMany             | 3 038 309,23 |                0,33 |                           63.95% |
+| deep(set).isMany                | 4 633 865,87 |                0,22 |                           97.53% |
+| deep(map).isMany                | 4 558 331,39 |                0,22 |                           95.94% |
+| deep(string).isMany             | 4 530 892,52 |                0,22 |                           95.36% |
+| deep(number).isMany             | 4 589 188,94 |                0,22 |                           96.59% |
 
 
 ## Сравнение встроенных проверок и deep свойств
 
 | Тест                                                                           |  Операций/сек | Среднее время (мкс) | Относительная производительность |
 | :----------------------------------------------------------------------------- | ------------: | ------------------: | -------------------------------: |
-| typeof string === "string"                                                     | 31 620 653,78 |                0,03 |                           98.68% |
-| deep(string).isString                                                          |  4 627 174,87 |                0,22 |                           14.44% |
-| typeof number === "number"                                                     | 32 042 008,91 |                0,03 |                           99.99% |
-| deep(number).isNumber                                                          |  4 492 644,15 |                0,22 |                           14.02% |
-| Array.isArray(array)                                                           | 32 043 759,73 |                0,03 |                          100.00% |
-| deep(array).isArray                                                            |  4 354 465,03 |                0,23 |                           13.59% |
-| Array.isArray(array) || value instanceof Set/Map || typeof object === "object" | 28 953 360,08 |                0,03 |                           90.36% |
-| deep(array).isMany                                                             |  4 232 864,42 |                0,24 |                           13.21% |
+| typeof string === "string"                                                     | 22 365 722,83 |                0,04 |                          100.00% |
+| deep(string).isString                                                          |   3 093 269,6 |                0,32 |                           13.83% |
+| typeof number === "number"                                                     |  16 670 026,5 |                0,06 |                           74.53% |
+| deep(number).isNumber                                                          |  2 478 601,18 |                 0,4 |                           11.08% |
+| Array.isArray(array)                                                           |  22 322 668,5 |                0,04 |                           99.81% |
+| deep(array).isArray                                                            |  2 804 290,23 |                0,36 |                           12.54% |
+| Array.isArray(array) || value instanceof Set/Map || typeof object === "object" |  19 679 614,1 |                0,05 |                           87.99% |
+| deep(array).isMany                                                             |  3 224 432,19 |                0,31 |                           14.42% |
 
 
 ## Время выполнения
 
-- Дата запуска: 2025-03-31T18:07:58.318Z
-- Общее время выполнения: 4 мин 20.15 сек
+- Дата запуска: 2025-04-04T03:43:50.337Z
+- Общее время выполнения: 4 мин 20.38 сек

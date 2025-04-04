@@ -67,58 +67,6 @@ createKillSuite.add('kill 1000 associations', () => {
   }
 });
 
-// Создаем сьют для тестов all.get и all.count
-const allSuite = benchmark.createSuite('all lifecycle', {
-  description: 'Тесты работы с глобальным хранилищем ассоциаций'
-});
-
-allSuite.add('all.count() with 10 associations', () => {
-  const associations = prepareTestData(10);
-  return all.count();
-});
-
-allSuite.add('all.count() with 100 associations', () => {
-  const associations = prepareTestData(100);
-  return all.count();
-});
-
-allSuite.add('all.count() with 1000 associations', () => {
-  const associations = prepareTestData(1000);
-  return all.count();
-});
-
-allSuite.add('all.get() with 10 associations', () => {
-  const associations = prepareTestData(10);
-  return all.get();
-});
-
-allSuite.add('all.get() with 100 associations', () => {
-  const associations = prepareTestData(100);
-  return all.get();
-});
-
-allSuite.add('all.get() with 1000 associations', () => {
-  const associations = prepareTestData(1000);
-  return all.get();
-});
-
-// Создаем сьют для тестов перезагрузки (reload)
-const reloadSuite = benchmark.createSuite('reload', {
-  description: 'Тесты перезагрузки ассоциаций'
-});
-
-reloadSuite.add('reload single association', () => {
-  const ass = deep({ test: 'value' });
-  return reload(ass);
-});
-
-reloadSuite.add('reload 10 associations', () => {
-  const associations = prepareTestData(10);
-  for (const ass of associations) {
-    reload(ass);
-  }
-});
-
 // Запускаем все бенчмарки
 async function runBenchmarks() {
   console.log('🏁 Запуск бенчмарков для lifecycle.js...');

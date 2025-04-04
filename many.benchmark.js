@@ -33,6 +33,51 @@ const bigMap2 = new Map(Array.from({ length: 1000 }, (_, i) => [`key${i + 500}`,
 const bigObj1 = Object.fromEntries(Array.from({ length: 1000 }, (_, i) => [`key${i}`, i]));
 const bigObj2 = Object.fromEntries(Array.from({ length: 1000 }, (_, i) => [`key${i + 500}`, i + 500]));
 
+// Данные для тестирования множественных аргументов
+const multiSet1 = new Set([1, 2, 3, 4, 5]);
+const multiSet2 = new Set([3, 4, 5, 6, 7]);
+const multiSet3 = new Set([5, 6, 7, 8, 9]);
+const multiSet4 = new Set([7, 8, 9, 10, 11]);
+
+// Бенчмарк для тестирования операций с множественными аргументами
+benchmark.createSuite('Методы с множественными аргументами')
+  .add('difference с двумя аргументами', () => {
+    deep(multiSet1).difference(multiSet2);
+  })
+  .add('difference с тремя аргументами', () => {
+    deep(multiSet1).difference(multiSet2, multiSet3);
+  })
+  .add('difference с четырьмя аргументами', () => {
+    deep(multiSet1).difference(multiSet2, multiSet3, multiSet4);
+  })
+  .add('intersection с двумя аргументами', () => {
+    deep(multiSet1).intersection(multiSet2);
+  })
+  .add('intersection с тремя аргументами', () => {
+    deep(multiSet1).intersection(multiSet2, multiSet3);
+  })
+  .add('intersection с четырьмя аргументами', () => {
+    deep(multiSet1).intersection(multiSet2, multiSet3, multiSet4);
+  })
+  .add('symmetricDifference с двумя аргументами', () => {
+    deep(multiSet1).symmetricDifference(multiSet2);
+  })
+  .add('symmetricDifference с тремя аргументами', () => {
+    deep(multiSet1).symmetricDifference(multiSet2, multiSet3);
+  })
+  .add('symmetricDifference с четырьмя аргументами', () => {
+    deep(multiSet1).symmetricDifference(multiSet2, multiSet3, multiSet4);
+  })
+  .add('union с двумя аргументами', () => {
+    deep(multiSet1).union(multiSet2);
+  })
+  .add('union с тремя аргументами', () => {
+    deep(multiSet1).union(multiSet2, multiSet3);
+  })
+  .add('union с четырьмя аргументами', () => {
+    deep(multiSet1).union(multiSet2, multiSet3, multiSet4);
+  });
+
 // Бенчмарк для разности множеств (4 элемента)
 benchmark.createSuite('difference (4 elements)')
   .add('set.difference(set)', () => {

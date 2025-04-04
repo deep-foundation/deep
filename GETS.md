@@ -28,6 +28,7 @@
 | values | ❌ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | entries | ❌ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | join | ❌ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| count/size/length | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 ## Поддерживаемые типы данных
 
@@ -102,6 +103,65 @@ console.log(map.has('c')); // false
 const set = deep(new Set([1, 2, 3]));
 console.log(set.has(2)); // true
 console.log(set.has(4)); // false
+```
+
+### count / size / length
+
+Возвращает количество элементов в коллекции. Этот метод имеет три алиаса: `count`, `size` и `length`, которые работают одинаково.
+
+```js
+// Массивы
+const array = deep([1, 2, 3, 4, 5]);
+console.log(array.count.this); // 5
+console.log(array.size.this);  // 5
+console.log(array.length.this); // 5
+
+// Объекты
+const obj = deep({ a: 1, b: 2, c: 3 });
+console.log(obj.count.this); // 3
+
+// Строки
+const str = deep('hello');
+console.log(str.count.this); // 5
+
+// Map
+const map = deep(new Map([['a', 1], ['b', 2], ['c', 3]]));
+console.log(map.count.this); // 3
+
+// Set
+const set = deep(new Set([1, 2, 3, 4]));
+console.log(set.count.this); // 4
+
+// Примитивные типы
+const num = deep(42);
+console.log(num.count.this); // 1 (примитивные типы считаются как один элемент)
+
+const bool = deep(true);
+console.log(bool.count.this); // 1
+
+// null и undefined
+console.log(deep(null).count.this); // 0
+console.log(deep(undefined).count.this); // 0
+```
+
+Методы `count`, `size` и `length` также поддерживают отслеживание изменений. При изменении исходной коллекции, значение count автоматически обновляется.
+
+```js
+const array = deep([1, 2, 3]);
+const count = array.count;
+console.log(count.this); // 3
+
+// При добавлении элемента count автоматически обновляется
+array.push(4);
+console.log(count.this); // 4
+
+// При удалении элемента count также обновляется
+array.pop();
+console.log(count.this); // 3
+
+// Работает с любыми изменениями коллекции
+array.set(0, 10); // Замена элемента не меняет count
+console.log(count.this); // 3
 ```
 
 ## Методы преобразования

@@ -563,13 +563,16 @@ function setupTrackForMultipleOperations(result) {
 export function difference(ass, op, args) {
   if (op === 'get') {
     return function(...others) {
+      // Применяем unwrap к аргументам
+      const unwrappedOthers = others.map(other => ass.unwrap(other));
+
       // Проверяем что есть хотя бы один аргумент
-      if (others.length === 0) {
-        return new Association(ass.this);
+      if (unwrappedOthers.length === 0) {
+        return ass.wrap(ass.this);
       }
 
       // Проверяем совместимость типов для всех аргументов
-      for (const other of others) {
+      for (const other of unwrappedOthers) {
         assertCompatibleTypes(ass.this, other, 'difference');
       }
 
@@ -579,7 +582,7 @@ export function difference(ass, op, args) {
         const resultSet = new Set(set1);
 
         // Вычитаем все остальные множества
-        for (const other of others) {
+        for (const other of unwrappedOthers) {
           const otherSet = toSet(other);
           for (const item of otherSet) {
             resultSet.delete(item);
@@ -588,7 +591,7 @@ export function difference(ass, op, args) {
 
         // Сортируем и создаем новую ассоциацию
         const sortedArray = Array.from(resultSet).sort((a, b) => a - b);
-        const result = new Association(new Set(sortedArray));
+        const result = ass.wrap(new Set(sortedArray));
 
         // Устанавливаем истоки - все множества
         const origins = [ass];
@@ -628,14 +631,14 @@ export function difference(ass, op, args) {
         const resultMap = new Map(map1);
 
         // Удаляем ключи, которые есть в других аргументах
-        for (const other of others) {
+        for (const other of unwrappedOthers) {
           const otherMap = toMap(other);
           for (const key of otherMap.keys()) {
             resultMap.delete(key);
           }
         }
 
-        const result = new Association(resultMap);
+        const result = ass.wrap(resultMap);
 
         // Устанавливаем истоки
         const origins = [ass];
@@ -672,12 +675,14 @@ export function difference(ass, op, args) {
   }
 
   if (op === 'apply') {
-    const [other] = args;
-    assertCompatibleTypes(ass.this, other, 'difference');
+    // Применяем unwrap к аргументам
+    const [unwrappedOther] = args.map(arg => ass.unwrap(arg));
+
+    assertCompatibleTypes(ass.this, unwrappedOther, 'difference');
 
     if (ass.this.isArray || ass.this.isSet) {
       const set1 = toSet(ass.this);
-      const set2 = toSet(other);
+      const set2 = toSet(unwrappedOther);
       const result = new Set();
 
       // Добавляем элементы, которые есть только в первом множестве
@@ -689,10 +694,10 @@ export function difference(ass, op, args) {
 
       // Сортируем результат
       const sortedArray = Array.from(result).sort((a, b) => a - b);
-      return new Set(sortedArray);
+      return ass.wrap(new Set(sortedArray));
     } else {
       const map1 = toMap(ass.this);
-      const map2 = toMap(other);
+      const map2 = toMap(unwrappedOther);
       const result = new Map();
 
       // Добавляем ключи, которые есть только в первой карте
@@ -702,7 +707,7 @@ export function difference(ass, op, args) {
         }
       }
 
-      return result;
+      return ass.wrap(result);
     }
   }
 }
@@ -717,14 +722,17 @@ export function difference(ass, op, args) {
 export function intersection(ass, op, args) {
   if (op === 'get') {
     return function(...others) {
+      // Применяем unwrap к аргументам
+      const unwrappedOthers = others.map(other => ass.unwrap(other));
+
       // Проверяем что есть хотя бы один аргумент
-      if (others.length === 0) {
-        return new Association(ass.this);
+      if (unwrappedOthers.length === 0) {
+        return ass.wrap(ass.this);
       }
 
       // Проверяем совместимость типов для всех аргументов
-      for (const other of others) {
-      assertCompatibleTypes(ass.this, other, 'intersection');
+      for (const other of unwrappedOthers) {
+        assertCompatibleTypes(ass.this, other, 'intersection');
       }
 
       if (ass.this.isArray || ass.this.isSet) {
@@ -733,14 +741,14 @@ export function intersection(ass, op, args) {
         let resultSet = new Set(set1);
 
         // Пересекаем с каждым последующим множеством
-        for (const other of others) {
+        for (const other of unwrappedOthers) {
           const otherSet = toSet(other);
           resultSet = new Set(Array.from(resultSet).filter(item => otherSet.has(item)));
         }
 
         // Сортируем и создаем новую ассоциацию
         const sortedArray = Array.from(resultSet).sort((a, b) => a - b);
-        const result = new Association(new Set(sortedArray));
+        const result = ass.wrap(new Set(sortedArray));
 
         // Устанавливаем истоки - все множества
         const origins = [ass];
@@ -757,7 +765,7 @@ export function intersection(ass, op, args) {
           // Начинаем с первого истока
           let resultSet = new Set(toSet(result.origins[0].this));
 
-          // Пересекаем с каждым последующим множеством
+          // Пересекаем с каждым множеством
           for (let i = 1; i < result.origins.length; i++) {
             const currentSet = toSet(result.origins[i].this);
             resultSet = new Set(Array.from(resultSet).filter(item => currentSet.has(item)));
@@ -777,21 +785,22 @@ export function intersection(ass, op, args) {
         const map1 = toMap(ass.this);
         const resultMap = new Map();
 
-        // Добавляем ключи, которые есть во всех аргументах
+        // Добавляем только те ключи, которые есть во всех объектах
         for (const [key, value] of map1) {
-          let inAllMaps = true;
-          for (const other of others) {
-            if (!toMap(other).has(key)) {
-              inAllMaps = false;
+          let existsInAll = true;
+          for (const other of unwrappedOthers) {
+            const otherMap = toMap(other);
+            if (!otherMap.has(key)) {
+              existsInAll = false;
               break;
             }
           }
-          if (inAllMaps) {
+          if (existsInAll) {
             resultMap.set(key, value);
           }
         }
 
-        const result = new Association(resultMap);
+        const result = ass.wrap(resultMap);
 
         // Устанавливаем истоки
         const origins = [ass];
@@ -806,19 +815,20 @@ export function intersection(ass, op, args) {
           if (result.origins.length <= 1) return result.origins[0].this;
 
           // Начинаем с первого истока
-          const map1 = toMap(result.origins[0].this);
+          const firstMap = toMap(result.origins[0].this);
           const resultMap = new Map();
 
-          // Добавляем ключи, которые есть во всех истоках
-          for (const [key, value] of map1) {
-            let inAllMaps = true;
+          // Проверяем каждый ключ из первого истока
+          for (const [key, value] of firstMap) {
+            let existsInAll = true;
             for (let i = 1; i < result.origins.length; i++) {
-              if (!toMap(result.origins[i].this).has(key)) {
-                inAllMaps = false;
-                          break;
-                        }
-                      }
-            if (inAllMaps) {
+              const currentMap = toMap(result.origins[i].this);
+              if (!currentMap.has(key)) {
+                existsInAll = false;
+                break;
+              }
+            }
+            if (existsInAll) {
               resultMap.set(key, value);
             }
           }
@@ -835,12 +845,14 @@ export function intersection(ass, op, args) {
   }
 
   if (op === 'apply') {
-    const [other] = args;
-    assertCompatibleTypes(ass.this, other, 'intersection');
+    // Применяем unwrap к аргументам
+    const [unwrappedOther] = args.map(arg => ass.unwrap(arg));
+
+    assertCompatibleTypes(ass.this, unwrappedOther, 'intersection');
 
     if (ass.this.isArray || ass.this.isSet) {
       const set1 = toSet(ass.this);
-      const set2 = toSet(other);
+      const set2 = toSet(unwrappedOther);
       const result = new Set();
 
       // Добавляем элементы, которые есть в обоих множествах
@@ -852,10 +864,10 @@ export function intersection(ass, op, args) {
 
       // Сортируем результат
       const sortedArray = Array.from(result).sort((a, b) => a - b);
-      return new Set(sortedArray);
+      return ass.wrap(new Set(sortedArray));
     } else {
       const map1 = toMap(ass.this);
-      const map2 = toMap(other);
+      const map2 = toMap(unwrappedOther);
       const result = new Map();
 
       // Добавляем ключи, которые есть в обеих картах
@@ -865,90 +877,91 @@ export function intersection(ass, op, args) {
         }
       }
 
-      return result;
+      return ass.wrap(result);
     }
   }
 }
 
 /**
- * Вычисляет симметрическую разность множеств (A △ B △ C △ ...)
+ * Вычисляет симметрическую разность множеств (элементы, которые есть только в одном из множеств)
  * @param {Association} ass - Экземпляр Association
  * @param {string} op - Операция ('get', 'apply')
  * @param {Array} args - Аргументы метода
- * @returns {Set|Map} - Новое множество/карта, содержащее элементы, присутствующие в нечетном числе множеств
+ * @returns {Set|Map} - Новое множество/карта, содержащее элементы, которые присутствуют только в одном множестве
  */
 export function symmetricDifference(ass, op, args) {
   if (op === 'get') {
     return function(...others) {
+      // Применяем unwrap к аргументам
+      const unwrappedOthers = others.map(other => ass.unwrap(other));
+
       // Проверяем что есть хотя бы один аргумент
-      if (others.length === 0) {
-        return new Association(ass.this);
+      if (unwrappedOthers.length === 0) {
+        return ass.wrap(ass.this);
       }
 
       // Проверяем совместимость типов для всех аргументов
-      for (const other of others) {
-      assertCompatibleTypes(ass.this, other, 'symmetricDifference');
+      for (const other of unwrappedOthers) {
+        assertCompatibleTypes(ass.this, other, 'symmetricDifference');
       }
 
       if (ass.this.isArray || ass.this.isSet) {
-        // Создаем карту для подсчета вхождений каждого элемента
-        const countMap = new Map();
-
-        // Начинаем с первого истока (текущего объекта)
+        // Подсчитываем вхождения каждого элемента по всем множествам
+        const counts = new Map();
         const set1 = toSet(ass.this);
+
+        // Добавляем элементы из первого множества
         for (const item of set1) {
-          countMap.set(item, 1);
+          counts.set(item, (counts.get(item) || 0) + 1);
         }
 
-        // Добавляем элементы из всех аргументов
-        for (const other of others) {
+        // Добавляем элементы из остальных множеств
+        for (const other of unwrappedOthers) {
           const otherSet = toSet(other);
           for (const item of otherSet) {
-            countMap.set(item, (countMap.get(item) || 0) + 1);
+            counts.set(item, (counts.get(item) || 0) + 1);
           }
         }
 
-        // Создаем результирующее множество только из элементов,
-        // встречающихся нечетное число раз
+        // Создаем результирующее множество с элементами, встречающимися нечетное число раз
         const resultSet = new Set();
-        for (const [item, count] of countMap) {
-          if (count % 2 === 1) {
+        for (const [item, count] of counts.entries()) {
+          if (count % 2 !== 0) {
             resultSet.add(item);
           }
         }
 
         // Сортируем и создаем новую ассоциацию
         const sortedArray = Array.from(resultSet).sort((a, b) => a - b);
-        const resultAss = new Association(new Set(sortedArray));
+        const result = ass.wrap(new Set(sortedArray));
 
         // Устанавливаем истоки - все множества
-        const originsList = [ass];
+        const origins = [ass];
         for (const other of others) {
-          originsList.push(new Association(other));
+          origins.push(new Association(other));
         }
-        resultAss.origins = originsList;
-        resultAss.temp.method = 'symmetricDifference';
+        result.origins = origins;
+        result.temp.method = 'symmetricDifference';
 
         // Обновляем трансформер для работы со множеством истоков
-        resultAss.temp.transformer = () => {
-          if (resultAss.origins.length <= 1) return resultAss.origins[0].this;
+        result.temp.transformer = () => {
+          if (result.origins.length <= 1) return result.origins[0].this;
 
-          // Создаем карту для подсчета вхождений каждого элемента
-          const countMap = new Map();
+          // Подсчитываем вхождения каждого элемента
+          const counts = new Map();
 
-          // Подсчитываем вхождения каждого элемента во всех истоках
-          for (let i = 0; i < resultAss.origins.length; i++) {
-            const currentSet = toSet(resultAss.origins[i].this);
+          // Для всех истоков
+          for (let i = 0; i < result.origins.length; i++) {
+            const currentSet = toSet(result.origins[i].this);
             for (const item of currentSet) {
-              countMap.set(item, (countMap.get(item) || 0) + 1);
+              counts.set(item, (counts.get(item) || 0) + 1);
             }
           }
 
-          // Создаем результирующее множество только из элементов,
-          // встречающихся нечетное число раз
+          // Создаем результирующее множество
           const resultSet = new Set();
-          for (const [item, count] of countMap) {
-            if (count % 2 === 1) {
+          for (const [item, count] of counts.entries()) {
+            if (count % 2 !== 0) {
               resultSet.add(item);
             }
           }
@@ -959,75 +972,82 @@ export function symmetricDifference(ass, op, args) {
         };
 
         // Добавляем локальный track для точечных обновлений
-        resultAss._proxy.set('track', setupTrackForMultipleOperations(resultAss));
+        result._proxy.set('track', setupTrackForMultipleOperations(result));
 
-        return resultAss;
-            } else {
-        // Для Map и Object
-        const countMap = new Map();
-
-        // Подсчитываем вхождения каждого ключа в первой карте
+        return result;
+      } else {
+        // Для Map и Object - подсчитываем вхождения ключей
+        const keyCount = new Map();
         const map1 = toMap(ass.this);
-        for (const [key, value] of map1) {
-          countMap.set(key, { count: 1, value });
+
+        // Добавляем ключи из первой карты
+        for (const key of map1.keys()) {
+          keyCount.set(key, (keyCount.get(key) || 0) + 1);
         }
 
-        // Подсчитываем вхождения для всех остальных карт
-        for (const other of others) {
+        // Добавляем ключи из остальных карт
+        for (const other of unwrappedOthers) {
           const otherMap = toMap(other);
-          for (const [key, value] of otherMap) {
-            if (countMap.has(key)) {
-              countMap.get(key).count += 1;
-      } else {
-              countMap.set(key, { count: 1, value });
-            }
+          for (const key of otherMap.keys()) {
+            keyCount.set(key, (keyCount.get(key) || 0) + 1);
           }
         }
 
-        // Создаем результирующую карту только из ключей,
-        // встречающихся нечетное число раз
+        // Создаем результирующую карту с ключами, встречающимися нечетное число раз
         const resultMap = new Map();
-        for (const [key, { count, value }] of countMap) {
-          if (count % 2 === 1) {
+        for (const [key, count] of keyCount.entries()) {
+          if (count % 2 !== 0) {
+            // Берем значение из первой карты, в которой есть этот ключ
+            let value;
+            if (map1.has(key)) {
+              value = map1.get(key);
+            } else {
+              for (const other of unwrappedOthers) {
+                const otherMap = toMap(other);
+                if (otherMap.has(key)) {
+                  value = otherMap.get(key);
+                  break;
+                }
+              }
+            }
             resultMap.set(key, value);
           }
         }
 
-        const resultAss = new Association(resultMap);
+        const result = ass.wrap(resultMap);
 
-        // Сохраняем все истоки
-        const originsList = [ass];
+        // Устанавливаем истоки
+        const origins = [ass];
         for (const other of others) {
-          originsList.push(new Association(other));
+          origins.push(new Association(other));
         }
-        resultAss.origins = originsList;
-        resultAss.temp.method = 'symmetricDifference';
+        result.origins = origins;
+        result.temp.method = 'symmetricDifference';
 
         // Обновляем трансформер для работы со множеством истоков
-        resultAss.temp.transformer = () => {
-          if (resultAss.origins.length <= 1) return resultAss.origins[0].this;
+        result.temp.transformer = () => {
+          if (result.origins.length <= 1) return result.origins[0].this;
 
-          // Создаем карту для подсчета вхождений каждого ключа
-          const countMap = new Map();
+          // Подсчитываем вхождения каждого ключа
+          const keyCount = new Map();
+          const valueMap = new Map();
 
-          // Подсчитываем вхождения каждого ключа во всех истоках
-          for (let i = 0; i < resultAss.origins.length; i++) {
-            const currentMap = toMap(resultAss.origins[i].this);
-            for (const [key, value] of currentMap) {
-              if (!countMap.has(key)) {
-                countMap.set(key, { count: 1, value });
-                  } else {
-                countMap.get(key).count += 1;
+          // Для всех истоков
+          for (let i = 0; i < result.origins.length; i++) {
+            const currentMap = toMap(result.origins[i].this);
+            for (const [key, value] of currentMap.entries()) {
+              keyCount.set(key, (keyCount.get(key) || 0) + 1);
+              if (!valueMap.has(key)) {
+                valueMap.set(key, value);
               }
             }
           }
 
-          // Создаем результирующую карту только из ключей,
-          // встречающихся нечетное число раз
+          // Создаем результирующую карту
           const resultMap = new Map();
-          for (const [key, { count, value }] of countMap) {
-            if (count % 2 === 1) {
-              resultMap.set(key, value);
+          for (const [key, count] of keyCount.entries()) {
+            if (count % 2 !== 0) {
+              resultMap.set(key, valueMap.get(key));
             }
           }
 
@@ -1035,43 +1055,43 @@ export function symmetricDifference(ass, op, args) {
         };
 
         // Добавляем локальный track для точечных обновлений
-        resultAss._proxy.set('track', setupTrackForMultipleOperations(resultAss));
+        result._proxy.set('track', setupTrackForMultipleOperations(result));
 
-        return resultAss;
+        return result;
       }
     };
   }
 
   if (op === 'apply') {
-    const [other] = args;
-    assertCompatibleTypes(ass.this, other, 'symmetricDifference');
+    // Применяем unwrap к аргументам
+    const [unwrappedOther] = args.map(arg => ass.unwrap(arg));
+
+    assertCompatibleTypes(ass.this, unwrappedOther, 'symmetricDifference');
 
     if (ass.this.isArray || ass.this.isSet) {
       const set1 = toSet(ass.this);
-      const set2 = toSet(other);
-
-      // Создаем результирующее множество
-      const resultSet = new Set();
+      const set2 = toSet(unwrappedOther);
+      const result = new Set();
 
       // Добавляем элементы, которые есть только в одном из множеств
       for (const item of set1) {
         if (!set2.has(item)) {
-          resultSet.add(item);
+          result.add(item);
         }
       }
 
       for (const item of set2) {
         if (!set1.has(item)) {
-          resultSet.add(item);
+          result.add(item);
         }
       }
 
       // Сортируем результат
-      const sortedArray = Array.from(resultSet).sort((a, b) => a - b);
-      return new Set(sortedArray);
+      const sortedArray = Array.from(result).sort((a, b) => a - b);
+      return ass.wrap(new Set(sortedArray));
     } else {
       const map1 = toMap(ass.this);
-      const map2 = toMap(other);
+      const map2 = toMap(unwrappedOther);
       const result = new Map();
 
       // Добавляем ключи, которые есть только в первой карте
@@ -1088,7 +1108,7 @@ export function symmetricDifference(ass, op, args) {
         }
       }
 
-      return result;
+      return ass.wrap(result);
     }
   }
 }
@@ -1098,28 +1118,30 @@ export function symmetricDifference(ass, op, args) {
  * @param {Association} ass - Экземпляр Association
  * @param {string} op - Операция ('get', 'apply')
  * @param {Array} args - Аргументы метода
- * @returns {Set|Map} - Новое множество/карта, содержащее все элементы из всех множеств
+ * @returns {Set|Map} - Новое множество/карта, содержащее элементы из всех множеств
  */
 export function union(ass, op, args) {
   if (op === 'get') {
     return function(...others) {
+      // Применяем unwrap к аргументам
+      const unwrappedOthers = others.map(other => ass.unwrap(other));
+
       // Проверяем что есть хотя бы один аргумент
-      if (others.length === 0) {
-        return new Association(ass.this);
+      if (unwrappedOthers.length === 0) {
+        return ass.wrap(ass.this);
       }
 
       // Проверяем совместимость типов для всех аргументов
-      for (const other of others) {
-      assertCompatibleTypes(ass.this, other, 'union');
+      for (const other of unwrappedOthers) {
+        assertCompatibleTypes(ass.this, other, 'union');
       }
 
       if (ass.this.isArray || ass.this.isSet) {
-        // Создаем объединенное множество, начиная с первого истока
-        const set1 = toSet(ass.this);
-        const resultSet = new Set(set1);
+        // Начинаем с первого истока (текущего объекта)
+        const resultSet = new Set(toSet(ass.this));
 
         // Добавляем элементы из остальных множеств
-        for (const other of others) {
+        for (const other of unwrappedOthers) {
           const otherSet = toSet(other);
           for (const item of otherSet) {
             resultSet.add(item);
@@ -1128,7 +1150,7 @@ export function union(ass, op, args) {
 
         // Сортируем и создаем новую ассоциацию
         const sortedArray = Array.from(resultSet).sort((a, b) => a - b);
-        const result = new Association(new Set(sortedArray));
+        const result = ass.wrap(new Set(sortedArray));
 
         // Устанавливаем истоки - все множества
         const origins = [ass];
@@ -1142,11 +1164,13 @@ export function union(ass, op, args) {
         result.temp.transformer = () => {
           if (result.origins.length <= 1) return result.origins[0].this;
 
-          // Объединяем все истоки
+          // Объединяем все множества
           const resultSet = new Set();
+
+          // Для всех истоков
           for (let i = 0; i < result.origins.length; i++) {
-            const originSet = toSet(result.origins[i].this);
-            for (const item of originSet) {
+            const currentSet = toSet(result.origins[i].this);
+            for (const item of currentSet) {
               resultSet.add(item);
             }
           }
@@ -1162,18 +1186,24 @@ export function union(ass, op, args) {
         return result;
       } else {
         // Для Map и Object - начинаем с первого истока
-        const map1 = toMap(ass.this);
-        const resultMap = new Map(map1);
+        const resultMap = new Map();
 
-        // Добавляем ключи из остальных карт, перезаписывая существующие
-        for (const other of others) {
+        // Перебираем все истоки по порядку, чтобы последние перезаписывали предыдущие
+        // Сначала текущий объект (первый исток)
+        const map1 = toMap(ass.this);
+        for (const [key, value] of map1) {
+          resultMap.set(key, value);
+        }
+
+        // Затем все последующие истоки (в порядке передачи)
+        for (const other of unwrappedOthers) {
           const otherMap = toMap(other);
           for (const [key, value] of otherMap) {
-            resultMap.set(key, value);
+            resultMap.set(key, value); // Перезаписывает предыдущие значения
           }
         }
 
-        const result = new Association(resultMap);
+        const result = ass.wrap(resultMap);
 
         // Устанавливаем истоки
         const origins = [ass];
@@ -1187,15 +1217,14 @@ export function union(ass, op, args) {
         result.temp.transformer = () => {
           if (result.origins.length <= 1) return result.origins[0].this;
 
-          // Создаем объединенную карту
+          // Объединяем все карты, последние перезаписывают предыдущие
           const resultMap = new Map();
 
-          // Добавляем ключи из всех истоков по порядку
-          // чтобы последний исток имел приоритет для одинаковых ключей
+          // Для всех истоков в порядке их добавления
           for (let i = 0; i < result.origins.length; i++) {
             const currentMap = toMap(result.origins[i].this);
             for (const [key, value] of currentMap) {
-              resultMap.set(key, value);
+              resultMap.set(key, value); // Перезаписывает предыдущие значения
             }
           }
 
@@ -1211,12 +1240,14 @@ export function union(ass, op, args) {
   }
 
   if (op === 'apply') {
-    const [other] = args;
-    assertCompatibleTypes(ass.this, other, 'union');
+    // Применяем unwrap к аргументам
+    const [unwrappedOther] = args.map(arg => ass.unwrap(arg));
+
+    assertCompatibleTypes(ass.this, unwrappedOther, 'union');
 
     if (ass.this.isArray || ass.this.isSet) {
       const set1 = toSet(ass.this);
-      const set2 = toSet(other);
+      const set2 = toSet(unwrappedOther);
       const result = new Set(set1);
 
       // Добавляем элементы из второго множества
@@ -1226,18 +1257,23 @@ export function union(ass, op, args) {
 
       // Сортируем результат
       const sortedArray = Array.from(result).sort((a, b) => a - b);
-      return new Set(sortedArray);
+      return ass.wrap(new Set(sortedArray));
     } else {
       const map1 = toMap(ass.this);
-      const map2 = toMap(other);
-      const result = new Map(map1);
+      const map2 = toMap(unwrappedOther);
+      const result = new Map();
 
-      // Добавляем ключи из второй карты
+      // Сначала добавляем все ключи из первой карты
+      for (const [key, value] of map1) {
+        result.set(key, value);
+      }
+
+      // Затем добавляем все ключи из второй карты (перезаписывая совпадающие)
       for (const [key, value] of map2) {
         result.set(key, value);
       }
 
-      return result;
+      return ass.wrap(result);
     }
   }
 }

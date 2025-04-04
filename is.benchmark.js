@@ -121,15 +121,6 @@ deepPropsSuite.add('deep(map).isMany', () => deepMap.isMany);
 deepPropsSuite.add('deep(string).isMany', () => deepString.isMany);
 deepPropsSuite.add('deep(number).isMany', () => deepNumber.isMany);
 
-// Группа тестов для проверки типов через deep функции (для сравнения)
-const deepFuncSuite = benchmark.createSuite('Проверка типов через deep функции');
-
-deepFuncSuite.add('deep(string).isString()', () => deepString.isString());
-deepFuncSuite.add('deep(number).isNumber()', () => deepNumber.isNumber());
-deepFuncSuite.add('deep(boolean).isBoolean()', () => deepBoolean.isBoolean());
-deepFuncSuite.add('deep(array).isArray()', () => deepArray.isArray());
-deepFuncSuite.add('deep(object).isObject()', () => deepObject.isObject());
-
 // Группа тестов для сравнения встроенных функций и deep свойств
 const compareSuite = benchmark.createSuite('Сравнение встроенных проверок и deep свойств');
 

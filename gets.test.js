@@ -474,3 +474,77 @@ test('get - доступ к элементам разных типов данн�
     assert.strictEqual(a.get(wrappedKey).this, 3);
   });
 });
+
+test('count, size и length для разных типов данных', async (t) => {
+  await t.test('count для массива', () => {
+    const array = [1, 2, 3, 4, 5];
+    const countResult = deep(array).count;
+    assert.ok(countResult instanceof Association, 'Результат count должен быть Association');
+    assert.strictEqual(countResult.this, 5, 'Count массива должен быть равен его длине');
+  });
+
+  await t.test('size для массива', () => {
+    const array = [1, 2, 3, 4, 5];
+    const sizeResult = deep(array).size;
+    assert.ok(sizeResult instanceof Association, 'Результат size должен быть Association');
+    assert.strictEqual(sizeResult.this, 5, 'Size массива должен быть равен его длине');
+  });
+
+  await t.test('length для массива', () => {
+    const array = [1, 2, 3, 4, 5];
+    const lengthResult = deep(array).length;
+    assert.ok(lengthResult instanceof Association, 'Результат length должен быть Association');
+    assert.strictEqual(lengthResult.this, 5, 'Length массива должен быть равен его длине');
+  });
+
+  await t.test('count для объекта', () => {
+    const obj = { a: 1, b: 2, c: 3 };
+    const countResult = deep(obj).count;
+    assert.ok(countResult instanceof Association, 'Результат count должен быть Association');
+    assert.strictEqual(countResult.this, 3, 'Count объекта должен быть равен количеству его свойств');
+  });
+
+  await t.test('count для строки', () => {
+    const str = 'hello';
+    const countResult = deep(str).count;
+    assert.ok(countResult instanceof Association, 'Результат count должен быть Association');
+    assert.strictEqual(countResult.this, 5, 'Count строки должен быть равен ее длине');
+  });
+
+  await t.test('count для Map', () => {
+    const map = new Map([['a', 1], ['b', 2], ['c', 3]]);
+    const countResult = deep(map).count;
+    assert.ok(countResult instanceof Association, 'Результат count должен быть Association');
+    assert.strictEqual(countResult.this, 3, 'Count Map должен быть равен его размеру');
+  });
+
+  await t.test('count для Set', () => {
+    const set = new Set([1, 2, 3, 4]);
+    const countResult = deep(set).count;
+    assert.ok(countResult instanceof Association, 'Результат count должен быть Association');
+    assert.strictEqual(countResult.this, 4, 'Count Set должен быть равен его размеру');
+  });
+
+  await t.test('count для числа', () => {
+    const num = 42;
+    const countResult = deep(num).count;
+    assert.ok(countResult instanceof Association, 'Результат count должен быть Association');
+    assert.strictEqual(countResult.this, 1, 'Count числа должен быть равен 1');
+  });
+
+  await t.test('count для boolean', () => {
+    const bool = true;
+    const countResult = deep(bool).count;
+    assert.ok(countResult instanceof Association, 'Результат count должен быть Association');
+    assert.strictEqual(countResult.this, 1, 'Count boolean должен быть равен 1');
+  });
+
+  await t.test('count для null и undefined', () => {
+    const nullCount = deep(null).count;
+    const undefinedCount = deep(undefined).count;
+    assert.ok(nullCount instanceof Association, 'Результат count для null должен быть Association');
+    assert.ok(undefinedCount instanceof Association, 'Результат count для undefined должен быть Association');
+    assert.strictEqual(nullCount.this, 0, 'Count для null должен быть равен 0');
+    assert.strictEqual(undefinedCount.this, 0, 'Count для undefined должен быть равен 0');
+  });
+});

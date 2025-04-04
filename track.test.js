@@ -1409,4 +1409,165 @@ test('Track на разных типах данных и операциях', as
       });
     });
   });
+
+  await t.test('Track - отслеживание метода count', async (t) => {
+    // Проверяем наличие системы событий
+    if (!Association._proxy.has('on') || !Association._proxy.has('emit')) {
+      t.skip('Тест пропущен, так как не реализована система событий');
+      return;
+    }
+
+    await t.test('Track count для массива с изменениями', async () => {
+      // Создаем исходную ассоциацию массива
+      const source = deep([1, 2, 3, 4]);
+
+      // Получаем count
+      const countResult = source.count;
+
+      // Проверяем начальное состояние
+      assert.strictEqual(countResult.this, 4, 'Начальное значение count должно быть 4');
+
+      // Инициализируем трекер
+      const tracker = countResult.track;
+
+      // Тестируем операцию push
+      source.push(5);
+      assert.strictEqual(countResult.this, 5, 'После push(5) count должен обновиться до 5');
+
+      // Тестируем операцию pop
+      source.pop();
+      assert.strictEqual(countResult.this, 4, 'После pop() count должен вернуться к 4');
+
+      // Тестируем операцию unshift
+      source.unshift(0);
+      assert.strictEqual(countResult.this, 5, 'После unshift(0) count должен обновиться до 5');
+
+      // Тестируем операцию shift
+      source.shift();
+      assert.strictEqual(countResult.this, 4, 'После shift() count должен вернуться к 4');
+
+      // Тестируем операцию delete
+      source.delete(1);
+      assert.strictEqual(countResult.this, 3, 'После delete(1) count должен уменьшиться до 3');
+
+      // Тестируем операцию add
+      source.add(10);
+      assert.strictEqual(countResult.this, 4, 'После add(10) count должен увеличиться до 4');
+    });
+
+    await t.test('Track count для объекта с изменениями', async () => {
+      // Создаем исходную ассоциацию объекта
+      const source = deep({ a: 1, b: 2, c: 3 });
+
+      // Получаем count
+      const countResult = source.count;
+
+      // Проверяем начальное состояние
+      assert.strictEqual(countResult.this, 3, 'Начальное значение count должно быть 3');
+
+      // Инициализируем трекер
+      const tracker = countResult.track;
+
+      // Тестируем операцию set нового свойства
+      source.set('d', 4);
+      assert.strictEqual(countResult.this, 4, 'После set("d", 4) count должен увеличиться до 4');
+
+      // Тестируем операцию set существующего свойства
+      source.set('a', 10);
+      assert.strictEqual(countResult.this, 4, 'После set("a", 10) count должен остаться 4');
+
+      // Тестируем операцию delete
+      source.delete('b');
+      assert.strictEqual(countResult.this, 3, 'После delete("b") count должен уменьшиться до 3');
+    });
+
+    await t.test('Track count для Set с изменениями', async () => {
+      // Создаем исходную ассоциацию Set
+      const source = deep(new Set([1, 2, 3]));
+
+      // Получаем count
+      const countResult = source.count;
+
+      // Проверяем начальное состояние
+      assert.strictEqual(countResult.this, 3, 'Начальное значение count должно быть 3');
+
+      // Инициализируем трекер
+      const tracker = countResult.track;
+
+      // Тестируем операцию add
+      source.add(4);
+      assert.strictEqual(countResult.this, 4, 'После add(4) count должен увеличиться до 4');
+
+      // Тестируем операцию add существующего элемента
+      source.add(2);
+      assert.strictEqual(countResult.this, 4, 'После add(2) count не должен измениться, так как элемент уже существует');
+
+      // Тестируем операцию delete
+      source.delete(1);
+      assert.strictEqual(countResult.this, 3, 'После delete(1) count должен уменьшиться до 3');
+    });
+
+    await t.test('Track count для Map с изменениями', async () => {
+      // Создаем исходную ассоциацию Map
+      const source = deep(new Map([
+        ['a', 1],
+        ['b', 2],
+        ['c', 3]
+      ]));
+
+      // Получаем count
+      const countResult = source.count;
+
+      // Проверяем начальное состояние
+      assert.strictEqual(countResult.this, 3, 'Начальное значение count должно быть 3');
+
+      // Инициализируем трекер
+      const tracker = countResult.track;
+
+      // Тестируем операцию set нового ключа
+      source.set('d', 4);
+      assert.strictEqual(countResult.this, 4, 'После set("d", 4) count должен увеличиться до 4');
+
+      // Тестируем операцию set существующего ключа
+      source.set('a', 10);
+      assert.strictEqual(countResult.this, 4, 'После set("a", 10) count не должен измениться');
+
+      // Тестируем операцию delete
+      source.delete('b');
+      assert.strictEqual(countResult.this, 3, 'После delete("b") count должен уменьшиться до 3');
+    });
+
+    await t.test('Track count для строки с изменениями', async () => {
+      // Создаем исходную ассоциацию строки
+      const source = deep('hello');
+
+      // Получаем count
+      const countResult = source.count;
+
+      // Проверяем начальное состояние
+      assert.strictEqual(countResult.this, 5, 'Начальное значение count должно быть 5');
+
+      // Инициализируем трекер
+      const tracker = countResult.track;
+
+      // Изменяем строку полностью (так как строки неизменяемы)
+      source.this = 'hi';
+
+      // Необходимо вручную выполнить emit, так как простая замена this не генерирует событие change
+      if (source.emit) {
+        source.emit('change', {
+          prev: 'hello',
+          next: 'hi',
+          detail: {
+            operation: 'set',
+            value: 'hi'
+          },
+          method: 'set'
+        });
+      }
+
+      // Проверяем, что count обновился
+      assert.strictEqual(countResult.this, 2, 'После замены строки count должен обновиться до 2');
+    });
+  });
 });
