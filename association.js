@@ -376,8 +376,18 @@ export class Association extends Function {
       configurable: true
     });
 
-    // Используем геттер proxy для получения проксированного экземпляра
-    return this.proxy;
+    // Проверяем существование метода _onNew в статическом хранилище
+    const onNewHandler = Association._proxy.get('_onNew');
+
+    // Получаем проксированный экземпляр
+    const proxy = this.proxy;
+
+    // Если метод _onNew есть, автоматически вызываем его
+    if (typeof onNewHandler === 'function' && proxy._onNew) {
+      proxy._onNew();
+    }
+
+    return proxy;
   }
 }
 

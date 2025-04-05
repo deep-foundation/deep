@@ -1785,7 +1785,6 @@ export function every(ass, op, args) {
         const wrappedCollection = ass.wrap(value);
         const callbackResult = callback(wrappedValue, index++, wrappedCollection);
         const unwrappedResult = ass.unwrap(callbackResult);
-
         if (!unwrappedResult) {
           result = false;
           break;
@@ -2845,3 +2844,4 @@ export function length(ass, op) {
 Association._proxy.set('count', count);
 Association._proxy.set('size', size);
 Association._proxy.set('length', length);
+

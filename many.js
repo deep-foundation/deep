@@ -1285,10 +1285,10 @@ const many = {
   symmetricDifference,
   union
 };
-
 // Добавляем методы в прокси Association
 for (const [name, method] of Object.entries(many)) {
   Association._proxy.set(name, method);
 }
 
 export default many;
+

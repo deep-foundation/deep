@@ -33,6 +33,27 @@ export class Events {
       this._contexts.set(handler, context);
     }
 
+    // Если это обработчик для "*", создадим специальный обработчик,
+    // который не будет реагировать на события "*" и "error"
+    if (eventType === '*') {
+      const originalHandler = handler;
+      handler = (eventType, ...args) => {
+        // Игнорируем события "*" и "error"
+        if (eventType === '*' || eventType === 'error') {
+          return;
+        }
+
+        // Вызываем оригинальный обработчик с контекстом
+        if (context !== undefined) {
+          return originalHandler.call(context, eventType, ...args);
+        } else {
+          return originalHandler(eventType, ...args);
+        }
+      };
+      // Сохраняем ссылку на оригинальный обработчик
+      handler.originalHandler = originalHandler;
+    }
+
     // Стандартная обработка для конкретных событий
     if (!this._handlers.has(eventType)) {
       this._handlers.set(eventType, new Set());
@@ -171,13 +192,51 @@ export class Events {
         } catch (error) {
           // Предотвращаем прерывание цепочки вызовов при ошибке
           // в одном из обработчиков
-          // Вместо логирования в консоль генерируем событие 'error'
-          this.emit('error', {
-            originalEvent: eventType,
-            error: error
-          });
+          // Не генерируем событие 'error' если текущее событие уже 'error',
+          // чтобы избежать бесконечной рекурсии
+          if (eventType !== 'error') {
+            this.emit('error', {
+              originalEvent: eventType,
+              error: error
+            });
+          } else {
+            console.error('Error in error event handler:', error);
+          }
         }
       });
+    }
+
+    // Вызываем обработчики специального события "*" для всех событий, кроме самого "*"
+    // и события 'error', чтобы избежать бесконечной рекурсии
+    if (eventType !== '*' && eventType !== 'error') {
+      const wildcardHandlers = this._handlers.get('*');
+      if (wildcardHandlers && wildcardHandlers.size > 0) {
+        hasHandlers = true;
+
+        // Копируем набор обработчиков для безопасного перебора
+        [...wildcardHandlers].forEach(handler => {
+          try {
+            // Используем сохраненный контекст, если он есть
+            const context = this._contexts.has(handler)
+              ? this._contexts.get(handler)
+              : undefined;
+
+            if (context !== undefined) {
+              handler.call(context, eventType, ...args);
+            } else {
+              handler(eventType, ...args);
+            }
+          } catch (error) {
+            // Предотвращаем прерывание цепочки вызовов при ошибке
+            // в одном из обработчиков
+            this.emit('error', {
+              originalEvent: eventType,
+              wildcardHandler: true,
+              error: error
+            });
+          }
+        });
+      }
     }
 
     return hasHandlers;
@@ -199,8 +258,6 @@ export class Events {
    * @returns {number} Количество обработчиков
    */
   listenerCount(eventType) {
-    const handlers = this._handlers.get(eventType);
-    return handlers ? handlers.size : 0;
   }
 
   /**

@@ -373,7 +373,7 @@ export {
 };
 
 // Экспортируем все методы проверок.
-export const all = {
+const all = {
   isSymbol,
   isString,
   isNumber,

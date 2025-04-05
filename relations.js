@@ -24,6 +24,12 @@ export const tos = new Memory({
   childSetFactory: () => new Association(new Set())
 });
 
+// Создаем экземпляр Memory для хранения значений ассоциаций (value/valued)
+export const values = new Memory({
+  name: 'Association.values',
+  childSetFactory: () => new Association(new Set())
+});
+
 /**
  * Функция для получения или установки типа ассоциации.
  * @param {string} op - Операция ('get' или 'set')
@@ -411,6 +417,255 @@ export const into = function(ass, op) {
   }
 };
 
+/**
+ * Функция для получения или установки значения ассоциации.
+ * @param {string} op - Операция ('get' или 'set')
+ * @param {...*} args - Аргументы операции
+ * @returns {Association|void} - Ассоциация значения при 'get', ничего при 'set'
+ */
+export const value = function(ass, op, args) {
+  // Операция 'get': возвращаем текущее значение ассоциации
+  if (op === 'get') {
+    const currentValue = values.one(ass.this);
+    // Возвращаем новую ассоциацию, связанную со значением
+    if (currentValue === undefined) return;
+    return new Association(currentValue);
+  }
+
+  // Операция 'set': устанавливаем значение ассоциации
+  else if (op === 'set') {
+    let newValue = args[0];
+
+    // Сохраняем оригинальное значение для проксирования событий
+    const origValue = newValue;
+
+    // Проверяем, если значение равно null или undefined
+    if (newValue === null || newValue === undefined) {
+      // Получаем текущее значение для события
+      const prevValue = values.one(ass.this);
+
+      // Если было установлено предыдущее значение, удаляем его
+      if (prevValue !== undefined) {
+        // Удаляем подписки на события предыдущего значения
+        _cleanupValueEventListeners(ass);
+
+        values.delete(ass.this, prevValue);
+
+        // Генерируем события только если было предыдущее значение
+        if (ass.emit) {
+          // Событие 'value' с указанием предыдущего и нового значения
+          ass.emit('value', prevValue, undefined);
+
+          // Событие 'change' с деталями изменения
+          ass.emit('change', {
+            prev: prevValue,
+            next: undefined
+          }, {
+            method: 'value',
+            arguments: [newValue]
+          });
+        }
+      }
+
+      return true;
+    }
+
+    // Unwrap только если это Association
+    if (newValue instanceof Association) newValue = newValue.this;
+
+    // Получаем текущее значение для события
+    const prevValue = values.one(ass.this);
+
+    // Если значение не изменилось, ничего не делаем
+    if (prevValue === newValue) {
+      return;
+    }
+
+    // Если было установлено предыдущее значение, удаляем его и отписываемся от его событий
+    if (prevValue) {
+      // Удаляем подписки на события предыдущего значения
+      _cleanupValueEventListeners(ass);
+
+      values.delete(ass.this, prevValue);
+    }
+
+    // Если указано новое значение, устанавливаем его
+    if (newValue !== undefined) {
+      // Если новое значение является экземпляром Association, используем его this
+      values.set(ass.this, newValue);
+
+      // Создаем подписку на все события нового значения, если это Association
+      // Передаем оригинальную Association, а не unwrapped значение
+      _setupValueEventListeners(ass, origValue);
+    }
+
+    // Генерируем события только если объект имеет метод emit
+    if (ass.emit) {
+      // Событие 'value' с указанием предыдущего и нового значения
+      ass.emit('value', prevValue, newValue);
+
+      // Событие 'change' с деталями изменения
+      ass.emit('change', {
+        prev: prevValue,
+        next: newValue
+      }, {
+        method: 'value',
+        arguments: [origValue]
+      });
+    }
+
+    return true;
+  }
+
+  else {
+    throw new Error(`unexpected op=${op}`);
+  }
+};
+
+/**
+ * Очищает все подписки на события значения ассоциации.
+ * @param {Association} ass - Ассоциация, для которой нужно очистить подписки
+ * @private
+ */
+function _cleanupValueEventListeners(ass) {
+  // Проверяем наличие подписки на события
+  if (ass.temp && ass.temp._valueEventUnsubscribe) {
+    // Вызываем функцию отписки
+    ass.temp._valueEventUnsubscribe();
+    // Удаляем ссылки на функцию отписки
+    delete ass.temp._valueEventUnsubscribe;
+  }
+}
+
+/**
+ * Настраивает подписку на все события значения ассоциации.
+ * @param {Association} ass - Ассоциация, для которой настраивается подписка
+ * @param {any} valueToSet - Значение, на события которого нужно подписаться
+ * @private
+ */
+function _setupValueEventListeners(ass, valueToSet) {
+  // Проверяем, что valueToSet является экземпляром Association
+  if (!(valueToSet instanceof Association)) {
+    return;
+  }
+
+  // Проверяем, что у valueToSet есть методы on и emit
+  if (!valueToSet.on || !valueToSet.emit) {
+    return;
+  }
+
+  // Проверяем, что у current ассоциации есть метод emit
+  if (!ass.emit) {
+    return;
+  }
+
+  // Упрощаем логику - вместо подписки на конкретные события используем
+  // wildcard-подписку на все события
+  const offWildcard = valueToSet.on('*', (eventType, ...eventArgs) => {
+    // Проксируем событие в текущую ассоциацию с префиксом "value:"
+    ass.emit(`value:${eventType}`, ...eventArgs);
+  });
+
+  // Массив для хранения функций отписки
+  const offChanges = [offWildcard];
+
+  // Подписываемся на событие kill для очистки подписки при удалении значения
+  const offKill = ass.on('kill', () => {
+    // Отписываемся от всех событий
+    for (const off of offChanges) {
+      if (typeof off === 'function') {
+        off();
+      }
+    }
+  });
+
+  // Сохраняем функцию отписки в temp
+  ass.temp._valueEventUnsubscribe = () => {
+    // Отписываемся от всех событий
+    for (const off of offChanges) {
+      if (typeof off === 'function') {
+        off();
+      }
+    }
+
+    // Отписываемся от события kill
+    if (offKill && typeof offKill === 'function') {
+      offKill();
+    }
+  };
+}
+
+/**
+ * Функция для получения множества ассоциаций с определенным значением.
+ * @param {string} op - Операция ('get')
+ * @returns {Association} - Ассоциация содержащая Set с ассоциациями с указанным значением
+ */
+export const valued = function(ass, op) {
+  // Операция 'get': возвращаем множество ассоциаций со значением
+  if (op === 'get') {
+    // Получаем множество из values, создаем его, если оно не существует
+    const result = values.many(ass.this);
+
+    // Добавляем информацию для TRACK
+    result.origins = [ass];
+    result.temp.method = 'valued';
+
+    // Создаем локальный track для отслеживания изменений
+    result._proxy.set('track', (resultAss, op) => {
+      if (op === 'get') {
+        // Если track уже создан, возвращаем его
+        if (resultAss.temp.track) {
+          return resultAss.temp.track;
+        }
+
+        // Создаем track
+        const track = Association._proxy.get('track').call(resultAss, resultAss, 'get');
+
+        if (track) {
+          // Функция для обновления результата при изменении значения
+          const updateHandler = (origin, event, meta) => {
+            // Перезапрашиваем актуальное состояние valued при изменении значения
+            const newValued = values.many(ass.this);
+            resultAss.this = newValued.this;
+
+            // Генерируем событие изменения
+            if (resultAss.emit) {
+              resultAss.emit('change', {
+                reason: 'value-update',
+                prev: event.prev,
+                next: event.next,
+                detail: event.detail
+              }, meta);
+            }
+          };
+
+          // Подписываемся на изменение значения
+          const offChanges = [];
+
+          if (ass.on && ass.emit) {
+            const offChange = ass.on('change', (event, meta) => {
+              updateHandler(ass, event, meta);
+            });
+            offChanges.push(offChange);
+          }
+
+          // Сохраняем функции отписки
+          track.temp.offChanges = offChanges;
+
+          return track;
+        }
+      }
+
+      return null;
+    });
+
+    return result;
+  }
+  else {
+    throw new Error(`unexpected op=${op}`);
+  }
+};
+
 // Добавляем метод type в статические методы Association
 Association._proxy.set('type', type);
 
@@ -428,5 +683,11 @@ Association._proxy.set('to', to);
 
 // Добавляем метод in в статические методы Association
 Association._proxy.set('in', into);
+
+// Добавляем метод value в статические методы Association
+Association._proxy.set('value', value);
+
+// Добавляем метод valued в статические методы Association
+Association._proxy.set('valued', valued);
 
 

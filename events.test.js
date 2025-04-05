@@ -351,3 +351,42 @@ test('Ассоциативные события: события жизненно
   const emitResult = a.emit('testEvent');
   assert.equal(emitResult, false, 'Emit должен вернуть false после kill');
 });
+
+test('События: обработка события "*" (wildcard)', async (t) => {
+  const events = new Events();
+  let captured1 = false;
+  let captured2 = false;
+  let captured3 = false;
+
+  // Подписываемся на конкретные события
+  events.on('event1', () => { captured1 = true; });
+  events.on('event2', () => { captured2 = true; });
+  events.on('event3', () => { captured3 = true; });
+
+  // Проверяем, что события "*" и "error" не обрабатываются wildcardом
+  let wildcardStarTriggered = false;
+  let wildcardErrorTriggered = false;
+
+  events.on('*', (eventType) => {
+    if (eventType === '*') wildcardStarTriggered = true;
+    if (eventType === 'error') wildcardErrorTriggered = true;
+  });
+
+  // Генерируем разные события
+  events.emit('event1');
+  events.emit('event2');
+  events.emit('event3');
+
+  // Проверка обработки обычных событий
+  assert.equal(captured1, true, 'Событие event1 должно быть обработано');
+  assert.equal(captured2, true, 'Событие event2 должно быть обработано');
+  assert.equal(captured3, true, 'Событие event3 должно быть обработано');
+
+  // Генерируем события "*" и "error"
+  events.emit('*', 'test');
+  events.emit('error', new Error('test error'));
+
+  // Убеждаемся, что обработчик "*" не был вызван для событий "*" и "error"
+  assert.equal(wildcardStarTriggered, false, 'События "*" не должно обрабатываться wildcard-обработчиком');
+  assert.equal(wildcardErrorTriggered, false, 'События "error" не должно обрабатываться wildcard-обработчиком');
+});

@@ -13,10 +13,10 @@ test('Association - добавление обычных свойств', () => {
   const a = deep();
 
   a.name = 'Test';
-  a.value = 42;
+  a.num = 42;
 
   assert.equal(a.name, 'Test');
-  assert.equal(a.value, 42);
+  assert.equal(a.num, 42);
 });
 
 test('Association - получение несуществующего свойства', () => {
@@ -315,10 +315,10 @@ test('wrap и unwrap - проверка сложных сценариев исп
   const wrapped2 = a.wrap(obj);
 
   // Изменяем оригинальный объект
-  obj.value = 20;
+  obj.num = 20;
 
   // Проверяем, что изменения отражаются в обернутом объекте
-  assert.strictEqual(wrapped2.this.value, 20, 'Изменения в оригинальном объекте должны отражаться в обернутом');
+  assert.strictEqual(wrapped2.this.num, 20, 'Изменения в оригинальном объекте должны отражаться в обернутом');
 });
 
 test('Association - автоматическая распаковка через valueOf', () => {
