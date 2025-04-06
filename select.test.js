@@ -7,6 +7,7 @@ import { Association } from './association.js';
 import { deepStrictEqual, strictEqual, ok, throws } from 'node:assert';
 import { _expAssociationsVariants, _parseExpAssociations, _and, _invertedRelations } from './select.js';
 import deep from './index.js';
+import { all } from './lifecycle.js';
 
 // Тестирование одиночных обработчиков _expAssociationsVariants
 test('Обработчики _expAssociationsVariants', async (t) => {
@@ -1257,5 +1258,82 @@ test('Механизм отслеживания (track) для select', async (t
     // Очистка
     track.kill();
     a1.value = undefined;
+  });
+});
+
+// Тесты для метода select с пустым объектом выражения
+test('select с пустым объектом выражения', async (t) => {
+  await t.test('Метод select возвращает все ассоциации при использовании пустого объекта выражения', () => {
+    // Создаем несколько ассоциаций для тестирования
+    const a1 = deep();
+    const a2 = deep();
+    const a3 = deep();
+
+    // Вызываем select с пустым объектом выражения
+    const result = deep.select({});
+
+    // Проверяем, что результат содержит все созданные ассоциации
+    ok(result.this.has(a1.this), 'Результат должен содержать a1');
+    ok(result.this.has(a2.this), 'Результат должен содержать a2');
+    ok(result.this.has(a3.this), 'Результат должен содержать a3');
+
+    // Проверяем, что размер не меньше минимального ожидаемого
+    ok(result.this.size >= 3, 'Результат должен содержать не менее трех ассоциаций');
+  });
+
+  await t.test('Отслеживание изменений с пустым объектом выражения', () => {
+    // Создаем select с пустым объектом выражения и активируем отслеживание
+    const result = deep.select({});
+    const tracker = result.track;
+
+    // Запоминаем размер результата до изменений
+    const initialSize = result.this.size;
+
+    // Создаем новую ассоциацию
+    const newAssoc = deep();
+
+    // Проверяем, что новая ассоциация была добавлена в результат
+    ok(result.this.has(newAssoc.this), 'Результат должен содержать новую ассоциацию');
+
+    // Проверяем, что размер увеличился
+    ok(result.this.size > initialSize, 'Размер результата должен увеличиться после добавления новой ассоциации');
+
+    // Удаляем ассоциацию
+    newAssoc.kill();
+
+    // Проверяем, что ассоциация удалена из результата
+    ok(!result.this.has(newAssoc.this), 'Результат не должен содержать удаленную ассоциацию');
+
+    // Отключаем отслеживание
+    tracker.kill();
+  });
+});
+
+// Тесты для _parseExpAssociations с пустым объектом выражения
+test('_parseExpAssociations с пустым объектом выражения', async (t) => {
+  await t.test('Возвращает множество ассоциаций для пустого объекта выражения', () => {
+    // Создаем несколько ассоциаций для тестирования
+    const a1 = deep();
+    const a2 = deep();
+    const a3 = deep();
+
+    // Парсим пустой объект выражения
+    const result = _parseExpAssociations({});
+
+    // Проверяем структуру результата
+    strictEqual(result.sets.length, 1, 'Результат должен содержать только один сет');
+    strictEqual(result.setSets.length, 1, 'Результат должен содержать только один setSets');
+    ok(result._relatedResults.all instanceof Association, 'Результат должен содержать ассоциацию в _relatedResults.all');
+
+    // Проверяем, что этот сет содержит созданные ассоциации
+    const resultSet = result.setSets[0];
+
+    // Проверяем наличие созданных ассоциаций
+    ok(resultSet.has(a1.this), 'Результат должен содержать a1');
+    ok(resultSet.has(a2.this), 'Результат должен содержать a2');
+    ok(resultSet.has(a3.this), 'Результат должен содержать a3');
+
+    // Проверяем, что размер не меньше минимального ожидаемого
+    ok(resultSet.size >= 3, 'Результат должен содержать не менее трех ассоциаций');
   });
 });

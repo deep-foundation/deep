@@ -339,50 +339,34 @@ test('Операции над множествами', async (t) => {
       const wrappedSet3 = deep(set3);
 
       // Добавляем прямой обработчик для проверки событий
-      wrappedSet1.on('change', () => console.log('Direct event on set1 triggered'));
-      wrappedSet2.on('change', () => console.log('Direct event on set2 triggered'));
-      wrappedSet3.on('change', () => console.log('Direct event on set3 triggered'));
 
       // Создаем разность и включаем отслеживание
       const result = wrappedSet1.difference(wrappedSet2, wrappedSet3);
-      console.log("Разность множеств:", result);
-      console.log("Текущий результат:", result.this);
 
       // Получаем трекер
       const tracker = result.track;
-      console.log("Трекер после вызова:", tracker);
-      console.log("Трекер this:", tracker.this);
 
       // Проверяем начальное состояние - элемент 1 должен быть в результате (он есть только в set1)
-      console.log("Начальное состояние:", tracker.this);
       assert.equal(tracker.this.size, 1, 'Размер множества должен быть 1');
       assert.ok(tracker.this.has(1), 'Результат должен содержать 1');
 
       // Добавляем новый элемент в первое множество
-      console.log("Добавляем элемент 6 в первое множество");
       wrappedSet1.add(6);
 
       // Проверяем, что элемент 6 добавлен в результат
-      console.log("Состояние после добавления 6 в первое множество:", tracker.this);
       assert.ok(tracker.this.has(6), 'Элемент 6 должен быть добавлен в результат');
 
       // Добавляем тот же элемент во второе множество
-      console.log("Добавляем элемент 6 во второе множество");
       wrappedSet2.add(6);
 
       // Проверяем, что элемент 6 больше не в результате (он есть в set1 и set2)
-      console.log("Состояние после добавления 6 во второе множество:", tracker.this);
-      console.log("Содержимое tracker.this:", Array.from(tracker.this));
 
       // Пробуем принудительно запустить recalculateResult через результат
-      console.log("Принудительно запускаем recalculateResult");
       recalculateResult(result);
 
       // Обновляем this у трекера
       tracker.this = result.this;
 
-      console.log("Состояние после принудительного пересчета:", tracker.this);
-      console.log("Содержимое после пересчета:", Array.from(tracker.this));
       assert.ok(!tracker.this.has(6), 'Элемент 6 должен быть удален из результата');
     });
 
@@ -408,33 +392,27 @@ test('Операции над множествами', async (t) => {
       assert.ok(tracker.this.has(7), 'Результат должен содержать 7');
 
       // Добавляем новый элемент во все множества
-      console.log("Добавляем элемент 8 во все множества");
       wrappedSet1.add(8);
       wrappedSet2.add(8);
       wrappedSet3.add(8);
 
       // Проверяем явно результат
-      console.log("Состояние после добавления 8:", tracker.this);
 
       // Принудительно пересчитываем результат
       recalculateResult(result);
       tracker.this = result.this;
-      console.log("Состояние после ручного пересчета:", tracker.this);
 
       // Проверяем, что элемент 8 добавлен в результат (он теперь есть во всех множествах)
       assert.ok(tracker.this.has(8), 'Элемент 8 должен быть добавлен в результат');
 
       // Удаляем элемент из одного множества
-      console.log("Удаляем элемент 7 из первого множества");
       wrappedSet1.delete(7);
 
       // Проверяем явно результат
-      console.log("Состояние после удаления 7:", tracker.this);
 
       // Принудительно пересчитываем результат
       recalculateResult(result);
       tracker.this = result.this;
-      console.log("Состояние после ручного пересчета:", tracker.this);
 
       // Проверяем, что элемент 7 больше не в результате (его нет в set1)
       assert.ok(!tracker.this.has(7), 'Элемент 7 должен быть удален из результата');
@@ -465,33 +443,27 @@ test('Операции над множествами', async (t) => {
       assert.ok(tracker.this.has(5), 'Результат должен содержать 5');
 
       // Добавляем новый элемент в первое множество
-      console.log("Добавляем элемент 7 в первое множество");
       wrappedSet1.add(7);
 
       // Проверяем явно результат
-      console.log("Состояние после добавления 7:", tracker.this);
 
       // Принудительно пересчитываем результат
       recalculateResult(result);
       tracker.this = result.this;
-      console.log("Состояние после ручного пересчета:", tracker.this);
 
       // Проверяем, что элемент 7 добавлен в результат
       assert.ok(tracker.this.has(7), 'Элемент 7 должен быть добавлен в результат');
 
       // Удаляем элемент из всех множеств
-      console.log("Удаляем элемент 3 из всех множеств");
       wrappedSet1.delete(3);
       wrappedSet2.delete(3);
       wrappedSet3.delete(3);
 
       // Проверяем явно результат
-      console.log("Состояние после удаления 3:", tracker.this);
 
       // Принудительно пересчитываем результат
       recalculateResult(result);
       tracker.this = result.this;
-      console.log("Состояние после ручного пересчета:", tracker.this);
 
       // Проверяем, что элемент 3 больше не в результате (его нет ни в одном множестве)
       assert.ok(!tracker.this.has(3), 'Элемент 3 должен быть удален из результата');
@@ -520,46 +492,37 @@ test('Операции над множествами', async (t) => {
       assert.ok(tracker.this.has(5), 'Результат должен содержать 5');
 
       // Добавляем новый элемент в первое множество
-      console.log("Добавляем элемент 6 в первое множество");
       wrappedSet1.add(6);
 
       // Проверяем явно результат
-      console.log("Состояние после добавления 6 в первое множество:", tracker.this);
 
       // Принудительно пересчитываем результат
       recalculateResult(result);
       tracker.this = result.this;
-      console.log("Состояние после ручного пересчета:", tracker.this);
 
       // Проверяем, что элемент 6 добавлен в результат (он встречается нечетное число раз)
       assert.ok(tracker.this.has(6), 'Элемент 6 должен быть добавлен в результат');
 
       // Добавляем тот же элемент во второе множество
-      console.log("Добавляем элемент 6 во второе множество");
       wrappedSet2.add(6);
 
       // Проверяем явно результат
-      console.log("Состояние после добавления 6 во второе множество:", tracker.this);
 
       // Принудительно пересчитываем результат
       recalculateResult(result);
       tracker.this = result.this;
-      console.log("Состояние после ручного пересчета:", tracker.this);
 
       // Проверяем, что элемент 6 не входит в результат (он встречается четное число раз)
       assert.ok(!tracker.this.has(6), 'Элемент 6 должен быть удален из результата');
 
       // Добавляем тот же элемент в третье множество
-      console.log("Добавляем элемент 6 в третье множество");
       wrappedSet3.add(6);
 
       // Проверяем явно результат
-      console.log("Состояние после добавления 6 в третье множество:", tracker.this);
 
       // Принудительно пересчитываем результат
       recalculateResult(result);
       tracker.this = result.this;
-      console.log("Состояние после ручного пересчета:", tracker.this);
 
       // Проверяем, что элемент 6 снова входит в результат (он встречается нечетное число раз)
       assert.ok(tracker.this.has(6), 'Элемент 6 должен снова быть добавлен в результат');
@@ -578,31 +541,22 @@ test('Debug Track', async () => {
 
   // Обычная разность множеств (один аргумент)
   const resultBasic = wrappedSet1.difference(wrappedSet2);
-  console.log('Basic result:', resultBasic);
 
   // Получаем трекер вызовом метода
   const trackerBasic = resultBasic.track;
-  console.log('Basic tracker:', trackerBasic);
-  console.log('Basic tracker.this:', trackerBasic.this);
 
   // Симметрическая разность для проверки
   const resultSymDiff = wrappedSet1.symmetricDifference(wrappedSet2);
-  console.log('SymDiff result:', resultSymDiff);
 
   // Получаем трекер вызовом метода
   const trackerSymDiff = resultSymDiff.track;
-  console.log('SymDiff tracker:', trackerSymDiff);
-  console.log('SymDiff tracker.this:', trackerSymDiff.this);
 
   // Множественные аргументы
   const set3 = new Set([3, 4, 5]);
   const wrappedSet3 = deep(set3);
 
   const resultMulti = wrappedSet1.difference(wrappedSet2, wrappedSet3);
-  console.log('Multi result:', resultMulti);
 
   // Получаем трекер вызовом метода
   const trackerMulti = resultMulti.track;
-  console.log('Multi tracker:', trackerMulti);
-  console.log('Multi tracker.this:', trackerMulti.this);
 });

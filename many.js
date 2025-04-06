@@ -13,7 +13,6 @@ import { is } from './is.js';
  */
 function setupOriginsSubscriptions(result, track, updateHandler) {
   if (!result || !result.temp) {
-    console.error('setupOriginsSubscriptions: Invalid result or missing temp property', result);
     return;
   }
 
@@ -24,23 +23,19 @@ function setupOriginsSubscriptions(result, track, updateHandler) {
 
   track.temp.offChanges = [];
 
-  console.log(`setupOriginsSubscriptions: Настройка подписок для ${result.temp.origins.length} истоков`);
 
   // Подписываемся на изменения всех истоков
   for (let i = 0; i < result.temp.origins.length; i++) {
     const origin = result.temp.origins[i];
-    console.log(`setupOriginsSubscriptions: Настройка подписки для истока ${i}`);
 
     if (origin.on && origin.emit) {
       const offChange = origin.on('change', (event, meta) => {
-        console.log(`setupOriginsSubscriptions: Получено событие change от истока ${i}`);
         // Вызываем обработчик с контекстом события
         updateHandler(origin, event, meta);
       });
 
       track.temp.offChanges.push(offChange);
     } else {
-      console.warn(`setupOriginsSubscriptions: Исток ${i} не поддерживает события`);
     }
   }
 
@@ -97,23 +92,18 @@ function setupOriginsSubscriptions(result, track, updateHandler) {
  */
 function recalculateResult(result) {
   if (!result || !result.temp || !result.temp.origins || result.temp.origins.length === 0) {
-    console.warn('recalculateResult: Invalid result or no origins', result);
     return;
   }
 
   const method = result.temp.method;
   if (!method) {
-    console.warn('recalculateResult: No method found in result.temp', result.temp);
     return;
   }
 
   // Добавление отладочной информации
-  console.log(`recalculateResult: method=${method}, origins=${result.temp.origins.length}`);
   for (let i = 0; i < result.temp.origins.length; i++) {
     if (result.temp.origins[i].this && result.temp.origins[i].this.isSet) {
-      console.log(`Origin ${i} is Set with items: ${Array.from(result.temp.origins[i].this).join(', ')}`);
     } else if (result.temp.origins[i].this && result.temp.origins[i].this.isMap) {
-      console.log(`Origin ${i} is Map with keys: ${Array.from(result.temp.origins[i].this.keys()).join(', ')}`);
     }
   }
 
@@ -200,7 +190,6 @@ function recalculateResult(result) {
         break;
 
       default:
-        console.warn('recalculateResult: Unknown method', method);
         return;
     }
 
@@ -226,10 +215,8 @@ function recalculateResult(result) {
         }
       }
 
-      console.log(`Changes in ${method}: added [${added.join(', ')}], removed [${removed.join(', ')}]`);
     }
 
-    console.log(`Result after recalculation (${method}): ${Array.from(newResult).join(', ')}`);
 
     // Обновляем result.this новыми данными
     result.this = new Set(sortedArray);
@@ -315,7 +302,6 @@ function recalculateResult(result) {
         break;
 
       default:
-        console.warn('recalculateResult: Unknown method for Map/Object', method);
         return;
       }
 
@@ -329,14 +315,7 @@ function recalculateResult(result) {
       const added = newKeys.filter(key => !oldState.has(key));
       const removed = oldKeys.filter(key => !result.this.has(key));
       const changed = newKeys.filter(key => oldState.has(key) && result.this.get(key) !== oldState.get(key));
-
-      if (added.length > 0 || removed.length > 0 || changed.length > 0) {
-        console.log(`Changes in ${method}: added [${added.join(', ')}], removed [${removed.join(', ')}], changed [${changed.join(', ')}]`);
-      }
     }
-
-    // Вывод результата для отладки
-    console.log(`Result after recalculation (${method}): ${Array.from(result.this.entries()).map(([k, v]) => `${k}:${v}`).join(', ')}`);
   }
 }
 
@@ -511,7 +490,6 @@ function setupTrackForMultipleOperations(result) {
 
     // Проверяем наличие истоков
     if (!ass.temp || !ass.temp.origins || ass.temp.origins.length === 0) {
-      console.warn('No origins found for track setup');
       return track;
     }
 
@@ -527,8 +505,6 @@ function setupTrackForMultipleOperations(result) {
 
     // Создаем обработчик изменений для всех истоков
     const updateHandler = (origin, event, meta) => {
-      console.log(`setupTrackForMultipleOperations: Update from origin ${origin.temp && origin.temp.symbol ? origin.temp.symbol.toString() : 'unknown'}`);
-      console.log(`Event details:`, event);
 
       // Принудительно вызываем recalculateResult для пересчета результата
       recalculateResult(ass);

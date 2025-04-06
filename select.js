@@ -221,6 +221,17 @@ export function _parseExpAssociations(expAssociations) {
     _relatedResults: {} // Сохраняем результаты для релейшенов
   };
 
+  // Проверяем, является ли объект выражения пустым
+  if (Object.keys(expAssociations).length === 0) {
+    // Для пустого объекта выражения создаем ассоциацию, содержащую all.this
+    const allAssociations = new Association(new Set(all.this));
+
+    result.sets.push(allAssociations);
+    result.setSets.push(allAssociations.this);
+    result._relatedResults.all = allAssociations;
+    return result;
+  }
+
   // Перебираем все ключи выражения
   for (const key in expAssociations) {
     // Проверяем наличие обработчика для ключа
