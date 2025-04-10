@@ -4,7 +4,6 @@
 
 import { Association } from './association.js';
 import { deep } from './index.js';
-import * as is from './is.js';
 import assert from 'node:assert';
 import test from 'node:test';
 
@@ -125,31 +124,85 @@ test('Базовые функции проверки типов', async (t) => {
     assert.strictEqual(deep(/test/).isMany, false, 'RegExp не должен определяться как множественный');
   });
 
+  // Проверка detect
+  await t.test('Метод detect для определения типа', () => {
+    assert.strictEqual(deep('test').detect, 'string');
+    assert.strictEqual(deep(123).detect, 'number');
+    assert.strictEqual(deep(true).detect, 'boolean');
+    assert.strictEqual(deep([]).detect, 'array');
+    assert.strictEqual(deep({}).detect, 'object');
+    assert.strictEqual(deep(null).detect, 'null');
+    assert.strictEqual(deep(undefined).detect, 'undefined');
+    assert.strictEqual(deep(new Set()).detect, 'set');
+    assert.strictEqual(deep(new Map()).detect, 'map');
+    assert.strictEqual(deep(new Date()).detect, 'date');
+  });
 
-  // Проверка структур данных, экспортируемых из is.js
-  await t.test('Вспомогательные структуры is.js', () => {
-    // Проверка types
-    assert.strictEqual(is.types instanceof Map, true);
-    assert(is.types.has('string'), 'types должен содержать string');
-    assert(is.types.has('number'), 'types должен содержать number');
-    assert(is.types.has('array'), 'types должен содержать array');
-    assert.strictEqual(is.types.get('string'), is.isString);
+  // Тесты для метода is
+  await t.test('Метод is для проверки идентичности', async (t) => {
+    const obj1 = { a: 1 };
+    const obj2 = { a: 1 };
+    const obj3 = obj1;
 
-    // Проверка checks
-    assert.strictEqual(is.checks instanceof Map, true);
-    assert(is.checks.has(is.isString), 'checks должен содержать isString');
-    assert(is.checks.has(is.isNumber), 'checks должен содержать isNumber');
-    assert.strictEqual(is.checks.get(is.isString), 'string');
+    const deepObj1 = deep(obj1);
+    const deepObj2 = deep(obj2);
+    const deepObj3 = deep(obj3);
 
-    // Проверка order
-    assert.strictEqual(Array.isArray(is.order), true);
-    assert(is.order.includes('string'), 'order должен содержать string');
-    assert(is.order.includes('number'), 'order должен содержать number');
-    assert(is.order.indexOf('undefined') < is.order.indexOf('object'),
-           'undefined должен проверяться раньше object');
-    assert(is.order.indexOf('null') < is.order.indexOf('object'),
-           'null должен проверяться раньше object');
-    assert(is.order.indexOf('array') < is.order.indexOf('object'),
-           'array должен проверяться раньше object');
+    await t.test('is проверяет идентичность объектов (одинаковые ссылки)', () => {
+      assert.strictEqual(deepObj1.is(deepObj3), true, 'Одинаковые ссылки должны быть идентичны');
+    });
+
+    await t.test('is проверяет идентичность объектов (разные объекты)', () => {
+      assert.strictEqual(deepObj1.is(deepObj2), false, 'Разные объекты не должны быть идентичны, даже с одинаковым содержимым');
+    });
+
+    await t.test('is работает с примитивами', () => {
+      assert.strictEqual(deep(42).is(deep(42)), true, 'Одинаковые числа должны быть идентичны');
+      assert.strictEqual(deep('text').is(deep('text')), true, 'Одинаковые строки должны быть идентичны');
+      assert.strictEqual(deep(true).is(deep(true)), true, 'Одинаковые булевы значения должны быть идентичны');
+      assert.strictEqual(deep(null).is(deep(null)), true, 'null должен быть идентичен null');
+      assert.strictEqual(deep(undefined).is(deep(undefined)), true, 'undefined должен быть идентичен undefined');
+
+      assert.strictEqual(deep(42).is(deep(43)), false, 'Разные числа не должны быть идентичны');
+      assert.strictEqual(deep('text').is(deep('text2')), false, 'Разные строки не должны быть идентичны');
+      assert.strictEqual(deep(true).is(deep(false)), false, 'Разные булевы значения не должны быть идентичны');
+      assert.strictEqual(deep(null).is(deep(undefined)), false, 'null не должен быть идентичен undefined');
+    });
+  });
+
+  // Расширенные тесты для isEmpty
+  await t.test('Свойство isEmpty для проверки пустоты', async (t) => {
+    await t.test('isEmpty для строк', () => {
+      assert.strictEqual(deep('').isEmpty, true, 'Пустая строка должна быть пустой');
+      assert.strictEqual(deep('text').isEmpty, false, 'Непустая строка не должна быть пустой');
+    });
+
+    await t.test('isEmpty для массивов', () => {
+      assert.strictEqual(deep([]).isEmpty, true, 'Пустой массив должен быть пустым');
+      assert.strictEqual(deep([1, 2, 3]).isEmpty, false, 'Непустой массив не должен быть пустым');
+    });
+
+    await t.test('isEmpty для объектов', () => {
+      assert.strictEqual(deep({}).isEmpty, true, 'Пустой объект должен быть пустым');
+      assert.strictEqual(deep({a: 1}).isEmpty, false, 'Непустой объект не должен быть пустым');
+    });
+
+    await t.test('isEmpty для коллекций', () => {
+      assert.strictEqual(deep(new Set()).isEmpty, true, 'Пустой Set должен быть пустым');
+      assert.strictEqual(deep(new Set([1, 2])).isEmpty, false, 'Непустой Set не должен быть пустым');
+
+      assert.strictEqual(deep(new Map()).isEmpty, true, 'Пустой Map должен быть пустым');
+      assert.strictEqual(deep(new Map([['a', 1]])).isEmpty, false, 'Непустой Map не должен быть пустым');
+    });
+
+    await t.test('isEmpty для чисел', () => {
+      assert.strictEqual(deep(0).isEmpty, true, 'Число 0 должно считаться пустым');
+      assert.strictEqual(deep(42).isEmpty, false, 'Ненулевое число не должно быть пустым');
+    });
+
+    await t.test('isEmpty для null и undefined', () => {
+      assert.strictEqual(deep(null).isEmpty, true, 'null должен считаться пустым');
+      assert.strictEqual(deep(undefined).isEmpty, true, 'undefined должен считаться пустым');
+    });
   });
 });

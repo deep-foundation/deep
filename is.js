@@ -8,27 +8,33 @@
 /**
  * Проверяет, является ли значение символом
  * @param {Association} ass - Экземпляр Association
+ * @param {string} op - Операция ('get')
  * @returns {boolean} - true, если значение является символом
  */
-function isSymbol(ass) {
+function isSymbol(ass, op) {
+  if (op !== 'get') return;
   return typeof ass.this === 'symbol';
 }
 
 /**
  * Проверяет, является ли значение строкой
  * @param {Association} ass - Экземпляр Association
+ * @param {string} op - Операция ('get')
  * @returns {boolean} - true, если значение является строкой
  */
-function isString(ass) {
+function isString(ass, op) {
+  if (op !== 'get') return;
   return typeof ass.this === 'string';
 }
 
 /**
  * Проверяет, является ли значение числом
  * @param {Association} ass - Экземпляр Association
+ * @param {string} op - Операция ('get')
  * @returns {boolean} - true, если значение является числом
  */
-function isNumber(ass) {
+function isNumber(ass, op) {
+  if (op !== 'get') return;
   return typeof ass.this === 'number';
 }
 
@@ -260,9 +266,12 @@ function isJSON(ass) {
 /**
  * Проверяет, является ли значение пустым
  * @param {Association} ass - Экземпляр Association
+ * @param {string} op - Операция ('get')
  * @returns {boolean} - true, если значение считается пустым
  */
-function isEmpty(ass) {
+function isEmpty(ass, op) {
+  if (op !== 'get') return;
+
   const value = ass.this;
   if (value === null || value === undefined) return true;
   if (typeof value === 'string' || Array.isArray(value)) return value.length === 0;
@@ -270,6 +279,7 @@ function isEmpty(ass) {
     if (value instanceof Set || value instanceof Map) return value.size === 0;
     return Object.keys(value).length === 0;
   }
+  if (typeof value === 'number') return value === 0;
   return false;
 }
 
@@ -294,6 +304,34 @@ function isMany(ass) {
   }
 
   return false;
+}
+
+/**
+ * Проверяет идентичность (===) двух значений
+ * @param {Association} ass - Экземпляр Association
+ * @param {string} op - Операция ('get' или 'apply')
+ * @param {Array} args - Аргументы операции
+ * @returns {boolean|Function} - При 'get' возвращает функцию, при 'apply' - результат сравнения
+ */
+function is(ass, op, args) {
+  if (op === 'get') {
+    // Возвращаем кешированную функцию для вызова is
+    return ass.temp.is = ass.temp.is || ((other) =>
+      Association._proxy.get('is')(ass, 'apply', [other])
+    );
+  } else if (op === 'apply') {
+    // Получаем аргументы
+    const [other] = args;
+
+    // Получаем оригинальное значение, если other - Association
+    let otherValue = other;
+    if (other instanceof Association) {
+      otherValue = other.this;
+    }
+
+    // Простое сравнение по ссылке
+    return ass.this === otherValue;
+  }
 }
 
 /**
@@ -365,14 +403,81 @@ const order = [
   'object'
 ];
 
-// Экспортируем только структуры данных
-export {
-  types,
-  checks,
-  order,
+/**
+ * Модуль для определения типов данных
+ */
+
+/**
+ * Геттер из любой ассоциации, определяет тип данных, возвращает строку
+ * @param {any} ass - Ассоциация для проверки
+ * @param {string} op - Операция ('get')
+ * @returns {string} - Тип данных
+ * @example
+ * const ass = deep('hello');
+ * console.log(ass.detect); // 'string'
+ */
+function detect(ass, op) {
+  if (op !== 'get') return;
+
+  const value = ass.this;
+  if (value === null) return 'null';
+  if (value === undefined) return 'undefined';
+  if (Array.isArray(value)) return 'array';
+  if (value instanceof Set) return 'set';
+  if (value instanceof Map) return 'map';
+  if (value instanceof WeakMap) return 'weakmap';
+  if (value instanceof WeakSet) return 'weakset';
+  if (value instanceof Date) return 'date';
+  if (typeof value === 'object') return 'object';
+  return typeof value;
+}
+
+// Инициализация методов проверки типов для Association
+import { Association } from './association.js';
+
+// Добавляем методы проверки типов в Association._proxy
+
+// Добавляем все isX методы проверки в прокси
+for (const [name, fn] of types.entries()) {
+  Association._proxy.set(`is${name.charAt(0).toUpperCase()}${name.slice(1)}`, fn);
+}
+
+// Добавляем геттеры для всех проверок типов в прототип
+for (const [name, fn] of types.entries()) {
+  const propName = `is${name.charAt(0).toUpperCase()}${name.slice(1)}`;
+  Object.defineProperty(Association.prototype, propName, {
+    get: function() {
+      return fn(this, 'get');
+    },
+    enumerable: true,
+    configurable: true
+  });
+}
+
+// Добавляем геттер isEmpty
+Object.defineProperty(Association.prototype, 'isEmpty', {
+  get: function() {
+    return isEmpty(this, 'get');
+  },
+  enumerable: true,
+  configurable: true
+});
+
+// Добавляем метод is в прототип
+Association.prototype.is = function(other) {
+  return is(this, 'apply', [other]);
 };
 
-// Экспортируем все методы проверок.
+// Добавляем геттер detect
+Object.defineProperty(Association.prototype, 'detect', {
+  get: function() {
+    return detect(this, 'get');
+  },
+  enumerable: true,
+  configurable: true
+});
+
+// Регистрируем все функции проверки типов и структуры в _proxy
 const all = {
   isSymbol,
   isString,
@@ -400,20 +505,29 @@ const all = {
   isJSON,
   isEmpty,
   isMany,
+  is,
+  detect,
 };
 
-// Инициализация методов проверки типов для Association
-import { Association } from './association.js';
-
-// Добавляем методы проверки типов в Association._proxy
 for (const name in all) {
   Association._proxy.set(
     name, all[name],
   );
 }
 
-// Переопределяем основные экспорты для обратной совместимости
-// Оригинальные функции остаются доступными для Association
+// Также экспортируем структуры в _proxy
+Association._proxy.set('types', types);
+Association._proxy.set('checks', checks);
+Association._proxy.set('order', order);
+
+// Экспортируем структуры данных
+export {
+  types,
+  checks,
+  order,
+};
+
+// Экспортируем все методы для отдельного использования
 export {
   isSymbol,
   isString,
@@ -441,45 +555,12 @@ export {
   isJSON,
   isEmpty,
   isMany,
+  is,
+  detect
 };
 
-/**
- * Модуль для определения типов данных
- */
-
-/**
- * Геттер из любой ассоциации, определяет тип данных, возвращает строку
- * @param {any} ass - Ассоциация для проверки
- * @returns {string} - Тип данных
- * @example
- * const ass = deep('hello');
- * console.log(ass.detect); // 'string'
- */
-export function detect(ass) {
-  const value = ass.this;
-  if (value === null) return 'null';
-  if (value === undefined) return 'undefined';
-  if (Array.isArray(value)) return 'array';
-  if (value instanceof Set) return 'set';
-  if (value instanceof Map) return 'map';
-  if (value instanceof WeakMap) return 'weakmap';
-  if (value instanceof WeakSet) return 'weakset';
-  if (value instanceof Date) return 'date';
-  if (typeof value === 'object') return 'object';
-  return typeof value;
-}
-
-Association._proxy.set(
-  'detect', detect,
-);
-
-// Методы проверки типов
-export const is = {
-  array: (value) => Array.isArray(value),
-  set: (value) => value instanceof Set,
-  map: (value) => value instanceof Map,
-  weakmap: (value) => value instanceof WeakMap,
-  weakset: (value) => value instanceof WeakSet,
-  object: (value) => value !== null && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Set) && !(value instanceof Map) && !(value instanceof WeakMap) && !(value instanceof WeakSet),
-  primitive: (value) => value === null || value === undefined || typeof value !== 'object',
+// Для обратной совместимости
+export default {
+  is,
+  isEmpty
 };

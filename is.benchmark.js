@@ -63,6 +63,14 @@ const deepError = deep(testError);
 const deepJSON = deep(testJSON);
 const deepEmpty = deep(testEmpty);
 
+// Добавляем тестовые объекты для сравнения ссылок
+const obj1 = { a: 1 };
+const obj2 = { a: 1 };
+const obj3 = obj1;
+const deepObj1 = deep(obj1);
+const deepObj2 = deep(obj2);
+const deepObj3 = deep(obj3);
+
 // Группа тестов для обычных вызовов через typeof и instanceof
 const nativeSuite = benchmark.createSuite('Обычные проверки типов');
 
@@ -140,6 +148,48 @@ compareSuite.add('Array.isArray(array) || value instanceof Set/Map || typeof obj
           !(testArray instanceof Date) && !(testArray instanceof RegExp));
 });
 compareSuite.add('deep(array).isMany', () => deepArray.isMany);
+
+// Группа тестов для метода is и isEmpty
+const isMethodSuite = benchmark.createSuite('Тесты для методов is и isEmpty');
+
+// Бенчмарки для метода is
+isMethodSuite.add('obj1 === obj3 (нативное сравнение ссылок)', () => obj1 === obj3);
+isMethodSuite.add('obj1 === obj2 (нативное сравнение разных объектов)', () => obj1 === obj2);
+isMethodSuite.add('deep(obj1).is(deep(obj3)) (одинаковые ссылки)', () => deepObj1.is(deepObj3));
+isMethodSuite.add('deep(obj1).is(deep(obj2)) (разные объекты)', () => deepObj1.is(deepObj2));
+isMethodSuite.add('deep(testString).is(deep(testString))', () => deepString.is(deep(testString)));
+isMethodSuite.add('deep(testNumber).is(deep(testNumber))', () => deepNumber.is(deep(testNumber)));
+
+// Бенчмарки для свойства isEmpty
+isMethodSuite.add('deep("").isEmpty (пустая строка)', () => deep('').isEmpty);
+isMethodSuite.add('deep([]).isEmpty (пустой массив)', () => deep([]).isEmpty);
+isMethodSuite.add('deep({}).isEmpty (пустой объект)', () => deep({}).isEmpty);
+isMethodSuite.add('deep(0).isEmpty (число 0)', () => deep(0).isEmpty);
+isMethodSuite.add('deep(new Set()).isEmpty (пустой Set)', () => deep(new Set()).isEmpty);
+isMethodSuite.add('deep(new Map()).isEmpty (пустой Map)', () => deep(new Map()).isEmpty);
+isMethodSuite.add('deep(null).isEmpty (null)', () => deep(null).isEmpty);
+isMethodSuite.add('deep(undefined).isEmpty (undefined)', () => deep(undefined).isEmpty);
+isMethodSuite.add('deep("text").isEmpty (непустая строка)', () => deep('text').isEmpty);
+isMethodSuite.add('deep([1,2,3]).isEmpty (непустой массив)', () => deep([1,2,3]).isEmpty);
+isMethodSuite.add('deep({a:1}).isEmpty (непустой объект)', () => deep({a:1}).isEmpty);
+
+// Сравнение нативных проверок и isEmpty
+const emptyCompareSuite = benchmark.createSuite('Сравнение нативных проверок пустоты и deep.isEmpty');
+
+emptyCompareSuite.add('string === "" (нативная проверка пустой строки)', () => testEmpty === '');
+emptyCompareSuite.add('deep("").isEmpty (проверка пустой строки)', () => deep('').isEmpty);
+
+emptyCompareSuite.add('array.length === 0 (нативная проверка пустого массива)', () => [].length === 0);
+emptyCompareSuite.add('deep([]).isEmpty (проверка пустого массива)', () => deep([]).isEmpty);
+
+emptyCompareSuite.add('Object.keys(obj).length === 0 (нативная проверка пустого объекта)', () =>
+  Object.keys({}).length === 0);
+emptyCompareSuite.add('deep({}).isEmpty (проверка пустого объекта)', () => deep({}).isEmpty);
+
+emptyCompareSuite.add('set.size === 0 (нативная проверка пустого Set)', () =>
+  new Set().size === 0);
+emptyCompareSuite.add('deep(new Set()).isEmpty (проверка пустого Set)', () =>
+  deep(new Set()).isEmpty);
 
 // Запускаем все бенчмарки
 async function runBenchmarks() {

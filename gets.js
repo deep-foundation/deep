@@ -81,6 +81,69 @@ export function get(ass, op, args) {
 }
 
 /**
+ * Универсальный метод для проверки наличия ключа или значения в структуре данных
+ * Поддерживает работу с массивами, строками, объектами, Map, Set
+ *
+ * @param {Association} ass - Экземпляр Association
+ * @param {string} op - Операция ('get', 'apply')
+ * @param {Array} args - Аргументы вызова (ключ или значение)
+ * @returns {boolean} - true, если ключ или значение существует, иначе false
+ */
+export function has(ass, op, args) {
+  if (op !== 'get' && op !== 'apply') return;
+
+  if (op === 'get') {
+    // Возвращаем кешированную функцию из temp или создаем новую
+    return ass.temp.has = ass.temp.has || ((key) =>
+      has(ass, 'apply', [key])
+    );
+  } else if (op === 'apply') {
+    // Получаем ключ из аргументов и применяем unwrap
+    const key = Association._proxy.get('unwrap').call(ass, ass, 'apply', [args[0]]);
+
+    // Получаем внутреннее значение ассоциации
+    const value = ass.this;
+
+    // Проверяем на null и undefined
+    if (value === null || value === undefined) {
+      return false;
+    }
+
+    // Обработка разных типов данных
+    if (Array.isArray(value)) {
+      // Для массивов проверяем, существует ли элемент с таким индексом
+      if (typeof key === 'number' && Number.isInteger(key)) {
+        return key >= 0 && key < value.length;
+      }
+      // Если ключ не число, проверяем наличие значения в массиве
+      return value.includes(key);
+    } else if (typeof value === 'string') {
+      // Для строк проверяем наличие символа по индексу или подстроки
+      if (typeof key === 'number' && Number.isInteger(key)) {
+        return key >= 0 && key < value.length;
+      }
+      return value.includes(key);
+    } else if (value instanceof Map) {
+      // Для Map проверяем наличие ключа
+      return value.has(key);
+    } else if (value instanceof Set) {
+      // Для Set проверяем наличие значения
+      return value.has(key);
+    } else if (typeof value === 'object') {
+      // Для объектов проверяем наличие свойства
+      return Object.prototype.hasOwnProperty.call(value, key);
+    } else if (typeof value === 'number' && typeof key === 'number' && Number.isInteger(key)) {
+      // Для чисел проверяем, что индекс не выходит за пределы представления числа в строке
+      const strValue = value.toString();
+      return key >= 0 && key < strValue.length;
+    }
+
+    // Для остальных типов данных
+    return false;
+  }
+}
+
+/**
  * Выполняет перебор элементов коллекции или свойств объекта
  * @param {Association} ass - Экземпляр Association
  * @param {string} op - Операция ('get', 'apply')
@@ -2442,16 +2505,15 @@ export const all = {
   keys,
   values,
   entries,
-  join
+  join,
+  get,
+  has,
 };
 
 // Добавляем методы в прокси
 for (const name in all) {
   Association._proxy.set(name, all[name]);
 }
-
-// Добавляем методы в прокси
-Association._proxy.set('get', get);
 
 /**
  * Возвращает массив ключей коллекции

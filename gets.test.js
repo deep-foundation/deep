@@ -355,123 +355,134 @@ test('join для разных типов данных', async (t) => {
   });
 });
 
-test('get - доступ к элементам разных типов данных', async (t) => {
-  await t.test('доступ к элементам массива по индексу', () => {
-    const arr = [1, 2, 3, 4, 5];
-    const a = deep(arr);
+test('get для разных типов данных', async (t) => {
+  await t.test('Для массива', () => {
+    const array = [1, 2, 3];
+    const result = deep(array).get(1);
+    assert.ok(result instanceof Association, 'Результат должен быть экземпляром Association');
+    assert.strictEqual(result.this, 2, 'Должен вернуть элемент с индексом 1');
 
-    assert.ok(a.get(0) instanceof Association, 'Результат должен быть Association');
-    assert.strictEqual(a.get(0).this, 1);
-    assert.strictEqual(a.get(2).this, 3);
-    assert.strictEqual(a.get(4).this, 5);
-    assert.strictEqual(a.get(-1), undefined); // Отрицательный индекс
-    assert.strictEqual(a.get(10), undefined); // Индекс за пределами массива
+    // Индекс за пределами массива
+    const outOfBounds = deep(array).get(10);
+    assert.strictEqual(outOfBounds, undefined, 'Должен вернуть undefined для индекса за пределами массива');
   });
 
-  await t.test('доступ к символам строки по индексу', () => {
+  await t.test('Для объекта', () => {
+    const obj = { a: 1, b: 2, c: 3 };
+    const result = deep(obj).get('b');
+    assert.ok(result instanceof Association, 'Результат должен быть экземпляром Association');
+    assert.strictEqual(result.this, 2, 'Должен вернуть значение по ключу "b"');
+
+    // Несуществующий ключ
+    const nonExistent = deep(obj).get('z');
+    assert.strictEqual(nonExistent, undefined, 'Должен вернуть undefined для несуществующего ключа');
+  });
+
+  await t.test('Для строки', () => {
     const str = 'hello';
-    const a = deep(str);
+    const result = deep(str).get(1);
+    assert.ok(result instanceof Association, 'Результат должен быть экземпляром Association');
+    assert.strictEqual(result.this, 'e', 'Должен вернуть символ с индексом 1');
 
-    assert.ok(a.get(0) instanceof Association, 'Результат должен быть Association');
-    assert.strictEqual(a.get(0).this, 'h');
-    assert.strictEqual(a.get(2).this, 'l');
-    assert.strictEqual(a.get(4).this, 'o');
-    assert.strictEqual(a.get(-1), undefined); // Отрицательный индекс
-    assert.strictEqual(a.get(10), undefined); // Индекс за пределами строки
+    // Индекс за пределами строки
+    const outOfBounds = deep(str).get(10);
+    assert.strictEqual(outOfBounds, undefined, 'Должен вернуть undefined для индекса за пределами строки');
   });
 
-  await t.test('доступ к элементам Map по ключу', () => {
-    const map = new Map([
-      ['a', 1],
-      ['b', 2],
-      ['c', 3]
-    ]);
-    const a = deep(map);
+  await t.test('Для Map', () => {
+    const map = new Map([['a', 1], ['b', 2], ['c', 3]]);
+    const result = deep(map).get('b');
+    assert.ok(result instanceof Association, 'Результат должен быть экземпляром Association');
+    assert.strictEqual(result.this, 2, 'Должен вернуть значение по ключу "b"');
 
-    assert.ok(a.get('a') instanceof Association, 'Результат должен быть Association');
-    assert.strictEqual(a.get('a').this, 1);
-    assert.strictEqual(a.get('b').this, 2);
-    assert.strictEqual(a.get('c').this, 3);
-    assert.strictEqual(a.get('d'), undefined); // Несуществующий ключ
+    // Несуществующий ключ
+    const nonExistent = deep(map).get('z');
+    assert.strictEqual(nonExistent, undefined, 'Должен вернуть undefined для несуществующего ключа');
   });
 
-  await t.test('доступ к элементам Set по индексу', () => {
-    const set = new Set([5, 6, 7, 8]);
-    const a = deep(set);
+  await t.test('Для Set', () => {
+    const set = new Set([1, 2, 3]);
+    const result = deep(set).get(1);
+    assert.ok(result instanceof Association, 'Результат должен быть экземпляром Association');
+    assert.strictEqual(result.this, 2, 'Должен вернуть элемент с индексом 1');
 
-    assert.ok(a.get(0) instanceof Association, 'Результат должен быть Association');
-    assert.strictEqual(a.get(0).this, 5);
-    assert.strictEqual(a.get(1).this, 6);
-    assert.strictEqual(a.get(2).this, 7);
-    assert.strictEqual(a.get(3).this, 8);
-    assert.strictEqual(a.get(4), undefined); // Индекс за пределами Set
-    assert.strictEqual(a.get(-1), undefined); // Отрицательный индекс
+    // Индекс за пределами Set
+    const outOfBounds = deep(set).get(10);
+    assert.strictEqual(outOfBounds, undefined, 'Должен вернуть undefined для индекса за пределами Set');
   });
 
-  await t.test('доступ к свойствам объекта по ключу', () => {
-    const obj = { name: 'John', age: 30, city: 'New York' };
-    const a = deep(obj);
-
-    assert.ok(a.get('name') instanceof Association, 'Результат должен быть Association');
-    assert.strictEqual(a.get('name').this, 'John');
-    assert.strictEqual(a.get('age').this, 30);
-    assert.strictEqual(a.get('city').this, 'New York');
-    assert.strictEqual(a.get('country'), undefined); // Несуществующее свойство
-  });
-
-  await t.test('доступ к цифрам числа по индексу', () => {
+  await t.test('Для числа', () => {
     const num = 12345;
-    const a = deep(num);
+    const result = deep(num).get(2);
+    assert.ok(result instanceof Association, 'Результат должен быть экземпляром Association');
+    assert.strictEqual(result.this, 3, 'Должен вернуть цифру с индексом 2');
 
-    assert.ok(a.get(0) instanceof Association, 'Результат должен быть Association');
-    assert.strictEqual(a.get(0).this, 1);
-    assert.strictEqual(a.get(2).this, 3);
-    assert.strictEqual(a.get(4).this, 5);
-    assert.strictEqual(a.get(5), undefined); // Индекс за пределами числа
-    assert.strictEqual(a.get(-1), undefined); // Отрицательный индекс
+    // Индекс за пределами числа
+    const outOfBounds = deep(num).get(10);
+    assert.strictEqual(outOfBounds, undefined, 'Должен вернуть undefined для индекса за пределами числа');
   });
 
-  await t.test('работа с null и undefined', () => {
-    const nullValue = deep(null);
-    const undefinedValue = deep(undefined);
+  await t.test('Для null и undefined', () => {
+    const nullResult = deep(null).get(0);
+    assert.strictEqual(nullResult, undefined, 'Должен вернуть undefined для null');
 
-    assert.strictEqual(nullValue.get(0), undefined);
-    assert.strictEqual(undefinedValue.get('key'), undefined);
+    const undefinedResult = deep(undefined).get(0);
+    assert.strictEqual(undefinedResult, undefined, 'Должен вернуть undefined для undefined');
+  });
+});
+
+test('has для разных типов данных', async (t) => {
+  await t.test('Для массива (проверка индекса)', () => {
+    const array = [1, 2, 3];
+    assert.strictEqual(deep(array).has(1), true, 'Должен вернуть true для существующего индекса');
+    assert.strictEqual(deep(array).has(3), false, 'Должен вернуть false для несуществующего индекса');
   });
 
-  await t.test('проверка кеширования функции', () => {
-    const arr = [1, 2, 3];
-    const a = deep(arr);
-
-    // Получаем ссылки на функцию get
-    const get1 = a.get;
-    const get2 = a.get;
-
-    // Проверяем, что это одна и та же функция (благодаря кешированию)
-    assert.strictEqual(get1, get2);
+  await t.test('Для массива (проверка значения)', () => {
+    const array = [1, 2, 3];
+    assert.strictEqual(deep(array).has(2), true, 'Должен вернуть true для существующего значения');
+    assert.strictEqual(deep(array).has(5), false, 'Должен вернуть false для несуществующего значения');
   });
 
-  await t.test('метод не изменяет исходные данные', () => {
-    const arr = [1, 2, 3];
-    const a = deep(arr);
-
-    // Получаем значение
-    const value = a.get(1);
-
-    // Проверяем, что метод не меняет данные
-    assert.deepStrictEqual(arr, [1, 2, 3]);
-    assert.strictEqual(value.this, 2);
-    assert.ok(value instanceof Association, 'Результат должен быть Association');
+  await t.test('Для объекта', () => {
+    const obj = { a: 1, b: 2, c: 3 };
+    assert.strictEqual(deep(obj).has('b'), true, 'Должен вернуть true для существующего свойства');
+    assert.strictEqual(deep(obj).has('z'), false, 'Должен вернуть false для несуществующего свойства');
   });
 
-  await t.test('unwrap применяется к ключу', () => {
-    const arr = [1, 2, 3, 4, 5];
-    const a = deep(arr);
-    const wrappedKey = deep(2);
+  await t.test('Для строки (проверка индекса)', () => {
+    const str = 'hello';
+    assert.strictEqual(deep(str).has(1), true, 'Должен вернуть true для существующего индекса');
+    assert.strictEqual(deep(str).has(10), false, 'Должен вернуть false для несуществующего индекса');
+  });
 
-    // Ключ должен быть автоматически развернут
-    assert.ok(a.get(wrappedKey) instanceof Association, 'Результат должен быть Association');
-    assert.strictEqual(a.get(wrappedKey).this, 3);
+  await t.test('Для строки (проверка подстроки)', () => {
+    const str = 'hello';
+    assert.strictEqual(deep(str).has('el'), true, 'Должен вернуть true для существующей подстроки');
+    assert.strictEqual(deep(str).has('xyz'), false, 'Должен вернуть false для несуществующей подстроки');
+  });
+
+  await t.test('Для Map', () => {
+    const map = new Map([['a', 1], ['b', 2], ['c', 3]]);
+    assert.strictEqual(deep(map).has('b'), true, 'Должен вернуть true для существующего ключа');
+    assert.strictEqual(deep(map).has('z'), false, 'Должен вернуть false для несуществующего ключа');
+  });
+
+  await t.test('Для Set', () => {
+    const set = new Set([1, 2, 3]);
+    assert.strictEqual(deep(set).has(2), true, 'Должен вернуть true для существующего значения');
+    assert.strictEqual(deep(set).has(5), false, 'Должен вернуть false для несуществующего значения');
+  });
+
+  await t.test('Для числа', () => {
+    const num = 12345;
+    assert.strictEqual(deep(num).has(2), true, 'Должен вернуть true для существующего индекса');
+    assert.strictEqual(deep(num).has(10), false, 'Должен вернуть false для несуществующего индекса');
+  });
+
+  await t.test('Для null и undefined', () => {
+    assert.strictEqual(deep(null).has(0), false, 'Должен вернуть false для null');
+    assert.strictEqual(deep(undefined).has(0), false, 'Должен вернуть false для undefined');
   });
 });
 

@@ -2,7 +2,6 @@
  * Модуль Select - реализует фильтрацию ассоциаций на основе объекта-выражения.
  */
 import { Association } from './association.js';
-import { types, froms, tos, values } from './relations.js';
 import { all } from './lifecycle.js';
 import { deep } from './index.js';
 
@@ -29,7 +28,19 @@ export const _invertedRelations = {
 /**
  * Объект с обработчиками для разных ключей выражения.
  * Каждый обработчик принимает значение и возвращает множество ассоциаций,
- * удовлетворяющих условию.
+ * которые указанным способом ссылаются на переданный аргумент.
+ *
+ * Например:
+ * - type(T) ищет все ассоциации A, у которых A.type === T
+ * - from(S) ищет все ассоциации R, у которых R.from === S
+ * - to(T) ищет все ассоциации R, у которых R.to === T
+ * - value(V) ищет все ассоциации A, у которых A.value === V
+ *
+ * А инвертированные отношения работают в обратную сторону:
+ * - typed(A) ищет все типы T, для которых A.type === T
+ * - out(R) ищет все источники S, для которых R.from === S
+ * - in(R) ищет все назначения T, для которых R.to === T
+ * - valued(A) ищет все значения V, для которых A.value === V
  */
 export const _expAssociationsVariants = {
   /**
@@ -41,10 +52,24 @@ export const _expAssociationsVariants = {
     // Распаковываем значение, если это Association
     const unwrappedValue = deep.unwrap(value);
 
-    // Получаем множество ассоциаций, имеющих указанный тип
-    const typedSet = types.many(unwrappedValue);
-    // Возвращаем саму ассоциацию, а не её .this
-    return typedSet;
+    // Оборачиваем значение в ассоциацию
+    const wrappedValue = deep.wrap(unwrappedValue);
+
+    // Создаем новую ассоциацию с пустым множеством
+    const result = new Association(new Set());
+
+    // Получаем ассоциации с данным типом через инвертированный релейшен 'typed'
+    const inverseRel = _invertedRelations['type']; // 'typed'
+    const typedResult = wrappedValue[inverseRel];
+
+    // Если результат есть и имеет this, добавляем все элементы в наш результат
+    if (typedResult && typedResult.this) {
+      for (const item of typedResult.this) {
+        result.this.add(item);
+      }
+    }
+
+    return result;
   },
 
   /**
@@ -56,16 +81,19 @@ export const _expAssociationsVariants = {
     // Распаковываем значение, если это Association
     const unwrappedValue = deep.unwrap(value);
 
-    // Получаем тип ассоциации
-    const typeValue = types.one(unwrappedValue);
+    // Оборачиваем значение в ассоциацию
+    const wrappedValue = deep.wrap(unwrappedValue);
+
+    // Получаем тип ассоциации через инвертированный релейшен 'type'
+    const inverseRel = _invertedRelations['typed']; // 'type'
+    const typeValue = wrappedValue[inverseRel];
 
     // Создаем новую ассоциацию с пустым множеством
     const result = new Association(new Set());
 
-    // Если тип найден, добавляем его в множество и устанавливаем value
+    // Если тип найден и это Association, добавляем его в результат
     if (typeValue !== undefined) {
-      result.this.add(typeValue);
-      result.value = typeValue;
+      result.this.add(typeValue.this);
     }
 
     return result;
@@ -80,10 +108,24 @@ export const _expAssociationsVariants = {
     // Распаковываем значение, если это Association
     const unwrappedValue = deep.unwrap(value);
 
-    // Получаем множество ассоциаций, имеющих указанный from
-    const outSet = froms.many(unwrappedValue);
-    // Возвращаем саму ассоциацию, а не её .this
-    return outSet;
+    // Оборачиваем значение в ассоциацию
+    const wrappedValue = deep.wrap(unwrappedValue);
+
+    // Создаем новую ассоциацию с пустым множеством
+    const result = new Association(new Set());
+
+    // Получаем ассоциации с данным from через инвертированный релейшен 'out'
+    const inverseRel = _invertedRelations['from']; // 'out'
+    const outResult = wrappedValue[inverseRel];
+
+    // Если результат есть и имеет this, добавляем все элементы в наш результат
+    if (outResult && outResult.this) {
+      for (const item of outResult.this) {
+        result.this.add(item);
+      }
+    }
+
+    return result;
   },
 
   /**
@@ -95,14 +137,19 @@ export const _expAssociationsVariants = {
     // Распаковываем значение, если это Association
     const unwrappedValue = deep.unwrap(value);
 
-    // Поиск всех ассоциаций, у которых from равен переданному значению
+    // Оборачиваем значение в ассоциацию
+    const wrappedValue = deep.wrap(unwrappedValue);
+
+    // Получаем from через инвертированный релейшен 'from'
+    const inverseRel = _invertedRelations['out']; // 'from'
+    const fromValue = wrappedValue[inverseRel];
+
+    // Создаем новую ассоциацию с пустым множеством
     const result = new Association(new Set());
 
-    for (const ass of all.this) {
-      const fromValue = froms.one(ass);
-      if (fromValue === unwrappedValue) {
-        result.this.add(ass);
-      }
+    // Если from найден и это Association, добавляем его в результат
+    if (fromValue !== undefined) {
+      result.this.add(fromValue.this);
     }
 
     return result;
@@ -117,10 +164,24 @@ export const _expAssociationsVariants = {
     // Распаковываем значение, если это Association
     const unwrappedValue = deep.unwrap(value);
 
-    // Получаем множество ассоциаций, имеющих указанный to
-    const inSet = tos.many(unwrappedValue);
-    // Возвращаем саму ассоциацию, а не её .this
-    return inSet;
+    // Оборачиваем значение в ассоциацию
+    const wrappedValue = deep.wrap(unwrappedValue);
+
+    // Создаем новую ассоциацию с пустым множеством
+    const result = new Association(new Set());
+
+    // Получаем ассоциации с данным to через инвертированный релейшен 'in'
+    const inverseRel = _invertedRelations['to']; // 'in'
+    const inResult = wrappedValue[inverseRel];
+
+    // Если результат есть и имеет this, добавляем все элементы в наш результат
+    if (inResult && inResult.this) {
+      for (const item of inResult.this) {
+        result.this.add(item);
+      }
+    }
+
+    return result;
   },
 
   /**
@@ -132,14 +193,19 @@ export const _expAssociationsVariants = {
     // Распаковываем значение, если это Association
     const unwrappedValue = deep.unwrap(value);
 
-    // Поиск всех ассоциаций, у которых to равен переданному значению
+    // Оборачиваем значение в ассоциацию
+    const wrappedValue = deep.wrap(unwrappedValue);
+
+    // Получаем to через инвертированный релейшен 'to'
+    const inverseRel = _invertedRelations['in']; // 'to'
+    const toValue = wrappedValue[inverseRel];
+
+    // Создаем новую ассоциацию с пустым множеством
     const result = new Association(new Set());
 
-    for (const ass of all.this) {
-      const toValue = tos.one(ass);
-      if (toValue === unwrappedValue) {
-        result.this.add(ass);
-      }
+    // Если to найден и это Association, добавляем его в результат
+    if (toValue !== undefined) {
+      result.this.add(toValue.this);
     }
 
     return result;
@@ -154,10 +220,24 @@ export const _expAssociationsVariants = {
     // Распаковываем значение, если это Association
     const unwrappedValue = deep.unwrap(value);
 
-    // Получаем множество ассоциаций, имеющих указанное значение
-    const valuedSet = values.many(unwrappedValue);
-    // Возвращаем саму ассоциацию, а не её .this
-    return valuedSet;
+    // Оборачиваем значение в ассоциацию
+    const wrappedValue = deep.wrap(unwrappedValue);
+
+    // Создаем новую ассоциацию с пустым множеством
+    const result = new Association(new Set());
+
+    // Получаем ассоциации с данным value через инвертированный релейшен 'valued'
+    const inverseRel = _invertedRelations['value']; // 'valued'
+    const valuedResult = wrappedValue[inverseRel];
+
+    // Если результат есть и имеет this, добавляем все элементы в наш результат
+    if (valuedResult && valuedResult.this) {
+      for (const item of valuedResult.this) {
+        result.this.add(item);
+      }
+    }
+
+    return result;
   },
 
   /**
@@ -169,16 +249,19 @@ export const _expAssociationsVariants = {
     // Распаковываем значение, если это Association
     const unwrappedValue = deep.unwrap(value);
 
-    // Поиск значения ассоциации
-    const valueResult = values.one(unwrappedValue);
+    // Оборачиваем значение в ассоциацию
+    const wrappedValue = deep.wrap(unwrappedValue);
+
+    // Получаем value через инвертированный релейшен 'value'
+    const inverseRel = _invertedRelations['valued']; // 'value'
+    const valueResult = wrappedValue[inverseRel];
 
     // Создаем новую ассоциацию с пустым множеством
     const result = new Association(new Set());
 
-    // Если значение найдено, добавляем его в множество и устанавливаем value
+    // Если value найдено и это Association, добавляем его в результат
     if (valueResult !== undefined) {
-      result.this.add(valueResult);
-      result.value = valueResult;
+      result.this.add(valueResult.this);
     }
 
     return result;
@@ -223,11 +306,11 @@ export function _parseExpAssociations(expAssociations) {
 
   // Проверяем, является ли объект выражения пустым
   if (Object.keys(expAssociations).length === 0) {
-    // Для пустого объекта выражения создаем ассоциацию, содержащую all.this
-    const allAssociations = new Association(new Set(all.this));
+    // Для пустого объекта выражения используем напрямую all.this
+    const allAssociations = new Association(all.this);
 
     result.sets.push(allAssociations);
-    result.setSets.push(allAssociations.this);
+    result.setSets.push(all.this); // Используем all.this напрямую
     result._relatedResults.all = allAssociations;
     return result;
   }
@@ -259,37 +342,56 @@ export function _parseExpAssociations(expAssociations) {
 /**
  * Функция для получения пересечения множеств ассоциаций.
  * @param {Object} parsedResults - Результат парсинга объекта-выражения
- * @returns {Set} - Итоговое множество ассоциаций
+ * @returns {Association} - Итоговое множество ассоциаций
  */
 export function _and(parsedResults) {
-  const { sets, setSets } = parsedResults;
+  const sets = parsedResults.sets;
 
-  // Если нет ассоциаций, возвращаем пустое множество
-  if (sets.length === 0) {
-    return new Set();
+  // Проверка на пустой массив
+  if (!sets || sets.length === 0) {
+    return new Association(new Set());
   }
 
-  // Начинаем с первого множества
-  // Используем setSets для совместимости
-  let result = new Set(setSets[0]);
+  // Проверка на единственное множество
+  if (sets.length === 1) {
+    return sets[0];
+  }
 
-  // Выполняем пересечение со всеми остальными множествами
-  for (let i = 1; i < setSets.length; i++) {
-    const currentSet = setSets[i];
-    const intersection = new Set();
+  // Проверка на наличие пустых множеств
+  for (let i = 0; i < sets.length; i++) {
+    if (!sets[i] || !sets[i].this || sets[i].this.size === 0) {
+      return new Association(new Set());
+    }
+  }
 
-    // Находим общие элементы
-    for (const item of result) {
-      if (currentSet.has(item)) {
-        intersection.add(item);
+  try {
+    // Формируем пересечение множеств вручную
+    const base = sets[0].this;
+    const result = new Set();
+
+    // Добавляем в результат только те элементы, которые есть во всех множествах
+    for (const item of base) {
+      let existsInAll = true;
+
+      // Проверяем наличие элемента во всех остальных множествах
+      for (let i = 1; i < sets.length; i++) {
+        if (!sets[i].this.has(item)) {
+          existsInAll = false;
+          break;
+        }
+      }
+
+      // Если элемент есть во всех множествах, добавляем его в результат
+      if (existsInAll) {
+        result.add(item);
       }
     }
 
-    // Обновляем результат
-    result = intersection;
+    return new Association(result);
+  } catch (error) {
+    // В случае ошибки возвращаем пустое множество
+    return new Association(new Set());
   }
-
-  return result;
 }
 
 /**
@@ -318,160 +420,24 @@ export function select(ass, op, args) {
       throw new Error('Аргумент select должен быть объектом');
     }
 
+    // Если объект выражения пуст, возвращаем все ассоциации
+    if (Object.keys(expAssociations).length === 0) {
+      // Создаем ассоциацию напрямую с all.this, без создания нового Set
+      const resultAssociation = new Association(all.this);
+      resultAssociation.temp.method = 'select';
+      resultAssociation.temp.expression = expAssociations;
+      return resultAssociation;
+    }
+
     // Парсим выражение и получаем ассоциации с множествами результатов
     const parsedResults = _parseExpAssociations(expAssociations);
 
     // Получаем итоговое множество (пересечение всех множеств)
-    const resultSet = _and(parsedResults);
+    const resultAssociation = _and(parsedResults);
 
-    // Создаем ассоциацию с результатом
-    const resultAssociation = new Association(resultSet);
-
-    // Сохраняем информацию для трекинга
+    // Сохраняем только метод для идентификации
     resultAssociation.temp.method = 'select';
     resultAssociation.temp.expression = expAssociations;
-
-    // Создаем функцию-трансформер для пересчета результата
-    resultAssociation.temp.transformer = () => {
-      // Выполняем новый запрос select с тем же выражением
-      const params = resultAssociation.temp.expression;
-      const parsedResults = _parseExpAssociations(params);
-      return _and(parsedResults);
-    };
-
-    // Сохраняем истоки (источники) для трекинга
-    // Для отслеживания нам необходимо следить за:
-    // 1. Ассоциациями, полученными из _expAssociationsVariants для трекинга изменений
-    // 2. Ассоциациями, которые выступают значениями в ключах выражения (type, from, то и т.д.)
-    // 3. Глобальной ассоциацией all для отслеживания создания и удаления ассоциаций
-    resultAssociation.origins = [];
-
-    // Добавляем ассоциации из результатов поиска в истоки для отслеживания их изменений
-    for (const assocSet of parsedResults.sets) {
-      resultAssociation.origins.push(assocSet);
-    }
-
-    // Добавляем ассоциации из выражения в истоки
-    for (const [key, expValue] of Object.entries(expAssociations)) {
-      // Добавляем только ассоциации
-      if (expValue instanceof Association) {
-        resultAssociation.origins.push(expValue);
-      }
-    }
-
-    // Добавляем также все ассоциации из результатов для отслеживания их изменений
-    for (const resultItem of resultSet) {
-      if (resultItem instanceof Association) {
-        resultAssociation.origins.push(resultItem);
-      }
-    }
-
-    // Добавляем all для отслеживания глобальных изменений (создание/удаление)
-    resultAssociation.origins.push(all);
-
-    // Настраиваем локальный track
-    resultAssociation._proxy.set('track', (resultAss, op) => {
-      if (op !== 'get') return;
-
-      // Проверяем, есть ли уже созданный трекер
-      if (resultAss.temp.track) {
-        return resultAss.temp.track;
-      }
-
-      // Создаем трекер
-      resultAss.temp.track = new Association();
-      const track = resultAss.temp.track;
-      track.temp.isActive = true;
-
-      // Храним функции отписки от событий
-      const offChanges = [];
-
-      // Обработчик для обновления результата при изменениях в источниках
-      const updateHandler = (origin, event, meta) => {
-        // Проверяем активен ли трекер
-        if (!track.temp.isActive) return;
-
-        // Выполняем пересчет результата
-        const prevResult = resultAss.this;
-        const newResultSet = resultAss.temp.transformer();
-
-        // Обновляем результат и генерируем событие только если изменился
-        // Это позволяет избежать зацикливания и ложных срабатываний
-        const prevSize = prevResult.size;
-        const newSize = newResultSet.size;
-        let changed = prevSize !== newSize;
-
-        if (!changed && newSize > 0) {
-          // Проверяем поэлементно, если размеры совпадают
-          const prevArray = Array.from(prevResult);
-          const newArray = Array.from(newResultSet);
-
-          for (let i = 0; i < prevSize; i++) {
-            if (prevArray[i] !== newArray[i]) {
-              changed = true;
-              break;
-            }
-          }
-        }
-
-        // Если результат изменился, обновляем его и генерируем событие
-        if (changed) {
-          // Обновляем результат
-          resultAss.this = newResultSet;
-
-          // Генерируем событие изменения
-          if (resultAss.emit) {
-            resultAss.emit('change', {
-              reason: 'select-update',
-              origin: origin,
-              detail: event?.detail || { operation: 'unknown' }
-            }, meta);
-          }
-        }
-      };
-
-      // Подписываемся на события для всех истоков
-      for (const origin of resultAss.origins) {
-        if (origin && origin.on && origin.emit) {
-          // Подписываемся на событие change
-          const offChange = origin.on('change', (event, meta) => {
-            updateHandler(origin, event, meta);
-          });
-          offChanges.push(offChange);
-        }
-      }
-
-      // Добавляем метод kill для отписки от всех событий
-      track._proxy.set('kill', (trackAss, op) => {
-        if (op === 'get') {
-          return function() {
-            // Деактивируем трекер
-            track.temp.isActive = false;
-
-            // Отписываемся от всех событий
-            for (const offChange of offChanges) {
-              if (typeof offChange === 'function') {
-                offChange();
-              }
-            }
-
-            return true;
-          };
-        }
-      });
-
-      // Сохраняем функции отписки
-      track.temp.offChanges = offChanges;
-
-      // Выполняем первичное обновление результата
-      setTimeout(() => {
-        if (track.temp.isActive) {
-          updateHandler(null, { detail: { operation: 'track-init' } });
-        }
-      }, 0);
-
-      return track;
-    });
 
     return resultAssociation;
   }
@@ -479,3 +445,4 @@ export function select(ass, op, args) {
 
 // Регистрируем метод select в прокси Association
 Association._proxy.set('select', select);
+
